@@ -14,10 +14,6 @@ programDir = os.getcwd () .replace ('\\', '/')
 transpilerDir = os.path.dirname (os.path.abspath (tmain.__file__)) .replace ('\\', '/')
 modulesDir = '{}/modules'.format (transpilerDir)
 tempDir = tempfile.gettempdir()
-tmp_path = os.path.dirname(os.path.abspath(__file__))
-
-base_path = os.path.abspath(os.path.join(os.path.join(tmp_path, ".."),".."))
-
 
 try:
     sys.path.remove (transpilerDir)	
@@ -46,83 +42,52 @@ def compile(python_code, temp_dir=None):
     else:
         tmp = tempDir
 
-    compilerPath = [base_path, programDir, modulesDir, tmp] + sys.path
+    compilerPath = [tmp, programDir, modulesDir] + sys.path
 
-    dest = os.path.join(os.path.join(tmp, "__javascript__"), "input.mod.js")
+    src = os.path.join(tmp, "input.py")
+    dest = os.path.join(os.path.join(tmp, "__target__"), "input.js")
 
     if os.path.exists(dest):
         os.remove(dest)
 
-    if python_code.startswith('file://'):
-        src = python_code[7:]
-    else:
-        src = os.path.join(tmp, "input.py")
-        with open(src, "wt") as pyinput:
-            pyinput.write(python_code)
+    with open(src, "wt") as pyinput:
+        pyinput.write(python_code)
 
     x = {
-        'source': src, 
-        'anno': False, 
-        'build': False, 
-        'complex': False,
-        'docat': False, 
-        'dcheck': False, 
-        'dassert': False, 
-        'dextex': False, 
-        'dmap': False, 
-        'dtree': False, 
-        'dstat': False, 
-        'esv': None, 
-        'fcall': False, 
-        'gen': False,
-        'iconv': False, 
-        'jskeys': False, 
-        'jsmod': False, 
-        'kwargs': False, 
-        'license': False, 
-        'map': False, 
-        'nomin': True, 
-        'opov': False, 
-        'parent': None, 
-        'run': False, 
-        'symbols': None, 
-        'tconv': False, 
-        'verbose': False, 
-        'ext': None, 
-        'star': False,
-        'keycheck': False,
+        'source': src.replace(".py",""),
+        'nomin': True,
         'dnostrip': True,
-        'jscall': True
+#        'jscall': True,
+#        'esv': 5,
     }
 
+    tmp_argv =  sys.argv
+    sys.argv = [sys.argv[0],]
+    try:
+        utils.commandArgs.parse()
+    except:
+        pass
+    sys.argv = tmp_argv
+    print(utils.commandArgs.__dict__)
     utils.commandArgs.__dict__.update (x)
-
     __symbols__ = []
     __symbols__.append ('__py{}.{}__'.format (* sys.version_info [:2]))
-    #if utils.commandArgs.esv:
-    #    __symbols__.append ('__esv{}__'.format (utils.commandArgs.esv))
-    #else:
     __symbols__.append ('__esv{}__'.format (utils.defaultJavaScriptVersion))
-
-    #__envir__ = utils.Any()
-    #with tokenize.open(f'{modulesDir}/org/transcrypt/__envir__.js') as envirFile:
-    #    exec(envirFile.read());
-    #__envir__.executor_name = __envir__.interpreter_name
-
+    __envir__ = utils.Any()
+    with tokenize.open(f'{modulesDir}/org/transcrypt/__envir__.js') as envirFile:
+        exec(envirFile.read());
+    __envir__.executor_name = __envir__.interpreter_name
     error = False
+
     try:
-        compiler.Program (compilerPath, compilerPath, __symbols__)
-        #compiler.Program(compilerPath, __symbols__, __envir__)
+        compiler.Program(compilerPath, __symbols__, __envir__)
         with open(dest,"rt") as pyoutput:
-            ret = pyoutput.read()        
-            s = ret.split('(function () {\n', 1)[1]
-            s = s.rsplit('}) ();', 1)[0]            
-            
+            s = pyoutput.read()
             tab = []
             for line in s.split("\n"):
-                tab.append(line[2:])
+                tab.append(line)
             ret = "\n".join(tab)
-            
+
     except Exception as exception:
         error = True
         tab = []
@@ -137,11 +102,7 @@ def compile(python_code, temp_dir=None):
                         tab.append("Python to javascript compile error:" + description)
                         tab.append("")
                         tab.append("code:")
-                        if python_code.startswith('file://'):
-                            with open(src, 'rt') as f:
-                                lines = f.read().split('\n')
-                        else:
-                            lines = python_code.split('\n')
+                        lines = python_code.split('\n')
                         start = row - 4
                         end = row + 4
                         if start < 0:
@@ -158,7 +119,5 @@ def compile(python_code, temp_dir=None):
                         tab.append(line)
                 else:
                     tab.append(line)
-                    
         ret = "\n".join(tab)
-        
     return (error, ret)

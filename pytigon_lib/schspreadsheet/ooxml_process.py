@@ -29,8 +29,11 @@ import datetime
 
 import dateutil.parser
 
-from lxml import etree
-from xml.sax.saxutils import escape
+try:
+    from lxml import etree
+    from xml.sax.saxutils import escape
+except:
+    pass
 import email.generator
 
 from django.template import Context

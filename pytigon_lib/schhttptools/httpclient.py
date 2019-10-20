@@ -32,7 +32,10 @@ from threading import Thread
 
 from pytigon_lib.schfs.vfstools import norm_path
 from pytigon_lib.schtools.schjson import json_loads
+from pytigon_lib.schhttptools.wsgi_bridge import get_or_post as wsgi_get_or_post
 from pytigon_lib.schhttptools.asgi_bridge import get_or_post, websocket
+from pytigon_lib.schtools.platform_info import platform_name
+from django.core.wsgi import get_wsgi_application
 
 import threading
 import logging
@@ -40,13 +43,23 @@ import logging
 LOGGER = logging.getLogger("httpclient")
 
 ASGI_APPLICATION = None
+FORCE_WSGI = False
+
+def decode(bstr, dec='utf-8'):
+    if type(bstr)==bytes:
+        return bstr.decode(dec)
+    else:
+        return bstr
 
 def init_embeded_django():
     global ASGI_APPLICATION
     import django
     django.setup()
-    from channels.routing import get_default_application
-    ASGI_APPLICATION = get_default_application()
+    if platform_name() == "Emscripten" or FORCE_WSGI:
+        ASGI_APPLICATION = get_wsgi_application()
+    else:
+        from channels.routing import get_default_application
+        ASGI_APPLICATION = get_default_application()
 
 
 BLOCK = False
@@ -84,15 +97,21 @@ class RetHttp():
                 self.content = value
             elif key == 'headers':
                 self.headers = {}
+                if type(value) == dict:
+                    value = value.items()
                 for pos in value:
-                    if pos[0].decode('utf-8').lower() == 'set-cookie':
-                        x  = pos[1].decode('utf-8')
+                    if decode(pos[0]).lower() == 'set-cookie':
+                        x  = decode(pos[1])
                         x2 = x.split('=',1)
                         self.cookies[x2[0]] = x2[1]
                     else:
-                        self.headers[pos[0].decode('utf-8').lower()] = pos[1].decode('utf-8')
+                        self.headers[decode(pos[0]).lower()] = decode(pos[1])
+
             elif key == 'status':
-                self.status_code = value
+                if type(value) == tuple:
+                    self.status_code = value[0]
+                else:
+                    self.status_code = value
             elif key == 'type':
                 self.type = value
             elif key == 'cookies':
@@ -103,11 +122,15 @@ class RetHttp():
                 self.url = value
 
 
-def asgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
-    event_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(event_loop)
-    ret2 = asyncio.get_event_loop().run_until_complete(get_or_post(application, url, headers, params=params, post=post))
-    ret.append(ret2)
+def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
+    if platform_name() == "Emscripten" or FORCE_WSGI:
+        ret2 = wsgi_get_or_post(application, url, headers, params=params, post=post)
+        ret.append(ret2)
+    else:
+        event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(event_loop)
+        ret2 = asyncio.get_event_loop().run_until_complete(get_or_post(application, url, headers, params=params, post=post))
+        ret.append(ret2)
 
 def requests_request(method, url, argv, ret=[]):
     ret2 = requests.request(method, url, **argv)
@@ -131,43 +154,52 @@ def request(method, url, direct_access, argv, app=None):
             headers.append((b"cookie", cookies.encode('utf-8')))
 
         if post:
-            t = Thread(target=asgi_get_or_post,
-                       args=(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret),
-                       daemon=True)
-            t.start()
-            if app:
-                try:
-                    while t.is_alive():
-                        app.Yield()
-                except:
-                    t.join()
+            if platform_name() == "Emscripten" or FORCE_WSGI:
+                asgi_or_wsgi_get_or_post(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret)
             else:
-                t.join()
+                t = Thread(target=asgi_or_wsgi_get_or_post,
+                           args=(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret),
+                           daemon=True)
+                t.start()
+                if app:
+                    try:
+                        while t.is_alive():
+                            app.Yield()
+                    except:
+                        t.join()
+                else:
+                    t.join()
         else:
-            t = Thread(target=asgi_get_or_post,
-                       args=(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, {}, post, ret),
-                       daemon=True)
-            t.start()
-            if app:
-                try:
-                    while t.is_alive():
-                        app.Yield()
-                except:
-                    t.join()
+            if platform_name() == "Emscripten" or FORCE_WSGI:
+                asgi_or_wsgi_get_or_post(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, {}, post, ret)
             else:
-                t.join()
+                t = Thread(target=asgi_or_wsgi_get_or_post,
+                           args=(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, {}, post, ret),
+                           daemon=True)
+                t.start()
+                if app:
+                    try:
+                        while t.is_alive():
+                            app.Yield()
+                    except:
+                        t.join()
+                else:
+                    t.join()
         return RetHttp(url, ret[0])
     else:
         if app:
-            t = Thread(target=requests_request,
-                       args=(method, url, argv, ret),
-                       daemon=True)
-            t.start()
-            try:
-                while t.is_alive():
-                    app.Yield()
-            except:
-                t.join()
+            if platform_name() == "Emscripten" or FORCE_WSGI:
+                requests_request(method, url, argv, ret)
+            else:
+                t = Thread(target=requests_request,
+                           args=(method, url, argv, ret),
+                           daemon=True)
+                t.start()
+                try:
+                    while t.is_alive():
+                        app.Yield()
+                except:
+                    t.join()
         else:
             requests_request(method, url, argv, ret)
         return ret[0]
@@ -240,15 +272,15 @@ class HttpResponse():
 
     def str(self):
         """Return request content converted to string"""
-        decode = 'utf-8'
+        dec = 'utf-8'
         if self.ret_content_type:
             if 'text' in self.ret_content_type:
                 if "iso-8859-2" in self.ret_content_type:
-                    decode = "iso-8859-2"
-                ret =  self.content.decode(decode)
+                    dec = "iso-8859-2"
+                ret =  decode(self.content,dec)
             else:
                 if 'application/json' in self.ret_content_type:
-                    ret = self.content.decode('utf-8')
+                    ret = decode(self.content, 'utf-8')
                 else:
                     ret = self.content
         else:

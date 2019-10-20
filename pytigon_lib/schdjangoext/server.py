@@ -32,7 +32,7 @@ import django
 #from channels.handler import ViewConsumer
 #from channels.worker import Worker
 
-import schserw.schsys.initdjango
+import pytigon.schserw.schsys.initdjango
 
 
 #class WorkerThread(threading.Thread):
