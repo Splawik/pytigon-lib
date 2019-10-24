@@ -58,7 +58,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     _data_path = os.path.normpath(data_path)
     _prj_path = os.path.normpath(prj_path)
     _static_app_path = os.path.normpath(static_app_path)
-
+    _base_compiler_path = os.path.join(_data_path, "ext_prg")
     test1 = 0 if os.path.exists(_prj_path) else 1
     test2 = 0 if os.path.exists(_data_path) else 1
     test3 = 0 if os.path.exists(_static_app_path) else 1
@@ -146,7 +146,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if not applib in sys.path:
             sys.path.append(applib)
         if test1 or test2 or test3:
-            ret = post_install(_root_path, os.path.join(_prj_path, prj))
+            ret = post_install(_base_compiler_path, os.path.join(_prj_path, prj))
             if ret:
                 for pos in ret:
                     print(pos)

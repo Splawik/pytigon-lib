@@ -95,6 +95,7 @@ def install():
     prj_path = settings.PRJ_PATH
     app_data_path = os.path.join(data_path, prj_name)
     db_path = os.path.join(app_data_path, prj_name+".db")
+    compiler_base_path = os.path.join(data_path, "ext_prg")
     if os.path.exists(db_path):
         return True
     else:
@@ -144,7 +145,7 @@ def install():
             User.objects.db_manager(db_profile).create_superuser('auto', 'auto@pytigon.com', 'anawa')
             if db_profile != 'default':
                 User.objects.db_manager('default').create_superuser('auto', 'auto@pytigon.com', 'anawa')
-    ret = post_install(root_path, prj_path)
+    ret = post_install(compiler_base_path, prj_path)
     if ret:
         for pos in ret:
             print(pos)
