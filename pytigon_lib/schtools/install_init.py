@@ -63,26 +63,26 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     test2 = 0 if os.path.exists(_data_path) else 1
     test3 = 0 if os.path.exists(_static_app_path) else 1
 
-    if not test1:
-        if upgrade_test(os.path.join(os.path.join(_root_path, "install"), "prj.zip"),_prj_path):
-            test1 = 2
-            print("Upgrade prj")
+    #if not test1:
+    #    if upgrade_test(os.path.join(os.path.join(_root_path, "install"), "prj.zip"),_prj_path):
+    #        test1 = 2
+    #        print("Upgrade prj")
 
     if not test2:
         if upgrade_test(os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip"), _data_path):
             test2 = 2
             print("Upgrade data")
 
-    if test1:
-        p2 = os.path.join(_root_path, 'prj')
-        if os.path.exists(p2) and test1 == 1:
-            copy_tree(p2, _prj_path, preserve_mode=0, preserve_times=0)
-        else:
-            zip_file = os.path.join(os.path.join(_root_path, "install"), "prj.zip")
-            if os.path.exists(zip_file):
-                if not os.path.exists(_prj_path):
-                    os.makedirs(_prj_path)
-                extractall(zipfile.ZipFile(zip_file), _prj_path)
+    #if test1:
+    #    p2 = os.path.join(_root_path, 'prj')
+    #    if os.path.exists(p2) and test1 == 1:
+    #        copy_tree(p2, _prj_path, preserve_mode=0, preserve_times=0)
+    #    else:
+    #        zip_file = os.path.join(os.path.join(_root_path, "install"), "prj.zip")
+    #        if os.path.exists(zip_file):
+    #            if not os.path.exists(_prj_path):
+    #                os.makedirs(_prj_path)
+    #            extractall(zipfile.ZipFile(zip_file), _prj_path)
 
     if test2:
         zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")
