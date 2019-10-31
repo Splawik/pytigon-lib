@@ -213,6 +213,8 @@ class HttpResponse():
         self.content = content
         self.ret_content_type = ret_content_type
         self.new_url = url
+        print("==> ", self.url, self.ret_code)
+
 
     def process_response(self, http_client, parent, post_request):
         global COOKIES
@@ -337,6 +339,7 @@ class HttpClient:
             credentials - default False
             user_agent - default None
         """
+
         if address_str.startswith('data:'):
             x = address_str.split(',', 1)
             if len(x)==2:
@@ -386,7 +389,11 @@ class HttpClient:
 
         if adr.startswith('http://127.0.0') and ('/static/' in adr or '/site_media' in adr) and not '?' in adr:
             if '/static/' in adr:
-                path = settings.STATICFILES_DIRS[0]+adr.replace('http://127.0.0.2', '').replace('/static','')
+                if settings.STATICFILES_DIRS:
+                    s = settings.STATICFILES_DIRS[0]
+                else:
+                    s = settings.STATIC_ROOT
+                path = s+adr.replace('http://127.0.0.2', '').replace('/static','')
             else:
                 path = settings.MEDIA_ROOT+adr.replace('http://127.0.0.2', '').replace('/site_media','')
 

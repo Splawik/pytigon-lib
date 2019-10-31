@@ -32,9 +32,12 @@ def _mkdir(path, ext=None):
         p = os.path.join(path, ext)
     else:
         p = path
-
     if not os.path.exists(p):
-        os.mkdir(p)
+        try:
+            os.mkdir(p)
+        except:
+            pass
+
 
 def upgrade_test(zip_path, out_path):
     if os.path.exists(zip_path):
