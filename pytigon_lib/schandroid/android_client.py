@@ -60,7 +60,7 @@ from pytigon_lib import init_paths
 
 init_paths()
 
-from schserw import settings as schserw_settings
+from pytigon.schserw import settings as schserw_settings
 from pytigon_lib.schtools.install_init import init
 
 if not schserw_settings.PRJ_PATH in sys.path:
