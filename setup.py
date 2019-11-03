@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pytigon-lib",
-    version="0.91",
+    version="0.92",
     description="Pytigon library",
     author="Sławomir Chołaj",
     author_email="slawomir.cholaj@gmail.com",
