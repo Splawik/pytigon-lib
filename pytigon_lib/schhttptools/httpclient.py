@@ -55,6 +55,7 @@ def init_embeded_django():
     global ASGI_APPLICATION
     import django
     django.setup()
+    import pytigon.schserw.urls
     if platform_name() == "Emscripten" or FORCE_WSGI:
         ASGI_APPLICATION = get_wsgi_application()
     else:
