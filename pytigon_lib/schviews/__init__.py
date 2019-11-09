@@ -29,6 +29,7 @@ from django.apps import apps
 from django.views import generic
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, Http404
 from django.urls import reverse
+from django.utils.functional import lazy
 from django.conf import settings
 from django.conf.urls import url
 from django.db.models import CharField
@@ -51,6 +52,8 @@ def make_path(view_name, args=None):
         return settings.URL_ROOT_FOLDER+"/"+reverse(view_name, args=args)
     else:
         return reverse(view_name, args=args)
+
+make_path_lazy = lazy(make_path, str)
 
 
 def gen_tab_action(table, action, fun, extra_context=None):
@@ -584,7 +587,7 @@ class GenericRows(object):
                 model = f.related_model
             else:
                 model = self.base_model
-            success_url = make_path('ok')
+            success_url = make_path_lazy('ok')
 
             template_name = self.template_name
             title = self.title
@@ -718,9 +721,9 @@ class GenericRows(object):
 
             def get_success_url(self):
                 if self.object:
-                    success_url = make_path('ret_ok', (int(self.object.id), str(self.object)))
+                    success_url = make_path_lazy('ret_ok', (int(self.object.id), str(self.object)))
                 else:
-                    success_url = make_path('ok')
+                    success_url = make_path_lazy('ok')
                 return success_url
 
             def _get_form(self, request, *args, **kwargs):
@@ -881,7 +884,7 @@ class GenericRows(object):
                 model = f.related_model
             else:
                 model = self.base_model
-            success_url = make_path('ok')
+            success_url = make_path_lazy('ok')
             template_name = self.template_name
             title = self.title
 
@@ -921,7 +924,7 @@ class GenericRows(object):
             tab=self.tab,
             ext='py',
             model=model,
-            post_save_redirect = make_path('ok'),
+            post_save_redirect = make_path_lazy('ok'),
             template_name=self.template_name,
             extra_context=transform_extra_context({'title': self.title + ' - ' +str(_('update element')) },
                     self.extra_context),

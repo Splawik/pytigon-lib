@@ -54,14 +54,16 @@ def decode(bstr, dec='utf-8'):
 def init_embeded_django():
     global ASGI_APPLICATION
     import django
+
     django.setup()
-    import pytigon.schserw.urls
+
     if platform_name() == "Emscripten" or FORCE_WSGI:
         ASGI_APPLICATION = get_wsgi_application()
     else:
         from channels.routing import get_default_application
         ASGI_APPLICATION = get_default_application()
 
+    import pytigon.schserw.urls
 
 BLOCK = False
 COOKIES_EMBEDED = {}
