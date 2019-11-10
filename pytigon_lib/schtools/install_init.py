@@ -113,6 +113,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                 os.chdir(path)
                 print("python: pytigon: init: ", path)
                 if not os.path.exists(db_path):
+                    print("python: pytigon: init: create:", db_path)
                     exit_code, output_tab, err_tab = py_manage(['makeallmigrations',], False)
                     if err_tab:
                         print(err_tab)
