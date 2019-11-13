@@ -173,7 +173,9 @@ class ZipWriter:
         self.filename = filename
         self.basepath = basepath
         self.base_len = len(self.basepath)
-        self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED)
+        self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_BZIP2, compresslevel=9)
+        #self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
+
         self.exclude = exclude
 
     def close(self):

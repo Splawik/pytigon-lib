@@ -23,7 +23,8 @@ import zipfile
 from shutil import move
 from pathlib import Path
 
-from django.conf import settings
+#from django.conf import settings
+from pytigon.schserw import settings
 from pytigon_lib.schdjangoext.django_manage import *
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.process import py_run

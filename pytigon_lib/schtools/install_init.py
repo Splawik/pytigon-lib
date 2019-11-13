@@ -138,7 +138,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if os.path.exists(p2):
             copy_tree(p2, _static_app_path, preserve_mode=0, preserve_times=0)
 
-    _paths = ['', 'cache', 'plugins_cache', '_schall',  'schdevtools', 'prj', prj]
+    _paths = ['', 'cache', 'plugins_cache', '_schall',  'schdevtools', 'prj', "temp", prj]
     for p in _paths:
         _mkdir(_data_path, p)
     if paths:
