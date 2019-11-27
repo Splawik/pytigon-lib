@@ -36,40 +36,67 @@ def check_compiler(base_path):
     return os.path.exists(compiler)
 
 
+def extract_tar_folder(tf, folder, extract_to):
+    os.makedirs(extract_to)
+
+    def _members():
+        l = len(folder)
+        for member in tf.getmembers():
+            if member.path.startswith(folder):
+                member.path = member.path[l:]
+                yield member
+
+    tf.extractall(path=extract_to, members=_members())
+
 def install_tcc(path):
     prg_path = os.path.abspath(os.path.join(path, ".."))
-    if not os.path.exists(prg_path):
-        os.makedirs(prg_path)
 
-    if platform.system() != 'Windows':
-        if sys.maxsize > 2 ** 32:
-            url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win64-bin.zip"
+    if not os.path.exists(path):
+        if not os.path.exists(prg_path):
+            os.makedirs(prg_path)
+
+        if platform.system() == 'Windows':
+            if sys.maxsize > 2 ** 32:
+                url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win64-bin.zip"
+            else:
+                url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win32-bin.zip"
+            r = requests.get(url, allow_redirects=True)
+            with zipfile.ZipFile(io.BytesIO(r.content)) as zfile:
+                zfile.extractall(prg_path)
         else:
-            url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win32-bin.zip"
-        r = requests.get(url, allow_redirects=True)
-        with zipfile.ZipFile(io.BytesIO(r.content)) as zfile:
-            zfile.extractall(prg_path)
-    else:
-        url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27.tar.bz2"
-        r = requests.get(url, allow_redirects=True)
-        with tarfile.open(fileobj=io.BytesIO(r.content), mode='r:bz2') as tar:
-            tar.extractall(prg_path)
-        os.rename(os.path.join(prg_path, "tcc-0.9.27"), path)
-        temp = os.getcwd()
-        os.chdir(path)
-        f = os.popen('./configure --disable-static')
-        f = os.popen('make')
-        os.chdir(temp)
+            url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27.tar.bz2"
+            r = requests.get(url, allow_redirects=True)
+            with tarfile.open(fileobj=io.BytesIO(r.content), mode='r:bz2') as tar:
+                tar.extractall(prg_path)
+            os.rename(os.path.join(prg_path, "tcc-0.9.27"), path)
+            temp = os.getcwd()
+            os.chdir(path)
+            f = os.popen('./configure --disable-static')
+            print(f.read())
+            f = os.popen('make')
+            print(f.read())
+            os.chdir(temp)
+    h_path = os.path.join(path, "include", "python")
+    print("A1:", h_path)
+    if not os.path.exists(h_path):
+        print("A2")
+        info = sys.version_info
+        url2 = f"https://www.python.org/ftp/python/{info.major}.{info.minor}.{info.micro}/Python-{info.major}.{info.minor}.{info.micro}.tgz"
+        print(url2)
+        r = requests.get(url2, allow_redirects=True)
+        with tarfile.open(fileobj=io.BytesIO(r.content), mode='r:gz') as tar:
+            extract_tar_folder(tar, f"Python-{info.major}.{info.minor}.{info.micro}/Include/", h_path)
+
 
 def compile(base_path, input_file_name, output_file_name=None, pyd=True):
     tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
-    if not os.path.exists(tcc_dir):
+    h_dir = os.path.join(tcc_dir, "include", "python")
+    if not os.path.exists(h_dir):
         install_tcc(tcc_dir)
     include1 = os.path.join(tcc_dir, "include")
     include2 = os.path.join(include1, "python")
     tmp = os.getcwd()
     os.chdir(tcc_dir)
-
     if output_file_name:
         ofn = output_file_name
     else:
