@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import os
 import sys
@@ -41,16 +41,16 @@ def _mkdir(path, ext=None):
 
 def upgrade_test(zip_path, out_path):
     if os.path.exists(zip_path):
-        archive = zipfile.ZipFile(zip_path, 'r')
-        cfg_txt = archive.read('install.ini').decode('utf-8')
+        archive = zipfile.ZipFile(zip_path, "r")
+        cfg_txt = archive.read("install.ini").decode("utf-8")
         cfg = configparser.ConfigParser()
         cfg.read_string(cfg_txt)
-        t1 = cfg['DEFAULT']['GEN_TIME']
+        t1 = cfg["DEFAULT"]["GEN_TIME"]
         ini2 = os.path.join(out_path, "install.ini")
         if os.path.exists(ini2):
             cfg2 = configparser.ConfigParser()
             cfg2.read(ini2)
-            t2 = cfg2['DEFAULT']['GEN_TIME']
+            t2 = cfg2["DEFAULT"]["GEN_TIME"]
             if t2 < t1:
                 return True
     return False
@@ -66,17 +66,20 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     test2 = 0 if os.path.exists(_data_path) else 1
     test3 = 0 if os.path.exists(_static_app_path) else 1
 
-    #if not test1:
+    # if not test1:
     #    if upgrade_test(os.path.join(os.path.join(_root_path, "install"), "prj.zip"),_prj_path):
     #        test1 = 2
     #        print("Upgrade prj")
 
     if not test2:
-        if upgrade_test(os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip"), _data_path):
+        if upgrade_test(
+            os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip"),
+            _data_path,
+        ):
             test2 = 2
             print("Upgrade data")
 
-    #if test1:
+    # if test1:
     #    p2 = os.path.join(_root_path, 'prj')
     #    if os.path.exists(p2) and test1 == 1:
     #        copy_tree(p2, _prj_path, preserve_mode=0, preserve_times=0)
@@ -92,18 +95,18 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if not os.path.exists(_data_path):
             os.makedirs(_data_path)
         if os.path.exists(zip_file2):
-            if test2==2:
-                extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=['.*\.db',])
+            if test2 == 2:
+                extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=[".*\.db"])
             else:
                 extractall(zipfile.ZipFile(zip_file2), _data_path)
-        if not os.path.exists(os.path.join(_data_path,'media')):
-            media_path = os.path.join(os.path.join(_data_path,'media'))
+        if not os.path.exists(os.path.join(_data_path, "media")):
+            media_path = os.path.join(os.path.join(_data_path, "media"))
             os.makedirs(media_path)
-            os.makedirs(os.path.join(media_path,'filer_public'))
-            os.makedirs(os.path.join(media_path,'filer_private'))
-            os.makedirs(os.path.join(media_path,'filer_public_tumbnails'))
-            os.makedirs(os.path.join(media_path,'filer_private_thumbnails'))
-        prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith('_')]
+            os.makedirs(os.path.join(media_path, "filer_public"))
+            os.makedirs(os.path.join(media_path, "filer_private"))
+            os.makedirs(os.path.join(media_path, "filer_public_tumbnails"))
+            os.makedirs(os.path.join(media_path, "filer_private_thumbnails"))
+        prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
 
         tmp = os.getcwd()
         for app in prjs:
@@ -114,18 +117,24 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                 print("python: pytigon: init: ", path)
                 if not os.path.exists(db_path):
                     print("python: pytigon: init: create:", db_path)
-                    exit_code, output_tab, err_tab = py_manage(['makeallmigrations',], False)
+                    exit_code, output_tab, err_tab = py_manage(
+                        ["makeallmigrations"], False
+                    )
                     if err_tab:
                         print(err_tab)
-                    exit_code, output_tab, err_tab = py_manage(['migrate',], False)
+                    exit_code, output_tab, err_tab = py_manage(["migrate"], False)
                     if err_tab:
                         print(err_tab)
-                    exit_code, output_tab, err_tab = py_manage(['createautouser',], False)
+                    exit_code, output_tab, err_tab = py_manage(
+                        ["createautouser"], False
+                    )
                     if err_tab:
                         print(err_tab)
-                    if app == 'schdevtools':
+                    if app == "schdevtools":
                         print("python: pytigon: import_projects!")
-                        exit_code, output_tab, err_tab = py_manage(['import_projects',], False)
+                        exit_code, output_tab, err_tab = py_manage(
+                            ["import_projects"], False
+                        )
                         print("python: pytigon: projects imported!")
                         if err_tab:
                             print(err_tab)
@@ -134,11 +143,21 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         pass
 
     if test3:
-        p2 = os.path.join(os.path.join(_root_path, 'static'), 'app')
+        p2 = os.path.join(os.path.join(_root_path, "static"), "app")
         if os.path.exists(p2):
             copy_tree(p2, _static_app_path, preserve_mode=0, preserve_times=0)
 
-    _paths = ['', 'cache', 'plugins_cache', '_schall',  'schdevtools', 'prj', "temp", prj]
+    _paths = [
+        "",
+        "cache",
+        "plugins_cache",
+        "_schall",
+        "schdevtools",
+        "prj",
+        "temp",
+        "static",
+        prj,
+    ]
     for p in _paths:
         _mkdir(_data_path, p)
     if paths:

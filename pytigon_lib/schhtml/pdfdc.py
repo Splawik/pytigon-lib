@@ -27,8 +27,11 @@ except:
 import fpdf
 
 from pytigon_lib.schfs.vfstools import get_temp_filename
+from pytigon_lib.schtools.main_paths import get_main_paths
 
-fpdf.fpdf.FPDF_FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../static/fonts")
+_cfg = get_main_paths()
+#fpdf.fpdf.FPDF_FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../static/fonts")
+fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg['STATIC_PATH'], "fonts")
 
 class PDFSurface:
     def __init__(self, output_name, width, height):

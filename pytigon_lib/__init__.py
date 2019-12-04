@@ -19,8 +19,10 @@
 
 import sys
 import os
+from pytigon_lib.schtools.main_paths import get_main_paths
 
 def init_paths():
+    cfg = get_main_paths()
 
     tmp = []
     for pos in sys.path:
@@ -50,3 +52,18 @@ def init_paths():
 
         if not p in sys.path: sys.path.insert(0, p)
         if not p2 in sys.path: sys.path.append(p2)
+
+
+    if not cfg["SERW_PATH"] in sys.path:
+        sys.path.append(cfg["SERW_PATH"])
+    if not cfg["ROOT_PATH"] in sys.path:
+        sys.path.append(cfg["ROOT_PATH"])
+
+    p1 = os.path.join(cfg["ROOT_PATH"], "ext_lib")
+    p2 = os.path.join(cfg["ROOT_PATH"], "schappdata", "schplugins")
+
+    if not p1 in sys.path:
+        sys.path.append(p1)
+    if not p2 in sys.path:
+        sys.path.append(p2)
+
