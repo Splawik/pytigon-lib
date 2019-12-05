@@ -3,6 +3,18 @@ import os
 from os import environ
 from pytigon_lib.schtools.platform_info import platform_name
 
+#                Client(appimage,emscripten)     Client/DEV                  Server                          Android                         pytigon-lib
+#
+#ROOT_PATH       site-packages/pytigon           ./                          /var/www/pytigon                site-packages/pytigon           None
+#SERW_PATH       site-packages/pytigon/schserw   ./schserw                   site-packages/pytigon/schserw   site-packages/pytigon/schserw   None
+#DATA_PATH       ~/.pytigon                      ~/.pytigon                  /home/www-data/.pytigon         STORAGE/pytigon_data            ~/.pytigon
+#LOG_PATH        console                         console                     /var/log                        STORAGE/pytigon_data            ~/.pytigon
+#TEMP_PATH       %TEMP%                          %TEMP%                      %TEMP%                          %TEMP%                          %TEMP%
+#PRJ_PATH        ~/.pytigon/prj                  ./prj                       /var/www/pytigon/prj            SORAGE/pytigon/prj              ~/.pytigon/prj
+#PRJ_PATH_ALT    site-packages/pytigon/prj       site-packages/pytigon/prj   site-packages/pytigon/prj      site-packages/pytigon/prj       None
+#STATIC_PATH     site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static   site-packages/pytigon/static    site-packages/pytigon/static
+#STATIC_PATH_APP ~/.pytigon/static/app           ./static/app                /var/www/pytigon/static/app     STORAGE/pytigon/static/app      ~/.pytigon/static/app
+
 
 def get_main_paths():
     ret = {}
@@ -15,8 +27,10 @@ def get_main_paths():
     except:
         pytigon = None
 
+    pytigon_path = None
     if pytigon:
         serw_path = os.path.dirname(os.path.abspath(pytigon.__file__))
+        pytigon_path = os.path.abspath(os.path.join(serw_path, ".."))
     else:
         serw_path = None
 
@@ -78,7 +92,7 @@ def get_main_paths():
             ret["LOG_PATH"] = "/var/log"
             ret["PRJ_PATH"] = os.path.join(data_path, "prj")
             ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
-            ret['STATIC_PATH'] = os.path.join(root_path, "static")
+            ret['STATIC_PATH_APP'] = os.path.join(root_path, "static", "app")
         else:
             ret["DATA_PATH"] = data_path = os.path.join(home_path, ".pytigon")
             ret["LOG_PATH"] = data_path
@@ -86,11 +100,20 @@ def get_main_paths():
             if os.path.exists(cwd_prj):
                 ret["PRJ_PATH"] = cwd_prj
                 ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
-                ret['STATIC_PATH'] = os.path.join(root_path, "static")
+                ret['STATIC_PATH_APP'] = os.path.join(root_path, "static", "app")
             else:
                 ret["PRJ_PATH"] = os.path.join(data_path, "prj")
                 ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
-                ret['STATIC_PATH'] = os.path.join(data_path, "static")
+                ret['STATIC_PATH_APP'] = os.path.join(data_path, "static","app")
+
+        if 'STATIC_PATH' in environ:
+            static_path = environ['STATIC_PATH']
+            ret['STATIC_PATH_APP'] = os.path.join(static_path, "app")
+        elif pytigon_path:
+            static_path = os.path.join(pytigon_path, "static")
+        else:
+            static_path = None
+        ret['STATIC_PATH'] = static_path
 
     return ret
 

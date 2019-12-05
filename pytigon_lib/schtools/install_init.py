@@ -65,7 +65,6 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     test1 = 0 if os.path.exists(_prj_path) else 1
     test2 = 0 if os.path.exists(_data_path) else 1
     test3 = 0 if os.path.exists(_static_app_path) else 1
-
     # if not test1:
     #    if upgrade_test(os.path.join(os.path.join(_root_path, "install"), "prj.zip"),_prj_path):
     #        test1 = 2
