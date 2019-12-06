@@ -23,13 +23,13 @@ def get_main_paths():
     ret["TEMP_PATH"] = tempfile.gettempdir()
 
     try:
-        import pytigon
+        import pytigon.schserw as pytigon_schserw
     except:
-        pytigon = None
+        pytigon_schserw = None
 
     pytigon_path = None
-    if pytigon:
-        serw_path = os.path.dirname(os.path.abspath(pytigon.__file__))
+    if pytigon_schserw:
+        serw_path = os.path.dirname(os.path.abspath(pytigon_schserw.__file__))
         pytigon_path = os.path.abspath(os.path.join(serw_path, ".."))
     else:
         serw_path = None
@@ -53,7 +53,7 @@ def get_main_paths():
 
     if platform_name() == "Android":
         platform_type = 'android'
-    elif not pytigon:
+    elif not pytigon_schserw:
         platform_type = 'pytigon-lib'
     elif '/var/www' in root_path:
         platform_type = 'webserwer'
