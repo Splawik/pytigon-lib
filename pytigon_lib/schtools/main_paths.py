@@ -88,10 +88,10 @@ def get_main_paths():
             ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
 
         elif platform_type == "webserwer":
-            ret["DATA_PATH"] = data_path = "/home/www-data/.pytigon"
+            ret["DATA_PATH"] = data_path = os.path.join(home_path, ".pytigon")
             ret["LOG_PATH"] = "/var/log"
-            ret["PRJ_PATH"] = os.path.join(data_path, "prj")
-            ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
+            ret["PRJ_PATH"] = os.path.join(root_path, "prj")
+            ret["PRJ_PATH_ALT"] = os.path.join(pytigon_path, "prj")
             ret['STATIC_PATH_APP'] = os.path.join(root_path, "static", "app")
         else:
             ret["DATA_PATH"] = data_path = os.path.join(home_path, ".pytigon")
