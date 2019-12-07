@@ -45,6 +45,7 @@ def get_main_paths():
 
     ret['SERW_PATH'] = serw_path
     ret['ROOT_PATH'] = root_path
+    ret['PYTIGON_PATH'] = pytigon_path
 
     if 'START_PATH' in environ:
         cwd = environ['START_PATH']
