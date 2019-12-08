@@ -265,7 +265,7 @@ class HttpResponse():
                 self.content = b""
                 return
 
-        if not post_request and not '?' in self.url and type(self.content)==bytes and ( b'Cache-control' in self.content or '/schplugins' in self.url ):
+        if not post_request and not '?' in self.url and type(self.content)==bytes and ( b'Cache-control' in self.content or '/plugins' in self.url ):
             http_client.http_cache[self.url]=(self.ret_content_type, self.content)
 
         self.new_url = self.response.url
@@ -364,7 +364,7 @@ class HttpClient:
 
         self.content = ""
         if address_str[0]=='^':
-            address = 'http://127.0.0.2/schplugins/'+address_str[1:]
+            address = 'http://127.0.0.2/plugins/'+address_str[1:]
         else:
             address = address_str
 

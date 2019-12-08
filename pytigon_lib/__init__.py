@@ -60,10 +60,13 @@ def init_paths():
         sys.path.append(cfg["ROOT_PATH"])
 
     p1 = os.path.join(cfg["ROOT_PATH"], "ext_lib")
-    p2 = os.path.join(cfg["ROOT_PATH"], "schappdata", "schplugins")
+    p2 = os.path.join(cfg["ROOT_PATH"], "appdata", "plugins")
+    p3 = os.path.join(cfg["DATA_PATH"], "plugins")
 
     if not p1 in sys.path:
         sys.path.append(p1)
     if not p2 in sys.path:
         sys.path.append(p2)
+    if not p3 in sys.path:
+        sys.path.append(p3)
 
