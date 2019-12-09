@@ -19,6 +19,7 @@
 
 import sys
 import os
+from os import environ
 from pytigon_lib.schtools.main_paths import get_main_paths
 
 def init_paths():
@@ -70,3 +71,4 @@ def init_paths():
     if not p3 in sys.path:
         sys.path.append(p3)
 
+    environ['LD_LIBRARY_PATH'] = os.path.join(cfg['DATA_PATH'], "ext_prg", "tcc")

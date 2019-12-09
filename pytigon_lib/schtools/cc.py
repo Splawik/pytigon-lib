@@ -93,11 +93,19 @@ def install_tcc(path):
 
 def compile(base_path, input_file_name, output_file_name=None, pyd=True):
     tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
+    if 'LD_LIBRARY_PATH' in os.environ:
+        ld_path = os.environ['LD_LIBRARY_PATH']
+        if not 'ext_prg/tcc' in ld_path:
+            os.environ['LD_LIBRARY_PATH'] = ld_path + ";" + tcc_dir
+    
     h_dir = os.path.join(tcc_dir, "include", "python")
     if not os.path.exists(h_dir):
         install_tcc(tcc_dir)
     include1 = os.path.join(tcc_dir, "include")
-    include2 = os.path.join(include1, "python")
+    #include2 = os.path.join(include1, "python")
+    include3 = '/usr/include'
+    include4 = '/usr/include/python3.7'
+    includes = [include1, include3, include4]
     tmp = os.getcwd()
     os.chdir(tcc_dir)
     if output_file_name:
@@ -113,9 +121,11 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
             ofn = input_file_name.replace('.c', '')+".so"
             compiler = "./tcc"
 
-    cmd = [compiler, input_file_name, '-o', ofn, '-shared']
-    for include in (include1, include2):
+    cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-nostdinc", "-nostdlib", "-L"+tcc_dir]
+    for include in includes:
         cmd.append('-I' + include + '')
+
+    print(cmd)
 
     (ret_code, output, err) = run(cmd)
     os.chdir(tmp)
