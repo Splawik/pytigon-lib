@@ -138,9 +138,9 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
             compiler = "./tcc"
 
     if platform.system() == 'Windows':
-        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-L" + tcc_dir, "-ltcc", "-lpython37"]
+        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-L" + tcc_dir, "-B"+tcc_dir , "-ltcc", "-lpython37"]
     else:
-        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-nostdinc", "-nostdlib", "-L"+tcc_dir]
+        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-nostdinc", "-L"+tcc_dir, "-B"+tcc_dir ]
     for include in includes:
         cmd.append('-I' + include + '')
 

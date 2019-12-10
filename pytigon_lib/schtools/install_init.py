@@ -24,8 +24,7 @@ import zipfile
 from distutils.dir_util import copy_tree
 import configparser
 from pytigon_lib.schtools.process import py_manage
-from pytigon_lib.schtools.install import post_install
-
+from pytigon_lib.schtools.cc import make
 
 def _mkdir(path, ext=None):
     if ext:
@@ -168,7 +167,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if not applib in sys.path:
             sys.path.append(applib)
         if test1 or test2 or test3:
-            ret = post_install(_base_compiler_path, os.path.join(_prj_path, prj))
+            ret = make(_data_path, os.path.join(_prj_path, prj))
             if ret:
                 for pos in ret:
                     print(pos)
