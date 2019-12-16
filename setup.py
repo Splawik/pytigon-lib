@@ -16,7 +16,7 @@ setup(
         "fs",
         "pyexcel_odsr",
         "pendulum",
-        "Django<2.2.5",
+        "Django<3",
         "cffi",
         "Pillow",
         "lxml",

@@ -18,8 +18,6 @@
 #version: "0.1a"
 
 
-#.\tcc.exe C:/Users/slawo/prj/pytigon/pytigon/prj/schdevtools/applib/schbuilderlib/test1.c -o C:/Users/slawo/prj/pytigon/pytigon/prj/schdevtools/applib/schbuilderlib/test1.pyd -shared -LC:\Users\slawo\.pytigon\ext_prg\tcc -IC:\Users\slawo\.pytigon\ext_prg\tcc\include -IC:\Users\slawo\.pytigon\ext_prg\tcc\include\python -LC:\Users\slawo\.pytigon\ext_prg\tcc\lib  -ltcc -lpython37
-
 import os
 import sys
 import platform
@@ -34,13 +32,12 @@ from pytigon_lib.schtools.process import run, py_run
 from pytigon_lib.schtools.main_paths import get_main_paths
 
 def check_compiler(base_path):
-    tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
     if platform.system() == 'Windows':
+        tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
         compiler = os.path.join(tcc_dir, "tcc.exe")
+        return os.path.exists(compiler)
     else:
-        compiler = os.path.join(tcc_dir, "tcc")
-    return os.path.exists(compiler)
-
+        return True
 
 def extract_tar_folder(tf, folder, extract_to):
     os.makedirs(extract_to)
@@ -103,27 +100,23 @@ def install_tcc(path):
         copyfile(src, dst)
 
 def compile(base_path, input_file_name, output_file_name=None, pyd=True):
-    tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
-    if 'LD_LIBRARY_PATH' in os.environ:
-        ld_path = os.environ['LD_LIBRARY_PATH']
-        if not 'ext_prg/tcc' in ld_path:
-            os.environ['LD_LIBRARY_PATH'] = ld_path + ";" + tcc_dir
-    
-    h_dir = os.path.join(tcc_dir, "include", "python")
-    if not os.path.exists(h_dir):
-        install_tcc(tcc_dir)
     if platform.system() == 'Windows':
+        tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
+        h_dir = os.path.join(tcc_dir, "include", "python")
+        if not os.path.exists(h_dir):
+            install_tcc(tcc_dir)
         include1 = os.path.join(tcc_dir, "include")
         include2 = os.path.join(tcc_dir, "include", "python")
         include3 = os.path.join(tcc_dir, "include", "winapi")
         includes = [include1, include2, include3]
+        tmp = os.getcwd()
+        os.chdir(tcc_dir)
     else:
-        include1 = os.path.join(tcc_dir, "include")
-        include2 = '/usr/include'
-        include3 = '/usr/include/python3.7'
-        includes = [include1, include2, include3]
-    tmp = os.getcwd()
-    os.chdir(tcc_dir)
+        #include1 = os.path.join(tcc_dir, "include")
+        include1 = '/usr/include'
+        include2 = '/usr/include/python3.7'
+        includes = [include1, include2]
+
     if output_file_name:
         ofn = output_file_name
     else:
@@ -135,19 +128,23 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
             compiler = ".\\tcc.exe"
         else:
             ofn = input_file_name.replace('.c', '')+".so"
-            compiler = "./tcc"
+            compiler = "gcc"
 
     if platform.system() == 'Windows':
         cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-L" + tcc_dir, "-B"+tcc_dir , "-ltcc", "-lpython37"]
     else:
-        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-nostdinc", "-L"+tcc_dir, "-B"+tcc_dir ]
+        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-fPIC"]
+
     for include in includes:
         cmd.append('-I' + include + '')
 
     print(cmd)
 
     (ret_code, output, err) = run(cmd)
-    os.chdir(tmp)
+
+    if platform.system() == 'Windows':
+        os.chdir(tmp)
+
     return (ret_code, output, err)
 
 
