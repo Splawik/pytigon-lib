@@ -154,7 +154,7 @@ class InterfaceManager(BoxLayout):
             print("python::pytigon::request_permissions", ret)
 
         init("_schall", schserw_settings.ROOT_PATH, schserw_settings.DATA_PATH, schserw_settings.PRJ_PATH,
-             schserw_settings.STATIC_APP_ROOT, [schserw_settings.MEDIA_ROOT, schserw_settings.UPLOAD_PATH])
+             schserw_settings.STATIC_ROOT, [schserw_settings.MEDIA_ROOT, schserw_settings.UPLOAD_PATH])
 
         base_apps_path = os.path.join(os.path.join(STORAGE, "pytigon"), "prj")
         l = [pos for pos in os.listdir(base_apps_path) if not pos.startswith('_')]

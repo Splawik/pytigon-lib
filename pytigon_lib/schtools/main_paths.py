@@ -61,6 +61,8 @@ def get_main_paths():
     elif os.path.exists(os.path.join(cwd, "prj")):
         platform_type = 'dev'
 
+    ret['PLATFORM_TYPE'] = platform_type
+
     if "DATA_PATH" in environ:
         ret['DATA_PATH'] = data_path = environ["DATA_PATH"]
         if platform_type == 'webserwer':
