@@ -434,9 +434,9 @@ class TagPreprocesor():
         self.tag_preprocess_map = {}
         self.tag_wildcards_preprocess_map = []
 
-    def register(self, tag, fun):
+    def register(self, tag, fun, not_tag=""):
         if '?' in tag or '*' in tag:
-            self.tag_wildcards_preprocess_map.append([tag.lower(), fun])
+            self.tag_wildcards_preprocess_map.append([tag.lower(), fun, not_tag.lower()])
         else:
             self.tag_preprocess_map[tag.lower()] = fun
 
@@ -446,16 +446,20 @@ class TagPreprocesor():
         else:
             for pos in self.tag_wildcards_preprocess_map:
                 if fnmatch.fnmatch(tag.lower(), pos[0]):
-                    return pos[1]
+                    if pos[2]:
+                        if not fnmatch.fnmatch(tag.lower(), pos[2]):
+                            return pos[1]
+                    else:
+                        return pos[1]
         return None
 
 
 #tag_preprocess_map = {}
 TAG_PREPROCESS_MAP = TagPreprocesor()
 
-def register_tag_preprocess_map(tag, fun):
+def register_tag_preprocess_map(tag, fun, not_tag=""):
     global TAG_PREPROCESS_MAP
-    TAG_PREPROCESS_MAP.register(tag, fun)
+    TAG_PREPROCESS_MAP.register(tag, fun, not_tag)
     #tag_preprocess_map[tag] = fun
 
 

@@ -392,17 +392,14 @@ class HttpClient:
 
         if adr.startswith('http://127.0.0') and ('/static/' in adr or '/site_media' in adr) and not '?' in adr:
             if '/static/' in adr:
-                if settings.STATICFILES_DIRS:
-                    s = settings.STATICFILES_DIRS[0]
-                else:
-                    s = settings.STATIC_ROOT
-                path = s+adr.replace('http://127.0.0.2', '').replace('/static','')
+                path = adr.replace('http://127.0.0.2', '')
             else:
                 path = settings.MEDIA_ROOT+adr.replace('http://127.0.0.2', '').replace('/site_media','')
 
             try:
                 return HttpResponse(adr, content=default_storage.open(path).read(), ret_content_type="text/html")
             except:
+                print("Static file load error: ", path)
                 return HttpResponse(adr, 400, content=b"", ret_content_type="text/html")
 
         if adr.startswith('file://'):
