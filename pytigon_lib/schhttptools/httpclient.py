@@ -26,7 +26,7 @@ import os
 
 from django.conf import settings
 from django.core.files.storage import default_storage
-import requests
+import httpx
 import asyncio
 from threading import Thread
 
@@ -136,7 +136,7 @@ def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, r
         ret.append(ret2)
 
 def requests_request(method, url, argv, ret=[]):
-    ret2 = requests.request(method, url, **argv)
+    ret2 = httpx.request(method, url, **argv)
     ret.append(ret2)
 
 def request(method, url, direct_access, argv, app=None):
@@ -268,7 +268,10 @@ class HttpResponse():
         if not post_request and not '?' in self.url and type(self.content)==bytes and ( b'Cache-control' in self.content or '/plugins' in self.url ):
             http_client.http_cache[self.url]=(self.ret_content_type, self.content)
 
-        self.new_url = self.response.url
+        if type(self.response.url) == str:
+            self.new_url = self.response.url
+        else:
+            self.new_url = self.response.url.path
 
 
     def ptr(self):

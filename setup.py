@@ -10,7 +10,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "fpdf",
-        "requests",
+        "httpx",
         "openpyxl",
         "httpie",
         "fs",
