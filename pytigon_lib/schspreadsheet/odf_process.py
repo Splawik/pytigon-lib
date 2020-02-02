@@ -31,7 +31,7 @@ import base64
 from pytigon_lib.schfs.vfstools import delete_from_zip
 
 
-def _enumerate_childs(node, tab=None):
+def _enumerate_children(node, tab=None):
     if tab == None:
         rettab = []
     else:
@@ -39,7 +39,7 @@ def _enumerate_childs(node, tab=None):
     for child in node.childNodes:
         rettab.append(child)
         if child.hasChildNodes():
-            _enumerate_childs(child, rettab)
+            _enumerate_children(child, rettab)
     return rettab
 
 
@@ -90,7 +90,7 @@ class OdfDocTransform:
         for element in elementy:
             if element.parentNode.nodeName == 'office:annotation':
                 data = ""
-                for child in _enumerate_childs(element):
+                for child in _enumerate_children(element):
                     if hasattr(child, 'data'):
                         data+=child.data
 
@@ -128,7 +128,7 @@ class OdfDocTransform:
                     element.setAttribute('table:number-columns-repeated', '1000')
 
             if element.getAttribute('office:value-type') == 'string':
-                for child in _enumerate_childs(element):  # .childNodes:
+                for child in _enumerate_children(element):  # .childNodes:
                     if child and child.firstChild and hasattr(child.firstChild, 'data'):
                         if child.firstChild.data and len(child.firstChild.data) > 0 and \
                                 (child.firstChild.data[0] == '*' or child.firstChild.data[0] == ':' or

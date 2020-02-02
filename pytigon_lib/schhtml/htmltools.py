@@ -86,10 +86,14 @@ class HtmlProxyParser(Parser):
 
 
 class Td:
-    def __init__(self, data, attr, childs=None):
+    def __init__(self, data, attrs={}, children=None):
         self.data = data
-        self.attr = attr
-        self.childs = childs
+        self.attrs = attrs
+        self.children = children
+
+    @property
+    def attr(self):
+        return ""
 
     def __repr__(self):
         return "Td:"+self.data

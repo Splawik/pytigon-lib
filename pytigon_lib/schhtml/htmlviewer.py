@@ -360,7 +360,7 @@ def tdata_from_html(html, http):
     p.close()
     tab = None
     for pos in ctrls:
-        if pos[1] == 'ctrltable':
+        if pos[1] == 'ctrl-table':
             tab = pos[0]
             break
     if tab and len(tab) > 0:

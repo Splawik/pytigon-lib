@@ -40,7 +40,7 @@ class MakeTreeFromObject(object):
         self.callback = callback
         self.field_name = field_name
 
-    def _tree_from_object_childs(self, parent):
+    def _tree_from_object_children(self, parent):
         ret = ''
         l = self.model.objects.filter(parent=parent)
         for o in l:
@@ -56,7 +56,7 @@ class MakeTreeFromObject(object):
                     ret += "<span class='file'><a href='" + link + "'>" + name\
                          + '</a></span>'
                     ret += '</li>'
-                ret += self._tree_from_object_childs(o)
+                ret += self._tree_from_object_children(o)
                 ret += '</ul>'
                 ret += '</li>'
         return ret.replace('<ul></ul>', '')
@@ -77,7 +77,7 @@ class MakeTreeFromObject(object):
                     ret += "<span class='file'><a href='" + link + "'>" + name\
                          + '</a></span>'
                     ret += '</li>'
-                ret += self._tree_from_object_childs(o)
+                ret += self._tree_from_object_children(o)
                 ret += '</ul>'
                 ret += '</li>'
         return ret

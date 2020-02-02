@@ -140,7 +140,7 @@ class ParBase(BaseHtmlAtomParser):
                 attr = self.attrs['valign']
             else:
                 if 'vertical-align' in self.attrs:
-                    atrr = self.attrs['vertical-align']
+                    attr = self.attrs['vertical-align']
                 else:
                     attr = ''
             if 'top' in attr:
@@ -208,7 +208,7 @@ class ParArray(ParBase):
 
     def get_height(self):
         dy = 0
-        for child in self.rendered_childs:
+        for child in self.rendered_children:
             child.set_width(self.width)
             dyy = child.get_height()
             child.set_height(dyy)
@@ -216,12 +216,12 @@ class ParArray(ParBase):
         return dy
 
     def render(self, dc_parm):
-        if len(self.rendered_childs)>0:
-            child = self.rendered_childs[0]
+        if len(self.rendered_children)>0:
+            child = self.rendered_children[0]
             dc = dc_parm.subdc(child.level*20, 0, dc_parm.dx-child.level*20, child.height)
             dyy, cont2 = child.render(dc)
-            self.rendered_childs = self.rendered_childs[1:]
-            if len(self.rendered_childs)>0:
+            self.rendered_children = self.rendered_children[1:]
+            if len(self.rendered_children)>0:
                 cont = True
             else:
                 cont = False
@@ -251,7 +251,7 @@ class Ul(ParArray):
 
     def __init__(self, parent, parser, tag, attrs):
         ParArray.__init__(self, parent, parser, tag, attrs)
-        self.childs=[]
+        self.children=[]
         self.level = 1
         p = parent
         while p:
@@ -260,12 +260,12 @@ class Ul(ParArray):
             p = p.parent
 
     def child_ready_to_render(self, child):
-        if not child in self.childs:
+        if not child in self.children:
             if child.lp < 0:
                 child.lp = self.lp
                 self.lp += 1
-            self.rendered_childs.append(child)
-            self.childs.append(child)
+            self.rendered_children.append(child)
+            self.children.append(child)
             child.make_atom_list()
             child.atom_list.pre = True
             child.atom_list.append_text(self._get_sym(child), self.get_style_id())
@@ -275,10 +275,10 @@ class Ul(ParArray):
 
             if self.parent.tag=='li' and type(self.parent.parent)==Ul:
                 self.parent.parent.child_ready_to_render(self.parent)
-                for child in self.rendered_childs:
-                    self.parent.parent.rendered_childs.append(child)
-                    self.parent.parent.childs.append(child)
-                self.rendered_childs = []
+                for child in self.rendered_children:
+                    self.parent.parent.rendered_children.append(child)
+                    self.parent.parent.children.append(child)
+                self.rendered_children = []
             else:
                 self.parent.child_ready_to_render(self)
 

@@ -77,7 +77,7 @@ class BaseHtmlElemParser(object):
             if parent_height >= 0:
                 self.height = self._norm_sizes([attrs['height']],
                         parent_height)[0]
-        self.rendered_childs = []
+        self.rendered_children = []
 
         self.dc_info = None
         self.last_rendered_dc = None
@@ -241,13 +241,13 @@ class BaseHtmlElemParser(object):
         pass
 
     def child_ready_to_render(self, child):
-        self.rendered_childs.append(child)
+        self.rendered_children.append(child)
         if not ('page-break-inside' in child.attrs and child.attrs['page-break-inside'] == 'avoid'):
             self.parent.child_ready_to_render(self)
 
     def render(self, dc):
-        if len(self.rendered_childs):
-            for child in self.rendered_childs:
+        if len(self.rendered_children):
+            for child in self.rendered_children:
                 ret = self.rendered_child.render(dc.subdc(0, 0, self.child_dx,
                         self.child_dy))
                 self.dy += self.child_dy

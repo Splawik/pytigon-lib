@@ -7,26 +7,13 @@ from pytigon.pytigon_request import request as pytigon_request, init
 import sys
 import ctypes
 
-LOADER2 = """   
-    <style>
-        .centered {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-        }
-    </style>
-    <img src="http://127.0.0.2/static/images/ajax-loader.gif" class="centered"></img>
-"""
-
-
 LOADER = """   
     <style>
         .centered {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
     <p class="centered">Loading ...</img>
@@ -220,7 +207,6 @@ class WebRequestClient:
 
 
 def create_browser(url=None, title="Pytigon", parent_win = None, x=200, y=200, width=1024, height=768):
-    init('schdevtools', 'auto', 'anawa')
 
     info = cef.WindowInfo()
     if parent_win:
@@ -331,7 +317,8 @@ def initialize():
 def shutdown():
     cef.Shutdown()
 
-def run(url, title="Pytigon", parent_win = None, x=200, y=200, width=1024, height=768):
+def run(url, app, title="Pytigon", parent_win = None, x=200, y=200, width=1024, height=768):
     initialize()
+    init(app, 'auto', 'anawa')
     asyncio.run(run_async(url, title, parent_win, x, y, width, height))
     shutdown()

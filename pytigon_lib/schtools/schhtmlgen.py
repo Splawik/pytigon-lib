@@ -26,7 +26,7 @@ class Html(object):
         self.name = name
         self.attr = attr
         self.value = None
-        self.childs = []
+        self.children = []
 
     def setvalue(self, value):
         self.value = value
@@ -39,7 +39,7 @@ class Html(object):
             helem = Html(elem, attr)
         else:
             helem = elem
-        self.childs.append(helem)
+        self.children.append(helem)
         return helem
 
     def dump(self):
@@ -47,7 +47,7 @@ class Html(object):
         if self.attr:
             ret += ' ' + self.attr.replace("'", '"')
         ret = ret + '>'
-        for elem in self.childs:
+        for elem in self.children:
             ret += elem.dump()
         if self.value:
             if isinstance(self.value, collections.Callable):
