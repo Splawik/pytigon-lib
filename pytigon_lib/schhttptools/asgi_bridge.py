@@ -80,10 +80,15 @@ async def get_or_post(application, path, headers, params={}, post=False):
         scope, content = get_scope_and_content_http_post(path, headers, params)
     else:
         scope, content = get_scope_and_content_http_get(path, headers)
+
     async def send(message):
         nonlocal ret
         for key, value in message.items():
-            ret[key] = value
+            if key in ret:
+                ret[key] += value
+            else:
+                ret[key] = value
+
 
     async def receive():
         nonlocal content
