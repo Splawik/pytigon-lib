@@ -324,6 +324,17 @@ class ConwertToHtml:
     def process(self):
         if self.file_name:
             file = codecs.open(self.file_name, 'r', encoding='utf-8')
+            x = file.readline()
+            file.seek(0, 0)
+            if x.startswith('@@@'):
+                fname = x[3:].strip()
+                fpath = os.path.join(os.path.dirname(self.file_name),fname)+".ihtml"
+                file2 = codecs.open(fpath, 'r', encoding='utf-8')
+                content2 = file.read()[len(x):]
+                content = file2.read().replace('@@@', content2)
+                file2.close()
+                file.close()
+                file = io.StringIO(content)
         else:
             file = io.StringIO(self.input_str)
         old_pos = 0
@@ -336,10 +347,11 @@ class ConwertToHtml:
             line = _line.replace('\n', '').replace('\r', '').replace('\t', '        ')
             if line.replace(' ', '') == '%else' or line.replace(' ', '') == '%else:':
                 line = ' ' + line
-            if '!!!' in line:
+            if '^^^' in line:
                 self.no_conwert = True
                 file.close()
                 return
+
             if test:
                 if test > 1 and len(line.strip()) > 0 and self._space_count(line) <= indent_pos:
                     cont = True
@@ -405,6 +417,7 @@ class ConwertToHtml:
                         test = 0
                 else:
                     buf.write(line.replace('\n', '').replace('\r', '').replace('\t', '        ').rstrip() + '\n')
+                continue
             if cont or not test:
                 cont = False
                 if '>>>' in line:
@@ -477,10 +490,10 @@ class ConwertToHtml:
         if self.no_conwert:
             if self.file_name:
                 file = codecs.open(self.file_name, 'r', encoding='utf-8')
-                output = file.read().replace('!!!', '')
+                output = file.read().replace('^^^', '')
                 file.close()
             else:
-                output = self.input_str.replace('!!!', '')
+                output = self.input_str.replace('^^^', '')
             return output
         else:
             output = ''
