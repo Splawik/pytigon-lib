@@ -310,7 +310,7 @@ class ManyToManyFieldWidthIcon(models.ManyToManyField):
 
     def formfield(self, **kwargs):
         if kwargs:
-            kwargs['form_class']= ModelMultipleChoiceFieldWidthIcon,
+            kwargs['form_class']= ModelMultipleChoiceFieldWidthIcon
         else:
             kwargs = { 'form_class': ModelMultipleChoiceFieldWidthIcon }
         return super().formfield(**kwargs)

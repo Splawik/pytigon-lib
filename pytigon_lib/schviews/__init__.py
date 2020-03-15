@@ -619,14 +619,17 @@ class GenericRows(object):
                 if 'init' in kwargs:
                     kwargs['init'](self)
 
-                form_class = self.get_form_class()
-
-                if self.object and hasattr(self.object, 'get_form'):
-                    form = self.object.get_form(self, request, form_class, False)
-                    if not form:
-                        form = self.get_form(form_class)
+                if self.object and hasattr(self.object, 'get_form_class'):
+                    self.form_class = self.object.get_form_class(self, request, False)
                 else:
-                    form = self.get_form(form_class)
+                    self.form_class = self.get_form_class()
+
+                #if self.object and hasattr(self.object, 'get_form'):
+                #    form = self.object.get_form(self, request, self.form_class, False)
+                #    if not form:
+                #        form = self.get_form(form_class)
+                #else:
+                form = self.get_form(self.form_class)
 
                 if form:
                     for field in form.fields:
@@ -642,14 +645,17 @@ class GenericRows(object):
                 if 'init' in kwargs:
                     kwargs['init'](self)
 
-                form_class = self.get_form_class()
-
-                if self.object and hasattr(self.object, 'get_form'):
-                    form = self.object.get_form(self, request, form_class, False)
-                    if not form:
-                        form = self.get_form(form_class)
+                if self.object and hasattr(self.object, 'get_form_class'):
+                    self.form_class = self.object.get_form_class(self, request, False)
                 else:
-                    form = self.get_form(form_class)
+                    self.form_class = self.get_form_class()
+
+                #if self.object and hasattr(self.object, 'get_form'):
+                #    form = self.object.get_form(self, request, form_class, False)
+                #    if not form:
+                #        form = self.get_form(form_class)
+                #else:
+                form = self.get_form(self.form_class)
 
                 if self.model and hasattr(self.model, 'is_form_valid'):
                     def vfun():
@@ -746,12 +752,18 @@ class GenericRows(object):
                                     pass
                 else:
                     self.init_form = None
-                form_class = self.get_form_class()
 
-                if self.object and hasattr(self.object, 'get_form'):
-                    form = self.object.get_form(self, request, form_class, True)
+                if self.object and hasattr(self.object, 'get_form_class'):
+                    self.form_class = self.object.get_form_class(self, request, True)
                 else:
-                    form = self.get_form(form_class)
+                    self.form_class = self.get_form_class()
+                #self.fields = None
+                #form_class = self.get_form_class()
+
+                #if self.object and hasattr(self.object, 'get_form'):
+                #    form = self.object.get_form(self, request, form_class, True)
+                #else:
+                form = self.get_form(self.form_class)
                 return form
 
             def get(self, request, *args, **kwargs):
