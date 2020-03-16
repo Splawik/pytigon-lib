@@ -386,6 +386,7 @@ class ConwertToHtml:
                             #codejs = py_to_js(v, None)
                             #x = self._pre_process_line(
                             #    buf0.replace('pscript', 'script').replace(' language=python', '') + codejs)
+                            test = 0
                         elif test == 4:
                             v = buf.getvalue()
                             codejs = py_to_js(v, None)
@@ -417,7 +418,7 @@ class ConwertToHtml:
                         test = 0
                 else:
                     buf.write(line.replace('\n', '').replace('\r', '').replace('\t', '        ').rstrip() + '\n')
-                continue
+                    continue
             if cont or not test:
                 cont = False
                 if '>>>' in line:
