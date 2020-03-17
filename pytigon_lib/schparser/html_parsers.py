@@ -20,7 +20,7 @@
 
 from pytigon_lib.schhtml.parser import Parser, content_tostring, Elem, Script, tostring
 from pytigon_lib.schhtml.htmltools import Td
-
+from pyquery import PyQuery as pq
 
 class SimpleTabParserBase(Parser):
     """Parses html for tables. Found tables save to self.tables variable"""
@@ -88,13 +88,6 @@ class TreeParser(Parser):
 
 def _remove(parent, elem):
     parent.remove(elem)
-    #try:
-    #    elem.getparent().remove(elem)
-    #except:
-    #    parent = elem.find("..")
-    #    parent.remove(elem)
-    #    #tree.remove(elem)
-    #    #elem.attrib['__parent'].remove(elem)
 
 class ShtmlParser(Parser):
     """Parser for SchPage window. Divides the page into parts: header, footer, panel, body and script. Reads variables
@@ -117,77 +110,26 @@ class ShtmlParser(Parser):
             return self._data[id].text
         return ""
 
-
-    def out_reparent(self, selectors):
-        ret = []
-
-        for selector in selectors:
-            tmp = self._tree.find(selector)
-            tmp2 = None
-            if tmp != None:
-                _remove(self._tree, tmp)
-                tmp2 = tmp.find(".//script[@language='python']")
-                if tmp2 != None:
-                    _remove(self._tree, tmp2)
-                for elem in tmp.iterfind(".//script"):
-                    _remove(self._tree, elem)
-            ret.append(tmp)
-            ret.append(tmp2)
-
-        tmp2 = self._tree.find(".//script[@language='python']")
-        if tmp2 != None:
-            _remove(self._tree, tmp2)
-        tmp = self._tree.find(".//body")
-        if tmp == None:
-            tmp = self._tree
-        for elem in tmp.iterfind(".//script"):
-            _remove(self._tree, elem)
-        ret.insert(0, tmp2)
-        ret.insert(0, tmp)
-        return ret
-
-
     def _reparent(self, selectors):
         ret = []
+        d = pq(self._tree)
 
         for selector in selectors:
-            tmp = None
-            tmp2 = None
-            _tmp = self._tree.find(selector+"/..")
-            if _tmp != None:
-                tmp = _tmp.find(selector.replace('.//', './'))
-            if tmp != None:
-                _remove(self._tmp, tmp)
-                _tmp2 = tmp.find(".//script[@language='python']/..")
-                if _tmp2 != None:
-                    tmp2 = _tmp2.find("./script[@language='python']")
-                if tmp2 != None:
-                    _remove(_tmp2, tmp2)
-                for _elem in tmp.iterfind(".//script/.."):
-                    elem = _elem.find("./script")
-                    if elem != None:
-                        _remove(_elem, elem)
-            ret.append(tmp)
-            ret.append(tmp2)
-
-        _tmp2 = self._tree.find(".//script[@language='python']/..")
-        if _tmp2 != None:
-            tmp2 = _tmp2.find("./script[@language='python']")
-        else:
-            tmp2 = None
-        if tmp2 != None:
-            _remove(_tmp2, tmp2)
-        tmp = self._tree.find(".//body")
-        if tmp == None:
-            tmp = self._tree
-        for _elem in tmp.iterfind(".//script/.."):
-            elem = _elem.find("./script")
-            if elem != None:
-                _remove(_elem, elem)
-        ret.insert(0, tmp2)
-        ret.insert(0, tmp)
+            tmp = d(selector) if selector else d
+            scripts = tmp("script")
+            if scripts:
+                tmp.remove("script")
+            if tmp:
+                ret.append(tmp[0])
+            else:
+                ret.append(None)
+            if scripts:
+                ret.append(scripts[0])
+            else:
+                ret.append(None)
+            if selector and tmp:
+                d.remove(selector)
         return ret
-
 
 
     def process(self, html_txt, address=None):
@@ -203,7 +145,7 @@ class ShtmlParser(Parser):
                         self.var[name] = elem.attrib['content']
                 else:
                     self.var[name] = None
-        self._data = self._reparent((".//frame[@id='header']",".//frame[@id='footer']",".//frame[@id='panel']",))
+        self._data = self._reparent(("", "#header", "#footer", "#panel"))
 
     @property
     def title(self):
