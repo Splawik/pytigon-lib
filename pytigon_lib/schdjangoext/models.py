@@ -124,3 +124,13 @@ def standard_table_action(cls, list_view, request, data, operations):
                     obj2.save()
             return {'success': 1}
     return None
+
+
+def form_with_widgets(obj, widgets_dict):
+    class _Form(forms.ModelForm):
+        class Meta:
+            nonlocal obj, widgets_dict
+            model = obj.__class__
+            fields = '__all__'
+            widgets = widgets_dict
+    return _Form
