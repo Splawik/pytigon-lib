@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pytigon-lib",
-    version="0.98",
+    version="0.99",
     description="Pytigon library",
     author="Sławomir Chołaj",
     author_email="slawomir.cholaj@gmail.com",
@@ -16,7 +16,7 @@ setup(
         "fs",
         "pyexcel_odsr",
         "pendulum",
-        "Django<3",
+        "Django",
         "cffi",
         "Pillow",
         "lxml",
