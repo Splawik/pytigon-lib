@@ -1,5 +1,10 @@
 from setuptools import setup, find_packages
 
+with open("requirements.txt") as f:
+    tmp = f.read().strip().split("\n")
+    install_requires = [pos for pos in tmp if "://" not in pos]
+    dependency_links = [pos for pos in tmp if "://" in pos]
+
 setup(
     name="pytigon-lib",
     version="0.99",
@@ -8,19 +13,8 @@ setup(
     author_email="slawomir.cholaj@gmail.com",
     license="LGPLv3",
     packages=find_packages(),
-    install_requires=[
-        "fpdf",
-        "httpx",
-        "openpyxl",
-        "httpie",
-        "fs",
-        "pyexcel_odsr",
-        "pendulum",
-        "Django",
-        "cffi",
-        "Pillow",
-        "lxml",
-    ],
+    install_requires=install_requires,
+    dependency_links=dependency_links,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Web Environment",

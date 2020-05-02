@@ -1,0 +1,11 @@
+fpdf
+httpx
+openpyxl
+httpie
+fs
+pyexcel_odsr
+pendulum
+Django
+cffi
+Pillow
+lxml
