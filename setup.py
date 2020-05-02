@@ -7,7 +7,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="pytigon-lib",
-    version="0.99",
+    version="0.100",
     description="Pytigon library",
     author="Sławomir Chołaj",
     author_email="slawomir.cholaj@gmail.com",
