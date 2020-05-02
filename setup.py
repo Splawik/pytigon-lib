@@ -1,5 +1,17 @@
 from setuptools import setup, find_packages
 
+
+def package_files(directory, ext=None):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            if not ext or (ext and filename.endswith(ext)):
+                paths.append(os.path.join("..", path, filename))
+    return paths
+
+
+extra_files = ["../requirements.txt"]
+
 with open("requirements.txt") as f:
     tmp = f.read().strip().split("\n")
     install_requires = [pos for pos in tmp if "://" not in pos]
@@ -13,6 +25,7 @@ setup(
     author_email="slawomir.cholaj@gmail.com",
     license="LGPLv3",
     packages=find_packages(),
+    package_data={"": extra_files},
     install_requires=install_requires,
     dependency_links=dependency_links,
     classifiers=[
