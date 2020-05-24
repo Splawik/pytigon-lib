@@ -88,15 +88,24 @@ def save(obj, request, view_type, param=None):
 def view_editor(request, pk, app, tab, model, template_name, field_edit_name, post_save_redirect, ext='py',
             extra_context=None, target=None, parent_pk=0, field_name=None):
     if request.POST:
-        data = request.POST['data']
-        #print(type(data), data)
-        buf = data.replace('\r\n', '\n')
-        #if type(buf)==str:
-        #    buf = buf.encode('utf-8')
-        obj = model.objects.get(id=pk)
-        setattr(obj, field_edit_name, buf)
-        save(obj, request, "editor", { 'field': field_edit_name })
-        return HttpResponse('OK')
+        if target == 'editable':
+            name = request.POST['name']
+            value = request.POST['value']
+            pk = request.POST['pk']
+            obj = model.objects.get(id=pk)
+            setattr(obj, field_edit_name, value)
+            obj.save()
+            return HttpResponse('OK')
+        else:
+            data = request.POST['data']
+            #print(type(data), data)
+            buf = data.replace('\r\n', '\n')
+            #if type(buf)==str:
+            #    buf = buf.encode('utf-8')
+            obj = model.objects.get(id=pk)
+            setattr(obj, field_edit_name, buf)
+            save(obj, request, "editor", { 'field': field_edit_name })
+            return HttpResponse('OK')
     else:
         obj = model.objects.get(id=pk)
         table_name = model._meta.object_name
