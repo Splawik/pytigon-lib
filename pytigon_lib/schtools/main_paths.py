@@ -52,6 +52,7 @@ def get_main_paths():
     else:
         cwd = os.path.abspath(os.getcwd())
 
+
     if platform_name() == "Android":
         platform_type = 'android'
     elif not pytigon_schserw:
