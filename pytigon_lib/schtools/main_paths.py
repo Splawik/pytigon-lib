@@ -56,8 +56,8 @@ def get_main_paths():
         platform_type = 'android'
     elif not pytigon_schserw:
         platform_type = 'pytigon-lib'
-    elif '/var/www' in root_path:
-        platform_type = 'webserwer'
+    elif '/var/www' in cwd:
+        platform_type = 'webserver'
     elif os.path.exists(os.path.join(cwd, "prj")):
         platform_type = 'dev'
 
@@ -65,7 +65,7 @@ def get_main_paths():
 
     if "DATA_PATH" in environ:
         ret['DATA_PATH'] = data_path = environ["DATA_PATH"]
-        if platform_type == 'webserwer':
+        if platform_type == 'webserver':
             ret["LOG_PATH"] = "/var/log"
         elif platform_type == "pytiogn-lib":
             ret["LOG_PATH"] = data_path
@@ -90,7 +90,7 @@ def get_main_paths():
             ret["PRJ_PATH"] = os.path.abspath(os.path.join(data_path, "..", "pytigon", "prj"))
             ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
 
-        elif platform_type == "webserwer":
+        elif platform_type == "webserver":
             ret["DATA_PATH"] = data_path = os.path.join(home_path, ".pytigon")
             ret["LOG_PATH"] = "/var/log"
             ret["PRJ_PATH"] = os.path.join(root_path, "prj")
@@ -118,7 +118,7 @@ def get_main_paths():
             static_path = None
 
         if platform_type == "webserwer":
-            ret['STATIC_PATH'] = os.path.join(root_path, "static")
+            ret['STATIC_PATH'] = os.path.join(data_path, "static")
         else:
             ret['STATIC_PATH'] = static_path
 
