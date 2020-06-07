@@ -116,7 +116,13 @@ def get_main_paths():
             static_path = os.path.join(pytigon_path, "static")
         else:
             static_path = None
-        ret['STATIC_PATH'] = static_path
+
+        if platform_type == "webserwer":
+            ret['STATIC_PATH'] = os.path.join(root_path, "static")
+        else:
+            ret['STATIC_PATH'] = static_path
+
+        ret['STATICFILES_DIR'] = static_path
 
     return ret
 
