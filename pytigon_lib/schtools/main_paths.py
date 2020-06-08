@@ -118,7 +118,7 @@ def get_main_paths():
         else:
             static_path = None
 
-        if platform_type == "webserwer":
+        if platform_type == "webserver":
             ret['STATIC_PATH'] = os.path.join(data_path, "static")
         else:
             ret['STATIC_PATH'] = static_path
