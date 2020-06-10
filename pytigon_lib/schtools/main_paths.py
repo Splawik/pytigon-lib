@@ -15,8 +15,14 @@ from pytigon_lib.schtools.platform_info import platform_name
 #STATIC_PATH     site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static   site-packages/pytigon/static    site-packages/pytigon/static
 #STATIC_PATH_APP ~/.pytigon/static/app           ./static/app                /var/www/pytigon/static/app     STORAGE/pytigon/static/app      ~/.pytigon/static/app
 
+PRJ_NAME = None
 
-def get_main_paths():
+def get_main_paths(prj_name=None):
+    global PRJ_NAME
+
+    if prj_name:
+        PRJ_NAME = prj_name
+
     ret = {}
     platform_type="standard"
 
@@ -51,7 +57,6 @@ def get_main_paths():
         cwd = environ['START_PATH']
     else:
         cwd = os.path.abspath(os.getcwd())
-
 
     if platform_name() == "Android":
         platform_type = 'android'
@@ -119,7 +124,10 @@ def get_main_paths():
             static_path = None
 
         if platform_type == "webserver":
-            ret['STATIC_PATH'] = os.path.join(data_path, "static")
+            if prj_name:
+                ret['STATIC_PATH'] = os.path.join(data_path, "static", prj_name)
+            else:
+                ret['STATIC_PATH'] = os.path.join(data_path, "static")
         else:
             ret['STATIC_PATH'] = static_path
 
@@ -127,3 +135,6 @@ def get_main_paths():
 
     return ret
 
+def get_prj_name():
+    global PRJ_NAME
+    return PRJ_NAME
