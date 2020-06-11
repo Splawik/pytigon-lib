@@ -124,8 +124,8 @@ def get_main_paths(prj_name=None):
             static_path = None
 
         if platform_type == "webserver":
-            if prj_name:
-                ret['STATIC_PATH'] = os.path.join(data_path, "static", prj_name)
+            if PRJ_NAME:
+                ret['STATIC_PATH'] = os.path.join(data_path, "static", PRJ_NAME)
             else:
                 ret['STATIC_PATH'] = os.path.join(data_path, "static")
         else:
