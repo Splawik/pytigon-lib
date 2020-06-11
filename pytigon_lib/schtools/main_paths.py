@@ -61,9 +61,10 @@ def get_main_paths(prj_name=None):
     if platform_name() == "Android":
         platform_type = 'android'
     elif not pytigon_schserw:
-        platform_type = 'pytigon-lib'
+        platform_type = 'pytigon-li b'
     elif '/var/www' in cwd:
         platform_type = 'webserver'
+        home_path = '/home/www-data/'
     elif os.path.exists(os.path.join(cwd, "prj")):
         platform_type = 'dev'
 
