@@ -341,6 +341,12 @@ class GenericRows(object):
                 else:
                     return "html"
 
+            def get_template_names(self):
+                names = super().get_template_names()
+                if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
+                    names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                return names
+
             def get_paginate_by(self, queryset):
                 if self.doc_type() in ('pdf', 'odf', 'txt', 'xlsx'):
                     return None
@@ -530,6 +536,7 @@ class GenericRows(object):
                 model = self.base_model
 
             template_name = self.template_name
+
             title = self.title
             response_class = ExtTemplateResponse
 
@@ -544,6 +551,12 @@ class GenericRows(object):
                     return "txt"
                 else:
                     return "html"
+
+            def get_template_names(self):
+                names = super().get_template_names()
+                if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
+                    names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                return names
 
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
@@ -605,6 +618,12 @@ class GenericRows(object):
 
             def doc_type(self):
                 return "html"
+
+            def get_template_names(self):
+                names = super().get_template_names()
+                if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
+                    names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                return names
 
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
@@ -733,6 +752,12 @@ class GenericRows(object):
 
             def doc_type(self):
                 return "html"
+
+            def get_template_names(self):
+                names = super().get_template_names()
+                if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
+                    names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                return names
 
             def get_success_url(self):
                 if self.object:

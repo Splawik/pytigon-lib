@@ -29,66 +29,58 @@ from pytigon_lib.schdjangoext.django_manage import *
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.process import py_run
 from pytigon_lib.schtools.cc import make
-
+from pytigon_lib.schtools.main_paths import get_prj_name
 
 def install():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
-    prj_name = settings.PRJ_NAME
+    from django.conf import settings as dsettings
+    prj_name = get_prj_name()
     data_path = settings.DATA_PATH
     root_path = settings.ROOT_PATH
     prj_path = settings.PRJ_PATH
     app_data_path = os.path.join(data_path, prj_name)
     db_path = os.path.join(app_data_path, prj_name+".db")
     compiler_base_path = os.path.join(data_path, "ext_prg")
+
+    upgrade = False
+
     if os.path.exists(db_path):
-        return True
+        upgrade = True
+    if 'local' in dsettings.DATABASES:
+        db_profile = 'local'
     else:
-        if 'local' in settings.DATABASES:
-            db_profile = 'local'
-        else:
-            db_profile = 'default'
+        db_profile = 'default'
 
-        db_path_new = os.path.join(app_data_path, prj_name + ".new")
-        db_path_old = os.path.join(app_data_path, prj_name + ".old")
-        new_db = False
-        old_db = False
+    db_path_new = os.path.join(app_data_path, prj_name + ".new")
 
-        if os.path.exists(db_path_old):
-            old_db = True
-            os.rename(db_path_old, db_path)
-        elif os.path.exists(db_path_new):
-            new_db = True
-            os.rename(db_path_new, db_path)
-
+    if upgrade:
         try:
             cmd(['migrate', '--database', db_profile])
         except:
             print("Migration for database: " + db_profile + " - fails")
-        if db_profile != 'default':
-            try:
-                cmd(['migrate', '--database', 'default'])
-            except:
-                print("Migration for database: defautl - fails")
+    else:
+        os.rename(db_path_new, db_path)
 
-        if old_db:
-            pass
-        elif new_db:
-            if db_profile != 'default':
-                temp_path = os.path.join(data_path, 'temp')
-                if not os.path.exists(temp_path):
-                    os.mkdir(temp_path)
-                json_path = os.path.join(temp_path, prj_name + '.json')
-                cmd(['dumpdata', '--database', db_profile, '--format', 'json', '--indent', '4',
-                     '-e', 'auth', '-e', 'contenttypes', '-e', 'sessions', '-e', 'sites', '-e', 'admin',
-                     '--output', json_path])
-                cmd(['loaddata', '--database', 'default', json_path])
-                from django.contrib.auth.models import User
-                User.objects.db_manager('default').create_superuser('auto', 'auto@pytigon.com', 'anawa')
-        else:
+    if db_profile != 'default':
+        try:
+            cmd(['migrate', '--database', 'default'])
+        except:
+            print("Migration for database: defautl - fails")
+
+    if not upgrade:
+        if db_profile != 'default':
+            temp_path = os.path.join(data_path, 'temp')
+            if not os.path.exists(temp_path):
+                os.mkdir(temp_path)
+            json_path = os.path.join(temp_path, prj_name + '.json')
+            print(json_path)
+            cmd(['dumpdata', '--database', db_profile, '--format', 'json', '--indent', '4',
+                 '-e', 'auth', '-e', 'contenttypes', '-e', 'sessions', '-e', 'sites', '-e', 'admin',
+                 '--output', json_path])
+            cmd(['loaddata', '--database', 'default', json_path])
             from django.contrib.auth.models import User
-            User.objects.db_manager(db_profile).create_superuser('auto', 'auto@pytigon.com', 'anawa')
-            if db_profile != 'default':
-                User.objects.db_manager('default').create_superuser('auto', 'auto@pytigon.com', 'anawa')
+            User.objects.db_manager('default').create_superuser('auto', 'auto@pytigon.com', 'anawa')
+
     ret = make(data_path, prj_path)
     if ret:
         for pos in ret:
@@ -168,8 +160,6 @@ def extract_ptig(zip_file, name):
         dest_db = os.path.join(dest_path_db, name + ".db")
         if not os.path.exists(dest_db):
             move(src_db, os.path.join(dest_path_db, name + ".new"))
-        else:
-            os.rename(dest_db, os.path.join(dest_path_db, name + ".old"))
 
         (ret_code, output, err) = py_run([os.path.join(extract_to, 'manage.py'), 'post_installation'])
 
