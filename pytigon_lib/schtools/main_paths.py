@@ -13,7 +13,6 @@ from pytigon_lib.schtools.platform_info import platform_name
 #PRJ_PATH        ~/.pytigon/prj                  ./prj                       /var/www/pytigon/prj            SORAGE/pytigon/prj              ~/.pytigon/prj
 #PRJ_PATH_ALT    site-packages/pytigon/prj       site-packages/pytigon/prj   site-packages/pytigon/prj      site-packages/pytigon/prj       None
 #STATIC_PATH     site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static   site-packages/pytigon/static    site-packages/pytigon/static
-#STATIC_PATH_APP ~/.pytigon/static/app           ./static/app                /var/www/pytigon/static/app     STORAGE/pytigon/static/app      ~/.pytigon/static/app
 
 PRJ_NAME = None
 
@@ -100,9 +99,8 @@ def get_main_paths(prj_name=None):
         elif platform_type == "webserver":
             ret["DATA_PATH"] = data_path = os.path.join(home_path, ".pytigon")
             ret["LOG_PATH"] = "/var/log"
-            ret["PRJ_PATH"] = os.path.join(root_path, "prj")
+            ret["PRJ_PATH"] = os.path.join(data_path, "prj")
             ret["PRJ_PATH_ALT"] = os.path.join(pytigon_path, "prj")
-            ret['STATIC_PATH_APP'] = os.path.join(root_path, "static", "app")
         else:
             ret["DATA_PATH"] = data_path = os.path.join(home_path, ".pytigon")
             ret["LOG_PATH"] = data_path
@@ -110,15 +108,12 @@ def get_main_paths(prj_name=None):
             if os.path.exists(cwd_prj):
                 ret["PRJ_PATH"] = cwd_prj
                 ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
-                ret['STATIC_PATH_APP'] = os.path.join(root_path, "static", "app")
             else:
                 ret["PRJ_PATH"] = os.path.join(data_path, "prj")
                 ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
-                ret['STATIC_PATH_APP'] = os.path.join(data_path, "static","app")
 
         if 'STATIC_PATH' in environ:
             static_path = environ['STATIC_PATH']
-            ret['STATIC_PATH_APP'] = os.path.join(static_path, "app")
         elif pytigon_path:
             static_path = os.path.join(pytigon_path, "static")
         else:
@@ -129,10 +124,10 @@ def get_main_paths(prj_name=None):
                 ret['STATIC_PATH'] = os.path.join(data_path, "static", PRJ_NAME)
             else:
                 ret['STATIC_PATH'] = os.path.join(data_path, "static")
+            ret['STATICFILES_DIR'] = os.path.join(pytigon_path, "static")
         else:
             ret['STATIC_PATH'] = static_path
-
-        ret['STATICFILES_DIR'] = static_path
+            ret['STATICFILES_DIR'] = static_path
 
     return ret
 
