@@ -38,9 +38,13 @@ class JSONModel(models.Model):
     def __getattribute__(self, name):
         if name.startswith('json_'):
             if not hasattr(self, '_data'):
-                self._data = json_loads(self.jsondata)
+                if self.jsondata:
+                    self._data = json_loads(self.jsondata)
+                else:
+                    self._data = {}
             if name[5:] in self._data:
                 return self._data[name[5:]]
+
             return None
 
         return super().__getattribute__(name)
