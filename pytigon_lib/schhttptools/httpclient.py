@@ -261,7 +261,7 @@ class HttpResponse():
                 else:
                     with open(os.path.join(settings.DATA_PATH, "last_error.html"), "wb") as f:
                         f.write(self.content)
-                self.ret_content_type = 500
+                self.ret_content_type = "500"
                 self.content = b""
                 return
 

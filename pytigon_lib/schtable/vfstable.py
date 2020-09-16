@@ -33,7 +33,7 @@ from fs.osfs import OSFS
 
 from pytigon_lib.schfs.vfstools import norm_path
 from pytigon_lib.schtable.table import Table
-from pytigon_lib.schtasks.task import get_process_manager
+#from pytigon_lib.schtasks.task import get_process_manager
 from pytigon_lib.schtools import schjson
 from pytigon_lib.schtools.tools import bdecode, is_null
 
@@ -226,8 +226,9 @@ class VfsTable(Table):
             else:
                 parm["files"] = [ bdecode(value[1][0]), ]
             parm["dest"] = bdecode(value[2][1])
-            task_manager = get_process_manager(self.task_href if self.task_href else '127.0.0.1:8080')
-            _id = task_manager.put('system', parm["cmd"], "@pytigon_lib.schfs:filesystemcmd", user_parm = parm)
+            #task_manager = get_process_manager(self.task_href if self.task_href else '127.0.0.1:8080')
+            #_id = task_manager.put('system', parm["cmd"], "@pytigon_lib.schfs:filesystemcmd", user_parm = parm)
+            #TODO
             c = { 'process': _id }
         elif value[0] == 'MKDIR':
             path = bdecode(value[2][0])
