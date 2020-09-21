@@ -5,12 +5,12 @@ from pytigon_lib.schtools.platform_info import platform_name
 
 #                Client(appimage,emscripten)     Client/DEV                  Server                          Android                         pytigon-lib
 #
-#ROOT_PATH       site-packages/pytigon           ./                          /var/www/pytigon                site-packages/pytigon           None
+#ROOT_PATH       site-packages/pytigon           ./                          /home/www-data/www/pytigon                site-packages/pytigon           None
 #SERW_PATH       site-packages/pytigon/schserw   ./schserw                   site-packages/pytigon/schserw   site-packages/pytigon/schserw   None
 #DATA_PATH       ~/.pytigon                      ~/.pytigon                  /home/www-data/.pytigon         STORAGE/pytigon_data            ~/.pytigon
 #LOG_PATH        console                         console                     /var/log                        STORAGE/pytigon_data            ~/.pytigon
 #TEMP_PATH       %TEMP%                          %TEMP%                      %TEMP%                          %TEMP%                          %TEMP%
-#PRJ_PATH        ~/.pytigon/prj                  ./prj                       /var/www/pytigon/prj            SORAGE/pytigon/prj              ~/.pytigon/prj
+#PRJ_PATH        ~/.pytigon/prj                  ./prj                       /home/www-data/pytigon/prj            SORAGE/pytigon/prj              ~/.pytigon/prj
 #PRJ_PATH_ALT    site-packages/pytigon/prj       site-packages/pytigon/prj   site-packages/pytigon/prj      site-packages/pytigon/prj       None
 #STATIC_PATH     site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static   site-packages/pytigon/static    site-packages/pytigon/static
 
@@ -61,7 +61,7 @@ def get_main_paths(prj_name=None):
         platform_type = 'android'
     elif not pytigon_schserw:
         platform_type = 'pytigon-li b'
-    elif '/var/www' in cwd:
+    elif '/home/www-data' in cwd:
         platform_type = 'webserver'
         home_path = '/home/www-data/'
     elif os.path.exists(os.path.join(cwd, "prj")):

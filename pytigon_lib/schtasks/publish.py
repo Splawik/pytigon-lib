@@ -1,5 +1,6 @@
 from django.core.cache import cache
 
+DEFAULT_TIMEOUT = 60*60
 
 class CommunicationBasePublisher():
 
@@ -19,15 +20,15 @@ class CommunicationBasePublisher():
 class CommunicationByCachePublisher(CommunicationBasePublisher):
     def __init__(self, id):
         self.id = id
-        cache.set('process_events_%s_count' % self.id, 0)
+        cache.set('process_events_%s_count' % self.id, 0, timeout=DEFAULT_TIMEOUT)
 
     def send_event(self, value):
         id2 = cache.incr('process_events_%s_count' % self.id)
-        cache.set('process_events_%s_value_%d' % (self.id, id2 - 1), value)
+        cache.set('process_events_%s_value_%d' % (self.id, id2 - 1), value, timeout=DEFAULT_TIMEOUT)
 
     def close(self):
         id2 = cache.incr('process_events_%s_count' % self.id)
-        cache.set('process_events_%s_value_%d' % (self.id, id2 - 1), "$$$END$$$")
+        cache.set('process_events_%s_value_%d' % (self.id, id2 - 1), "$$$END$$$", timeout=DEFAULT_TIMEOUT)
 
     def __enter__(self):
         return self
@@ -72,7 +73,6 @@ class CommunicationByCacheReceiver(CommunicationBaseReceiver):
         cache.delete('process_events_%s_count' % self.id)
 
     def process(self):
-        print("A1")
         if self.started:
             id2 = cache.get('process_events_%s_count' % self.id, 0)
             print("A2", id2)
