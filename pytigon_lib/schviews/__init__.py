@@ -31,7 +31,8 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, Http40
 from django.urls import reverse
 from django.utils.functional import lazy
 from django.conf import settings
-from django.conf.urls import url
+from django.urls import path, re_path
+
 from django.db.models import CharField
 from django.db.models import  Q
 from django.utils.translation import ugettext_lazy as _
@@ -57,15 +58,15 @@ make_path_lazy = lazy(make_path, str)
 
 
 def gen_tab_action(table, action, fun, extra_context=None):
-    return url(r'table/%s/action/%s/$' % (table, action), fun, extra_context)
+    return re_path(r'table/%s/action/%s/$' % (table, action), fun, extra_context)
 
 
 def gen_tab_field_action(table, field, action, fun, extra_context=None):
-    return url(r'table/%s/(?P<parent_pk>\d+)/%s/action/%s/$' % (table, field, action), fun, extra_context)
+    return re_path(r'table/%s/(?P<parent_pk>\d+)/%s/action/%s/$' % (table, field, action), fun, extra_context)
 
 
 def gen_row_action(table, action, fun, extra_context=None):
-    return url('table/%s/(?P<pk>\d*)/action/%s/$' % (table, action), fun, extra_context)
+    return re_path('table/%s/(?P<pk>\d*)/action/%s/$' % (table, action), fun, extra_context)
 
 
 def transform_extra_context(context1, context2):
@@ -290,9 +291,9 @@ class GenericRows(object):
 
     def _append(self, url_str, fun, parm=None):
         if parm:
-            self.table.urlpatterns += [ url(self._get_base_path() + url_str, fun, parm), ]
+            self.table.urlpatterns += [ re_path(self._get_base_path() + url_str, fun, parm), ]
         else:
-            self.table.urlpatterns += [ url(self._get_base_path() + url_str, fun), ]
+            self.table.urlpatterns += [ re_path(self._get_base_path() + url_str, fun), ]
         return self
 
     def gen(self):
