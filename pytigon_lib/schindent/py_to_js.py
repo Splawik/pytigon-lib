@@ -94,7 +94,10 @@ def compile(python_code, temp_dir=None):
             s = pyoutput.read()
             tab = []
             for line in s.split("\n"):
-                tab.append(line)
+                if line.strip().startswith("JS (\""):
+                    tab.append(line.replace("JS (\"", "").replace("\");", ""))
+                else:
+                    tab.append(line)
             ret = "\n".join(tab)
             ret = ret.replace("./pytigon_js", "../../pytigon_js/pytigon_js")
 
