@@ -75,28 +75,21 @@ class CommunicationByCacheReceiver(CommunicationBaseReceiver):
     def process(self):
         if self.started:
             id2 = cache.get('process_events_%s_count' % self.id, 0)
-            print("A2", id2)
         else:
             id2 = cache.get('process_events_%s_count' % self.id, None)
-            print("A3", id2)
             if id2 != None:
                 self.started = True
                 self.handle_start()
             else:
                 return False
-        print("A4", id2)
         if id2 != self.process_events_count:
             i = self.process_events_count
             while i < id2:
                 value = cache.get('process_events_%s_value_%d' % (self.id, i), "")
                 if type(value) == str and value=="$$$END$$$":
-                    print("F1")
                     self.handle_end()
-                    print("F2")
                     self._remove_caches()
-                    print("F3")
                     return True
-                print("A5", "handle_event", value)
                 self.handle_event(value)
 
                 i+=1

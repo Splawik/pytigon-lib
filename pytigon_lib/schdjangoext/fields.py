@@ -526,9 +526,13 @@ class AutocompleteTextField(TextField):
         return super(AutocompleteTextField, self).formfield(**defaults)
 
 
-class NullBooleanField(models.NullBooleanField):
+class NullBooleanField(models.BooleanField):
+    def __init__(self, *args, **kwargs):
+        kwargs['null'] = True
+        super().__init__(*args, **kwargs)
+
     def formfield(self, **kwargs):
-        defaults = {'form_class': forms.BooleanField}
+        defaults = {'form_class': forms.BooleanField, }
         defaults.update(kwargs)
         return super().formfield(**defaults)
 

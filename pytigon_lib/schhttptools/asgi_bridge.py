@@ -142,6 +142,8 @@ async def websocket(application, path, headers, input_queue, output):
             return {'type': 'websocket.disconnect'}
 
     app_instance = application(scope)
+    #output.connect()
+    print('A/0')
     application_queue = await app_instance(receive, send)
-
+    print('A/1')
     return ret
