@@ -22,14 +22,11 @@
 """
 
 from itertools import chain
-import collections
 
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django import forms
 from django.utils.safestring import mark_safe
-from django.conf import settings
-from django.utils.html import conditional_escape
 from django_select2.forms import ModelSelect2Widget
 from django.forms.widgets import HiddenInput, CheckboxInput, CheckboxSelectMultiple, RadioSelect
 from django.db.models.fields import TextField
@@ -271,7 +268,7 @@ class CheckboxSelectMultipleWithIcon(CheckboxSelectMultiple):
         has_id = attrs and 'id' in attrs
         final_attrs = self.build_attrs(attrs) #, name=name)
         output = ['<ul>']
-        str_values = set([v for v in value])
+        str_values = set([str(v) for v in value])
         for (i, (option_value, option_label)) in enumerate(chain(self.choices,
                 choices)):
             if has_id:
@@ -279,7 +276,7 @@ class CheckboxSelectMultipleWithIcon(CheckboxSelectMultiple):
                 label_for = ' for="%s"' % final_attrs['id']
             else:
                 label_for = ''
-            cb = CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
+            cb = CheckboxInput(final_attrs, check_test=lambda value: str(value) in str_values)
             rendered_cb = cb.render(name, option_value)
             option_label = conditional_escape(option_label)
             x = option_label.split('|')
