@@ -94,8 +94,9 @@ async def get_or_post(application, path, headers, params={}, post=False):
         nonlocal content
         return {'type': 'http', 'body': content.encode('utf-8')}
 
-    app_instance = application(scope)
-    application_queue = await app_instance(receive, send)
+    #app_instance = application(scope)
+    #application_queue = await app_instance(receive, send)
+    application_queue = await application(scope, receive, send)
 
     if 'status' in ret and ret['status'] == 302:
         if 'headers' in ret:
@@ -141,9 +142,7 @@ async def websocket(application, path, headers, input_queue, output):
         else:
             return {'type': 'websocket.disconnect'}
 
-    app_instance = application(scope)
-    #output.connect()
-    print('A/0')
-    application_queue = await app_instance(receive, send)
-    print('A/1')
+    #app_instance = application(scope)
+    #application_queue = await app_instance(receive, send)
+    application_queue = await application(scope, receive, send)
     return ret
