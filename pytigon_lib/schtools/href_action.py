@@ -24,7 +24,7 @@ from django.utils.html import escape
 
 STANDARD_ACTIONS = {
     'default': {
-        'target': '_top',
+        'target': '_parent',
         'class': "btn {{btn_size}} btn-outline-secondary",
         'class_in_menu': "",
         'attrs': "data-role='button' data-inline='true' data-mini='true'",
@@ -32,7 +32,9 @@ STANDARD_ACTIONS = {
         'url': "{ap}table/{table_name}/{id}/action/{action}/",
     },
     'action': {
-        'target': 'inline',
+        'target': 'inline_edit',
+        'attrs': "data-inline-position='^tr:after'",
+        'attrs_in_menu': "data-inline-position='^tr:after'",
     },
     'new_row': {
         'target': 'popup_edit',
@@ -48,7 +50,7 @@ STANDARD_ACTIONS = {
     },
     'edit2': {
         'target':  "popup_edit",
-        'titl': _('Update'),
+        'title': _('Update'),
         'class': "btn {{btn_size}} btn-outline-secondary edit",
         'attrs': "data-role='button' data-inline='true' data-mini='true'",
         'url': "{tp}{id}/{action}/",
@@ -71,29 +73,33 @@ STANDARD_ACTIONS = {
         'icon': 'delete fa fa-lg fa-trash-o'
     },
     'field_list': {
-        'target': 'inline',
+        'target': 'inline_info',
         'class': "popup_inline btn {{btn_size}} btn-outline-secondary",
-        'attrs': "data-role='button' data-inline='true' data-mini='true'",
+        'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr:after' ",
+        'attrs_in_menu': "data-inline-position='^tr:after'",
         'url': "{ap}table/{object_name}/{id}/{x1}/-/form/sublist/",
         'icon': 'grid fa fa-lg fa-caret-down',
     },
     'field_list_get': {
-        'target': 'inline',
+        'target': 'inline_info',
         'class': "popup_inline btn {{btn_size}} btn-outline-secondary",
         'attrs': "data-role='button' data-inline='true' data-mini='true'",
         'url': "{ap}{object_name}/{id}/{x1}/-/form/get/",
         'icon': "grid fa fa-lg fa-caret-down",
     },
     'field_action': {
-        'target': 'inline',
+        'target': 'inline_edit',
         'class': "popup_inline btn {{btn_size}} btn-outline-secondary",
-        'attrs': "data-role='button' data-inline='true' data-mini='true'",
+        'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr:after'",
+        'attrs_in_menu': "data-inline-position='^tr:after'",
         'url': "{ap}{object_name}/{id}/{x1}/-/form/sublist/",
         'icon': 'grid fa fa-lg fa-angle-double-down',
     },
     'field_edit': {
         'url': "{ap}table/{object_name}/{id}/{x1}/py/editor/",
         'icon': 'edit fa fa-lg fa-pencil-square-o',
+        'attrs': "data-inline-position='^tr:after'",
+        'attrs_in_menu': "data-inline-position='^tr:after'",
     },
     'any_field_edit': {
         'url': "{app_path}table/{object_name}/{id}/{x1}/{format}/editor/",
@@ -126,7 +132,9 @@ STANDARD_ACTIONS = {
         'url': "{tp}{id}/action/{action}/",
     },
     'inline': {
-        'target': 'inline',
+        'target': 'inline_edit',
+        'attrs': "data-inline-position='^tr:after'",
+        'attrs_in_menu': "data-inline-position='^tr:after'",
     },
     'popup': {
         'target': "popup_edit"
@@ -140,8 +148,8 @@ STANDARD_ACTIONS = {
     'popup_delete': {
         'target': "popup_delete"
     },
-    'refresh_obj': {
-        'target': "refresh_obj"
+    'refresh_frame': {
+        'target': "refresh_frame"
     },
     'top': {
         'target': "_top"

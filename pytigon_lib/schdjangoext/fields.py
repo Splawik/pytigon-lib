@@ -109,17 +109,18 @@ class RadioChoiceInput(ChoiceInput):
 
 
 _GET_TABLE_BUTTONS_1 = """
-    <a type='button' target='popup_edit' name='get_tbl_value' class='btn btn-secondary btn-flat foreignkey_button get_tbl_value' href='%s' title='%s'>
+    <a type='button' target='popup_edit' name='get_tbl_value' class='btn btn-secondary btn-flat foreignkey_button get_tbl_value' href='%s' title='%s' data-inline-position='^div.ajax-region:append'">
       <span class='fa-table fa'></span>
     </a>
 """
 _GET_TABLE_BUTTONS_2 = """    
-    <a type='button' target='inline' name='new_tbl_value' class='btn btn-secondary btn-flat foreignkey_button new_tbl_value' href='%s' title='%s'>
+    <a type='button' target='inline' name='new_tbl_value' class='btn btn-secondary btn-flat foreignkey_button new_tbl_value' href='%s' title='%s' data-inline-position='^div.ajax-region:append'">
       <span class='fa-plus fa'></span>
     </a>
 """
 
 class ModelSelect2WidgetExt(ModelSelect2Widget):
+    input_type = 'select2'
     def __init__(self, href1=None, href2=None, is_new_button=False, is_get_button=True, label="", *argi, **argv):
         ModelSelect2Widget.__init__(self, *argi, label=label, **argv)
         self.href1 = href1
