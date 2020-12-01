@@ -5,7 +5,7 @@ httpie
 fs
 pyexcel_odsr
 pendulum
-Django
+Django==2.2.17
 cffi
 Pillow
 lxml
