@@ -435,13 +435,13 @@ class GenericRows(object):
                 context['doc_type'] = self.doc_type()
                 context['uuid'] = uuid.uuid4()
 
-                context['prj'] = ""
-                for app in settings.APPS:
-                    if '.' in app and parent_class.table.app in app:
-                        _app = app.split('.')[0]
-                        if not _app.startswith('_'):
-                            context['prj'] = app.split('.')[0]
-                        break
+                #context['prj'] = ""
+                #for app in settings.APPS:
+                #    if '.' in app and parent_class.table.app in app:
+                #        _app = app.split('.')[0]
+                #        if not _app.startswith('_'):
+                #            context['prj'] = app.split('.')[0]
+                #        break
 
                 if 'tree' in self.kwargs['vtype']:
                     parent = int(self.kwargs['filter'])
@@ -563,16 +563,16 @@ class GenericRows(object):
                 nonlocal parent_class
                 context = super(DetailView, self).get_context_data(**kwargs)
                 context['title'] = self.title + ' - '+str(_('element information'))
-                context['prj'] = ""
+                #context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
 
-                for app in settings.APPS:
-                    if '.' in app and parent_class.table.app in app:
-                        _app = app.split('.')[0]
-                        if not _app.startswith('_'):
-                            context['prj'] = app.split('.')[0]
-                        break
+                #for app in settings.APPS:
+                #    if '.' in app and parent_class.table.app in app:
+                #        _app = app.split('.')[0]
+                #        if not _app.startswith('_'):
+                #            context['prj'] = app.split('.')[0]
+                #        break
                 return context
 
             def get(self, request, *args, **kwargs):
@@ -630,16 +630,16 @@ class GenericRows(object):
                 nonlocal parent_class
                 context = super(UpdateView, self).get_context_data(**kwargs)
                 context['title'] = self.title + ' - ' + str(_('update element'))
-                context['prj'] = ""
+                #context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
 
-                for app in settings.APPS:
-                    if '.' in app and parent_class.table.app in app:
-                        _app = app.split('.')[0]
-                        if not _app.startswith('_'):
-                            context['prj'] = app.split('.')[0]
-                        break
+                #for app in settings.APPS:
+                #    if '.' in app and parent_class.table.app in app:
+                #        _app = app.split('.')[0]
+                #        if not _app.startswith('_'):
+                #            context['prj'] = app.split('.')[0]
+                #        break
                 return context
 
             def get(self, request, *args, **kwargs):
@@ -896,17 +896,17 @@ class GenericRows(object):
                 context = super(CreateView, self).get_context_data(**kwargs)
                 context['title'] = self.title + ' - '+ str(_('new element'))
                 context['object'] = self.object
-                context['prj'] = ""
+                #context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
 
-                for app in settings.APPS:
-                    if '.' in app and parent_class.table.app in app:
-                        _app = app.split('.')[0]
-                        if not _app.startswith('_'):
-                            context['prj'] = app.split('.')[0]
-                        break
-                return context
+                #for app in settings.APPS:
+                #    if '.' in app and parent_class.table.app in app:
+                #        _app = app.split('.')[0]
+                #        if not _app.startswith('_'):
+                #            context['prj'] = app.split('.')[0]
+                #        break
+                #return context
 
         fun = make_perms_test_fun(self.base_perm % 'change',
                                   CreateView.as_view())
@@ -937,13 +937,13 @@ class GenericRows(object):
 
                 parent_class.table_paths_to_context(self, context)
 
-                context['prj'] = ""
-                for app in settings.APPS:
-                    if '.' in app and parent_class.table.app in app:
-                        _app = app.split('.')[0]
-                        if not _app.startswith('_'):
-                            context['prj'] = app.split('.')[0]
-                        break
+                #context['prj'] = ""
+                #for app in settings.APPS:
+                #    if '.' in app and parent_class.table.app in app:
+                #        _app = app.split('.')[0]
+                #        if not _app.startswith('_'):
+                #            context['prj'] = app.split('.')[0]
+                #        break
                 return context
 
         fun = make_perms_test_fun(self.base_perm % 'delete',
