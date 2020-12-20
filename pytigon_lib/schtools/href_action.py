@@ -102,7 +102,7 @@ STANDARD_ACTIONS = {
         'attrs_in_menu': "data-inline-position='^tr:after'",
     },
     'any_field_edit': {
-        'url': "{app_path}table/{object_name}/{id}/{x1}/{format}/editor/",
+        'url': "{app_path}table/{object_name}/{id}/{x1}/{x2}/editor/",
         'icon': 'edit fa fa-lg fa-pencil-square-o',
     },
     'print': {
@@ -191,7 +191,7 @@ def get_action_parm(standard_web_browser, action, key, default_value=""):
 
 class Action:
     def __init__(self, actions_str, context, d):
-        #actions_str: action,title,icon_name,target,attrs,class,url
+        #actions_str: action,title,icon,target,attrs,tag_class,url
         self.d = d
         self.context = context
         self.action = ""
@@ -209,13 +209,28 @@ class Action:
         self.x2 = ""
         self.x3 = ""
 
+        standard_attr = ('action', 'title', 'icon', 'target', 'attrs', 'tag_class', 'url')
+
         if 'standard_web_browser' in d:
             standard_web_browser = d['standard_web_browser']
         else:
             standard_web_browser = 1
 
         pos = actions_str.split(',')
-        action = pos[0].strip()
+        if not '=' in  pos[0]:
+            action = pos[0].strip()
+
+        while True:
+            if '=' in pos[-1]:
+                if not pos[-1].split('=')[0].strip() in standard_attr:
+                    break
+                s = pos.pop().split('=', 1)
+                if s[0]=='action':
+                    action = s.strip()
+                else:
+                    setattr(self, s[0], unpack_value(standard_web_browser, s[1]))
+            else:
+                break
 
         if '/' in action:
             x = action.split('/')
