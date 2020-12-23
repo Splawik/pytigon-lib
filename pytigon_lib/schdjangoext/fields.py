@@ -236,8 +236,8 @@ class HiddenForeignKey(models.ForeignKey):
         field.widget.choices = None
         return field
 
-#class ManyToManyField(models.ManyToManyField):
-#    pass
+class ManyToManyField(models.ManyToManyField):
+    pass
 
 
 #class ManyToManyFieldAlternateRel(models.ManyToManyField):
@@ -544,5 +544,6 @@ class TreeForeignKey(ForeignKey):
 PtigForeignKey = ForeignKey
 PtigHiddenForeignKey = HiddenForeignKey
 PtigForeignKeyWidthIcon = ForeignKeyWidthIcon
+PtigManyToManyField = ManyToManyField
 PtigManyToManyFieldWidthIcon = ManyToManyFieldWidthIcon
 PtigTreeForeignKey = TreeForeignKey
