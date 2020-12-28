@@ -108,7 +108,6 @@ class LocalizationTemplateResponse(TemplateResponse):
 class ExtTemplateResponse(LocalizationTemplateResponse):
     def __init__(self, request, template, context=None, content_type=None, status=None, mimetype=None,
                  current_app=None, charset=None, using=None):
-
         template2 = None
         if context and 'view' in context and context['view']:
             template2 = self._get_model_template(context, context['view'].doc_type())

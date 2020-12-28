@@ -296,11 +296,11 @@ class CheckboxSelectMultipleWithIcon(CheckboxSelectMultiple):
         return mark_safe('\n'.join(output))
 
 
-class ModelMultipleChoiceFieldWidthIcon(forms.ModelMultipleChoiceField):
+class ModelMultipleChoiceFieldWithIcon(forms.ModelMultipleChoiceField):
     widget = CheckboxSelectMultipleWithIcon
 
 
-class ManyToManyFieldWidthIcon(models.ManyToManyField):
+class ManyToManyFieldWithIcon(models.ManyToManyField):
     """Extended version of django django models.ManyToManyField.
     If label contains contains '|' its value split to two parts. First part should be image address, second
     part should be a label.
@@ -308,9 +308,9 @@ class ManyToManyFieldWidthIcon(models.ManyToManyField):
 
     def formfield(self, **kwargs):
         if kwargs:
-            kwargs['form_class']= ModelMultipleChoiceFieldWidthIcon
+            kwargs['form_class']= ModelMultipleChoiceFieldWithIcon
         else:
-            kwargs = { 'form_class': ModelMultipleChoiceFieldWidthIcon }
+            kwargs = { 'form_class': ModelMultipleChoiceFieldWithIcon }
         return super().formfield(**kwargs)
 
 
@@ -359,7 +359,7 @@ class RadioSelectWithIcon(RadioSelect):
     renderer = RadioFieldRendererWithIcon
 
 
-class ModelChoiceFieldWidthIcon(forms.ModelChoiceField):
+class ModelChoiceFieldWithIcon(forms.ModelChoiceField):
     """Extended version of django django models.ManyToManyField.
     If label contains contains '|' its value split to two parts. First part should be image address, second
     part should be a label.
@@ -367,14 +367,14 @@ class ModelChoiceFieldWidthIcon(forms.ModelChoiceField):
     widget = RadioSelectWithIcon
 
 
-class ForeignKeyWidthIcon(models.ForeignKey):
+class ForeignKeyWithIcon(models.ForeignKey):
     """Extended version of django django models.ForeignKey.
     If label contains contains '|' its value split to two parts. First part should be image address, second
     part should be a label.
     """
     def formfield(self, **kwargs):
         db = kwargs.pop('using', None)
-        defaults = {'form_class': ModelChoiceFieldWidthIcon,
+        defaults = {'form_class': ModelChoiceFieldWithIcon,
                     'queryset': self.rel.to._default_manager.using(db).complex_filter(self.rel.limit_choices_to),
                     'to_field_name': self.rel.field_name}
         defaults.update(kwargs)
@@ -543,7 +543,7 @@ class TreeForeignKey(ForeignKey):
 
 PtigForeignKey = ForeignKey
 PtigHiddenForeignKey = HiddenForeignKey
-PtigForeignKeyWidthIcon = ForeignKeyWidthIcon
+PtigForeignKeyWithIcon = ForeignKeyWithIcon
 PtigManyToManyField = ManyToManyField
-PtigManyToManyFieldWidthIcon = ManyToManyFieldWidthIcon
+PtigManyToManyFieldWithIcon = ManyToManyFieldWithIcon
 PtigTreeForeignKey = TreeForeignKey

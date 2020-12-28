@@ -415,10 +415,10 @@ class GenericRows(object):
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
                 context = super(ListView, self).get_context_data(**kwargs)
+                context['view'] = self
                 context['title'] = self.title
                 context['rel_field'] = self.rel_field
                 context['filter'] = self.kwargs['filter']
-
                 parent_class.table_paths_to_context(self, context)
 
                 if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
@@ -434,6 +434,7 @@ class GenericRows(object):
 
                 context['doc_type'] = self.doc_type()
                 context['uuid'] = uuid.uuid4()
+                context['vtype'] = self.kwargs['vtype']
 
                 #context['prj'] = ""
                 #for app in settings.APPS:
@@ -486,6 +487,10 @@ class GenericRows(object):
                                     ret = self.model.objects.all()
                             else:
                                 ret = self.model.objects.all()
+                    if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
+                        parent = int(self.kwargs['base_filter'])
+                        ret = ret.filter(parent=parent)
+
                 if self.search:
                     fields = [f for f in self.model._meta.fields if isinstance(f, CharField)]
                     queries = [Q(**{f.name+"__icontains": self.search}) for f in fields]
@@ -562,6 +567,7 @@ class GenericRows(object):
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
                 context = super(DetailView, self).get_context_data(**kwargs)
+                context['view'] = self
                 context['title'] = self.title + ' - '+str(_('element information'))
                 #context['prj'] = ""
 
@@ -629,6 +635,7 @@ class GenericRows(object):
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
                 context = super(UpdateView, self).get_context_data(**kwargs)
+                context['view'] = self
                 context['title'] = self.title + ' - ' + str(_('update element'))
                 #context['prj'] = ""
 
@@ -803,7 +810,7 @@ class GenericRows(object):
                         if hasattr(form.fields[field].widget, 'py_client'):
                             if request.META['HTTP_USER_AGENT'].startswith('Py'):
                                 form.fields[field].widget.set_py_client(True)
-                return self.render_to_response(self.get_context_data(form=form))
+                return self.render_to_response(context=self.get_context_data(form=form))
 
             def post(self, request, *args, **kwargs):
                 form = self._get_form(request, *args, **kwargs)
@@ -894,6 +901,7 @@ class GenericRows(object):
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
                 context = super(CreateView, self).get_context_data(**kwargs)
+                context['view'] = self
                 context['title'] = self.title + ' - '+ str(_('new element'))
                 context['object'] = self.object
                 #context['prj'] = ""
@@ -906,7 +914,7 @@ class GenericRows(object):
                 #        if not _app.startswith('_'):
                 #            context['prj'] = app.split('.')[0]
                 #        break
-                #return context
+                return context
 
         fun = make_perms_test_fun(self.base_perm % 'change',
                                   CreateView.as_view())
@@ -933,6 +941,7 @@ class GenericRows(object):
             def get_context_data(self, **kwargs):
                 nonlocal parent_class
                 context = super(DeleteView, self).get_context_data(**kwargs)
+                context['view'] = self
                 context['title'] = self.title + ' - ' + str(_('delete element'))
 
                 parent_class.table_paths_to_context(self, context)
