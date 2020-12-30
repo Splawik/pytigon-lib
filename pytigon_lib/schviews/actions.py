@@ -22,7 +22,7 @@ from django.http import HttpResponse
 
 _NEW_ROW_OK_HTML = """
 <head>
-    <meta name="RETURN" content="RETURN_OK" />
+    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
     <script>ret_ok(%s,"%s");</script>
 </head>
 <body></body>
@@ -30,7 +30,7 @@ _NEW_ROW_OK_HTML = """
 
 _NEW_ROW_OK_SHTML = """
 <head>
-    <meta name="RETURN" content="RETURN_OK" />
+    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
     <meta name="target" content="code" />
 </head>
 <body>
@@ -45,7 +45,7 @@ self.ok()
 
 _UPDATE_ROW_OK_HTML = """
 <head>
-    <meta name="RETURN" content="RETURN_OK" />
+    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
     <script>ret_ok(%s,"%s");</script>
 </head>
 <body></body>
@@ -53,7 +53,7 @@ _UPDATE_ROW_OK_HTML = """
 
 _UPDATE_ROW_OK_SHTML = """
 <head>
-    <meta name="RETURN" content="RETURN_OK" />
+    <meta name="RETURN" content="$$RETURN_OK" />
     <meta name="target" content="code" />
 </head>
 <body>
