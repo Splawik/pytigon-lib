@@ -37,7 +37,7 @@ from django.db.models import CharField
 from django.db.models import  Q
 from django.utils.translation import ugettext_lazy as _
 
-from pytigon_lib.schviews.actions import new_row_action, update_row_action
+from pytigon_lib.schviews.actions import new_row_ok, update_row_ok
 from pytigon_lib.schviews.viewtools import render_to_response
 from pytigon_lib.schtools.schjson import json_loads, json_dumps
 
@@ -727,7 +727,7 @@ class GenericRows(object):
                 form.save_m2m()
 
                 if self.object:
-                    return update_row_action(request, int(self.object.id), str(self.object))
+                    return update_row_ok(request, int(self.object.id), str(self.object))
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 
@@ -894,7 +894,7 @@ class GenericRows(object):
                 form.save_m2m()
 
                 if self.object:
-                    return new_row_action(request, int(self.object.id), str(self.object))
+                    return new_row_ok(request, int(self.object.id), str(self.object))
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 

@@ -22,15 +22,13 @@ from django.http import HttpResponse
 
 _NEW_ROW_OK_HTML = """
 <head>
-    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
-    <script>ret_ok(%s,"%s");</script>
+    <meta name="RETURN" content="$$RETURN_NEW_ROW_OK" />
 </head>
-<body></body>
 """
 
 _NEW_ROW_OK_SHTML = """
 <head>
-    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
+    <meta name="RETURN" content="$$RETURN_OK" />
     <meta name="target" content="code" />
 </head>
 <body>
@@ -45,10 +43,8 @@ self.ok()
 
 _UPDATE_ROW_OK_HTML = """
 <head>
-    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
-    <script>ret_ok(%s,"%s");</script>
+    <meta name="RETURN" content="$$RETURN_UPDATE_ROW_OK" />
 </head>
-<body></body>
 """
 
 _UPDATE_ROW_OK_SHTML = """
@@ -66,16 +62,74 @@ self.ok()
 </body>
 """
 
+_OK_HTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_OK" />
+</head>
+"""
 
-def new_row_action(request, id, title):
+_REFRESH_HTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_REFRESH" />
+</head>
+"""
+
+_REFRESH_PARENT_HTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_REFRESH_PARENT" />
+</head>
+"""
+
+_RELOAD_HTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_RELOAD" />
+</head>
+<body>
+%s 
+</body>
+"""
+
+_CANCEL_HTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_CANCEL" />
+</head>
+"""
+
+_ERROR_HTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_ERROR" />
+</head>
+<body>
+%s
+</body>
+"""
+
+def new_row_ok(request, id, title):
     if request.META['HTTP_USER_AGENT'].lower().startswith('py'):
         return HttpResponse(_NEW_ROW_OK_SHTML % (id, title))
     else:
-        return HttpResponse(_NEW_ROW_OK_HTML % (id, title))
+        return HttpResponse(_NEW_ROW_OK_HTML)
 
-
-def update_row_action(request, id, title):
+def update_row_ok(request, id, title):
     if request.META['HTTP_USER_AGENT'].lower().startswith('py'):
         return HttpResponse(_UPDATE_ROW_OK_SHTML % (id, title))
     else:
-        return HttpResponse(_UPDATE_ROW_OK_HTML % (id, title))
+        return HttpResponse(_UPDATE_ROW_OK_HTML)
+
+def ok(request):
+    return HttpResponse(_OK_HTML)
+
+def refresh(request):
+    return HttpResponse(_REFRESH_HTML)
+
+def refresh_parent(request):
+    return HttpResponse(_REFRESH_PARENT_HTML)
+
+def reload(request, new_html):
+    return HttpResponse(_RELOAD_HTML % new_html)
+
+def cancel(request):
+    return HttpResponse(_CANCEL_HTML)
+
+def error(request, error_txt):
+    return HttpResponse(_ERROR_HTML % error_txt)
