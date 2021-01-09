@@ -232,6 +232,9 @@ class Action:
             else:
                 break
 
+        if not action:
+            return
+
         if '/' in action:
             x = action.split('/')
             self.x1 = escape(x[1].strip())
@@ -317,6 +320,7 @@ class Action:
                     x = self.icon.split('/')
                     self.icon = x[0]
                     self.icon2 = x[1]
+
     def format(self, s):
         ret = s.format(**self.d).strip()
         if self.d['x1']:

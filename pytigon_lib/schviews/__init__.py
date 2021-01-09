@@ -769,7 +769,7 @@ class GenericRows(object):
 
             def get_success_url(self):
                 if self.object:
-                    success_url = make_path_lazy('ret_ok', (int(self.object.id), str(self.object)))
+                    success_url = make_path_lazy('new_row_ok', (int(self.object.id), str(self.object)))
                 else:
                     success_url = make_path_lazy('ok')
                 return success_url
@@ -852,8 +852,6 @@ class GenericRows(object):
                         ret.update({'data': data})
 
                 return ret
-
-
 
             def form_valid(self, form, request=None):
                 """
