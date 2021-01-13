@@ -255,7 +255,7 @@ class OOXmlDocTransform(OdfDocTransform):
                         
 
     def transform_template(self, template_str, context):
-        template_header = "{% load exfiltry %}{% load exsyntax %}"
+        template_header = "{% load exfiltry %}{% load exsyntax %}{% load expr %}"
         template = Template(template_header+template_str)
         return template.render(context)
 
