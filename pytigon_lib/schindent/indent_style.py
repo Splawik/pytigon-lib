@@ -20,16 +20,9 @@
 
 import os
 import os.path
-import sys
 import io
-import re
 import gettext
 import codecs
-import subprocess
-#import itertools
-#import tempfile
-from pytigon_lib.schdjangoext.tools import gettempdir
-from pytigon_lib.schtools.tools import get_executable
 from pytigon_lib.schindent.py_to_js import compile
 
 
@@ -382,10 +375,6 @@ class ConwertToHtml:
                             x = self._pre_process_line(buf0 + buf2.getvalue())
                         elif test == 3:
                             x = self._pre_process_line(buf0.replace('pscript', 'script language=python') + buf.getvalue())
-                            #v = buf.getvalue()
-                            #codejs = py_to_js(v, None)
-                            #x = self._pre_process_line(
-                            #    buf0.replace('pscript', 'script').replace(' language=python', '') + codejs)
                             test = 0
                         elif test == 4:
                             v = buf.getvalue()
@@ -397,13 +386,6 @@ class ConwertToHtml:
                             codejs = py_to_js(v, None)
                             x = self._pre_process_line(
                                 buf0.replace('pscript', 'script').replace(' language=python', '') + codejs)
-                        #elif test == 4:
-                        #    v = buf.getvalue()
-                        #    codejs = pjsx_to_js(v, None)
-                        #    x = self._pre_process_line(buf0 + codejs)
-                        # elif test == 5:
-                        #    codejs = pjsx_to_js('"""'+buf.getvalue()+'"""', None)
-                        #    x = self._pre_process_line(buf0 + codejs)
                         else:
                             x = self._pre_process_line(buf0 + buf.getvalue())
                         for pos in x:
@@ -551,92 +533,6 @@ def ihtml_to_html_base(file_name, input_str=None, lang='en'):
         return ""
 
 
-# def py2js(script, module_path):
-#     """Compile python script to javascript script
-#
-#     Args:
-#         script - python script source
-#         module_path - path for target script
-#     """
-#
-#     error = False
-#     tempdir = gettempdir()
-#
-#     cwd = os.getcwd()
-#     os.chdir(tempdir)
-#
-#     script_name = os.path.join(tempdir, "pytigon_module.py")
-#
-#     f = open(script_name, "wt")
-#     f.write(script)
-#     f.close()
-#
-#     import transcrypt
-#     transcrypt_lib = transcrypt.__path__._path[0]
-#     cmd = [get_executable(), os.path.join(transcrypt_lib, "__main__.py"), '-n', 'pytigon_module.py']
-#
-#     def process_output(line):
-#         if line.startswith('Error in program'):
-#             nonlocal error
-#             error = True
-#             print(line)
-#             m = re.search(".*line (\d*):(.*)", line)
-#             if m:
-#                 try:
-#                     row = int(m.groups()[0]) - 1
-#                     description = m.groups()[1]
-#                     print("Python to javascript compile error:")
-#                     print(description)
-#                     lines = script.split('\n')
-#                     start = row - 4
-#                     end = row + 4
-#                     if start < 0:
-#                         start = 0
-#                     if end >= len(lines):
-#                         end = len(lines) - 1
-#                     for i in range(start, end):
-#                         if row == i:
-#                             print(lines[i], " <===")
-#                         else:
-#                             print(lines[i])
-#                     print()
-#                 except:
-#                     pass
-#
-#     if module_path:
-#         old_path = os.getcwd()
-#         os.chdir(module_path)
-#     else:
-#         old_path = None
-#
-#     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-#                             stderr=subprocess.PIPE, universal_newlines=True)
-#     ret, stderr_value = proc.communicate()  # script)
-#
-#     if stderr_value:
-#         for line in stderr_value.split('\n'):
-#             process_output(line)
-#     if ret:
-#         for line in ret.split('\n'):
-#             process_output(line)
-#
-#     if error:
-#         raise Exception('Python to javascript compile error!')
-#
-#     js_script_name = os.path.join(tempdir, "__javascript__/pytigon_module.mod.js")
-#     f = open(js_script_name, "rt")
-#     s = f.read()
-#     f.close()
-#     s = s.split('(function () {', 1)[1]
-#     s = s.rsplit('}) ();', 1)[0]
-#     ret = s
-#
-#     if old_path:
-#         os.chdir(old_path)
-#
-#     return ret
-
-
 def py_to_js(script, module_path):
     """Compile python script to javascript. Additional indentation are removed from python scrip before compile.
 
@@ -687,7 +583,7 @@ def py_to_js(script, module_path):
                 tmp.append(result)
         tab_string = tmp
 
-    error, code = compile(script2, gettempdir())
+    error, code = compile(script2)
 
     if error:
         print(code)
