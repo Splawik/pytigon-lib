@@ -157,10 +157,13 @@ class Loader(BaseLoader):
                                                          'w', encoding='utf-8') as f:
                                             f.write(ret)
                                 except:
-                                    import traceback
-                                    import sys
-                                    print(sys.exc_info())
-                                    print(traceback.print_exc())
+                                    size1 = os.path.getmtime(filepath2)
+                                    size2 = os.path.getmtime(filepath)
+                                    if size1 != size2:
+                                        import traceback
+                                        import sys
+                                        print(sys.exc_info())
+                                        print(traceback.print_exc())
                         except:
                             pass
         except:
