@@ -28,6 +28,15 @@ from django.core import serializers
 from pytigon_lib.schtools.schjson import json_dumps, json_loads
 from pytigon_lib.schdjangoext.fastform import form_from_str
 
+_CONNECTED_MODELS = {}
+
+def connect_models(parent, child):
+    global _CONNECTED_MODELS
+    if parent in _CONNECTED_MODELS:
+        _CONNECTED_MODELS[parent].append(child)
+    else:
+        _CONNECTED_MODELS[parent] = [ child, ]
+
 
 class JSONModel(models.Model):
     class Meta:
@@ -79,7 +88,31 @@ class JSONModel(models.Model):
             return view.get_form(form_class2)
         return view.get_form(form_class)
 
-    def save(self, *args, **kwargs):
+
+    def get_connected_object(self):
+        global _CONNECTED_MODELS
+        if hasattr(self, "_connected_obj"):
+            if self._connected_obj:
+                return self._connected_obj
+
+        if type(self) in _CONNECTED_MODELS:
+            if len(_CONNECTED_MODELS) > 1:
+                for item in _CONNECTED_MODELS[type(self)]:
+                    if hasattr(item, 'connect_to_obj'):
+                        self._connected_obj = item._connect_to_obj(self)
+                        if self._connected_obj:
+                            return self._connected_obj
+            else:
+                if hasattr(_CONNECTED_MODELS[type(self)], 'connect_to_obj'):
+                    self._connected_obj = _CONNECTED_MODELS[type(self)].connect_to_obj(self)
+                else:
+                    self._connected_obj =  _CONNECTED_MODELS[type(self)]()
+                    self._connected_obj.parent = self
+                return self._connected_obj
+        self._connected_obj = None
+        return None
+
+    def save(self, *args, **kwargs):                            return obj
         if hasattr(self, '_data'):
             if 'json_update' in self._data:
                 data = {}
@@ -96,13 +129,17 @@ class JSONModel(models.Model):
                 json_str = json_dumps(self._data)
             self.jsondata = json_str
 
+        connected_obj = self.get_connected_object()
+
+        if connected_obj:
+            connected_obj.save(*args, **kwargs)
+
         super().save(*args, **kwargs)
 
 
-class TreeModel(models.Model):
+class TreeModel(JSONModel):
     class Meta:
         abstract = True
-
 
 def standard_table_action(cls, list_view, request, data, operations):
     if 'action' in data and data['action'] in operations:
