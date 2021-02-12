@@ -112,7 +112,7 @@ class JSONModel(models.Model):
         self._connected_obj = None
         return None
 
-    def save(self, *args, **kwargs):                            return obj
+    def save(self, *args, **kwargs):
         if hasattr(self, '_data'):
             if 'json_update' in self._data:
                 data = {}
@@ -135,6 +135,28 @@ class JSONModel(models.Model):
             connected_obj.save(*args, **kwargs)
 
         super().save(*args, **kwargs)
+
+    def save_from_request(self, request, view_type, param):
+        self.get_connected_object()
+        tmp = self._connected_obj
+        if tmp:
+            class _NoSave():
+                def save(self, *args, **kwargs):
+                    pass
+            self._connected_obj = _NoSave()
+            tmp.save_from_request(request, view_type, param)
+            self.save()
+            self._connected_obj = tmp
+        else:
+            self.save()
+
+    def get_form_class(self, view, request, create):
+        connected_obj = self.get_connected_object()
+        form_class = view.get_form_class()
+        if connected_obj:
+            if hasattr(connected_obj, 'extend_form'):
+                form_class = connected_obj.extend_form(form_class)
+        return form_class
 
 
 class TreeModel(JSONModel):
@@ -175,3 +197,7 @@ def form_with_widgets(obj, widgets_dict):
             fields = '__all__'
             widgets = widgets_dict
     return _Form
+
+
+def extend_class(main, base):
+    main.__bases__ = tuple([base, ] + list(main.__bases__))
