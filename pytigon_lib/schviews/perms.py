@@ -29,6 +29,19 @@ from pytigon_lib.schdjangoext.django_init import get_app_name
 
 _ANONYMOUS = None
 
+def filter_by_permissions(model, queryset_or_obj, request):
+    if hasattr(model, "filter_by_permissions"):
+        return model.filter_by_permissions(oper_type, queryset_or_obj, request)
+    else:
+        return queryset_or_obj
+
+def has_the_right(perm, model, param, request):
+    if hasattr(model, "has_the_right"):
+        return model.has_the_right(perm, param, request)
+    else:
+        return True
+
+
 def get_anonymous():
     global _ANONYMOUS
     if not _ANONYMOUS:
@@ -79,7 +92,7 @@ def make_perms_url_test_fun(app_name, fun, if_block_view=default_block):
     return perms_test
 
 
-def make_perms_test_fun(perm, fun, if_block_view=default_block):
+def make_perms_test_fun(model, perm, fun, if_block_view=default_block):
     """Protect views by the authorization system
 
     Args:
@@ -90,12 +103,16 @@ def make_perms_test_fun(perm, fun, if_block_view=default_block):
     """
 
     def perms_test(request, *args, **kwargs):
+        nonlocal perm, model
+        print("perms_test", perm, args, kwargs)
         user = request.user
         if not user.is_authenticated:
             user = get_anonymous()
             if not user:
                 user = request.user
         if not user.has_perm(perm):
+            return if_block_view(request)
+        if not has_the_right(perm, model, kwargs, request):
             return if_block_view(request)
         return fun(request, *args, **kwargs)
 

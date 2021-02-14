@@ -43,7 +43,7 @@ from pytigon_lib.schtools.schjson import json_loads, json_dumps
 
 from .viewtools import transform_template_name, LocalizationTemplateResponse, ExtTemplateResponse
 from .form_fun import form_with_perms
-from .perms import make_perms_test_fun
+from .perms import make_perms_test_fun, filter_by_permissions
 
 # url:  /table/TableName/filter/target/list url width field:
 # /table/TableName/parent_pk/field/filter/target/list
@@ -84,7 +84,6 @@ def save(obj, request, view_type, param=None):
         obj.save_from_request(request, view_type, param)
     else:
         obj.save()
-
 
 def view_editor(request, pk, app, tab, model, template_name, field_edit_name, post_save_redirect, ext='py',
             extra_context=None, target=None, parent_pk=0, field_name=None):
@@ -346,6 +345,9 @@ class GenericRows(object):
                 names = super().get_template_names()
                 if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
                     names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                if hasattr(self.model, "get_template_name"):
+                    names.insert(0, self.model.get_template_name(None))
+                    print(names)
                 return names
 
             def get_paginate_by(self, queryset):
@@ -456,11 +458,13 @@ class GenericRows(object):
 
             def get_queryset(self):
                 ret = None
+
                 if 'tree' in self.kwargs['vtype']:
                     if self.queryset:
                         ret = self.queryset
                     else:
                         ret = self.model.objects.all()
+
                     parent = int(self.kwargs['filter'])
                     if parent >= 0:
                         if parent == 0:
@@ -487,6 +491,9 @@ class GenericRows(object):
                                     ret = self.model.objects.all()
                             else:
                                 ret = self.model.objects.all()
+
+                    ret = filter_by_permissions(self.model, ret, self.request)
+
                     if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
                         parent = int(self.kwargs['base_filter'])
                         ret = ret.filter(parent=parent)
@@ -519,7 +526,7 @@ class GenericRows(object):
                 else:
                     return ret
 
-        fun = make_perms_test_fun(self.base_perm % 'list', ListView.as_view())
+        fun = make_perms_test_fun(self.base_model, self.base_perm % 'list', ListView.as_view())
         self._append(url, fun)
 
         return self
@@ -562,6 +569,8 @@ class GenericRows(object):
                 names = super().get_template_names()
                 if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
                     names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                if hasattr(self.model, "get_template_name"):
+                    names.insert(0, self.model.get_template_name(self.get_object()))
                 return names
 
             def get_context_data(self, **kwargs):
@@ -597,7 +606,7 @@ class GenericRows(object):
             def post(self, request, *args, **kwargs):
                 return self.get(request, *args, **kwargs)
 
-        fun = make_perms_test_fun(self.base_perm % 'list', DetailView.as_view())
+        fun = make_perms_test_fun(self.base_model, self.base_perm % 'list', DetailView.as_view())
         return self._append(url, fun)
 
     def edit(self):
@@ -630,6 +639,8 @@ class GenericRows(object):
                 names = super().get_template_names()
                 if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
                     names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                if hasattr(self.model, "get_template_name"):
+                    names.insert(0, self.model.get_template_name(self.get_object()))
                 return names
 
             def get_context_data(self, **kwargs):
@@ -731,7 +742,7 @@ class GenericRows(object):
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 
-        fun = make_perms_test_fun(self.base_perm % 'change', UpdateView.as_view())
+        fun = make_perms_test_fun(self.base_model, self.base_perm % 'change', UpdateView.as_view())
         return self._append(url, fun)
 
     def add(self):
@@ -765,6 +776,8 @@ class GenericRows(object):
                 names = super().get_template_names()
                 if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
                     names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                if hasattr(self.model, "get_template_name"):
+                    names.insert(0, self.model.get_template_name(self.get_object()))
                 return names
 
             def get_success_url(self):
@@ -914,7 +927,7 @@ class GenericRows(object):
                 #        break
                 return context
 
-        fun = make_perms_test_fun(self.base_perm % 'change',
+        fun = make_perms_test_fun(self.base_model, self.base_perm % 'change',
                                   CreateView.as_view())
         return self._append(url, fun)
 
@@ -953,13 +966,13 @@ class GenericRows(object):
                 #        break
                 return context
 
-        fun = make_perms_test_fun(self.base_perm % 'delete',
+        fun = make_perms_test_fun(self.base_model, self.base_perm % 'delete',
                                   DeleteView.as_view())
         return self._append(url, fun)
 
     def editor(self):
         url = r'(?P<pk>\d+)/(?P<field_edit_name>[\w_]*)/(?P<target>[\w_]*)/editor/$'
-        fun = make_perms_test_fun(self.base_perm % 'change', view_editor)
+        fun = make_perms_test_fun(self.base_model, self.base_perm % 'change', view_editor)
         if self.field:
             try:
                 f = getattr(self.base_model, self.field).related
