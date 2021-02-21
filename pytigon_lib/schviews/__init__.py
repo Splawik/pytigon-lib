@@ -777,7 +777,7 @@ class GenericRows(object):
                 if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
                     names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
                 if hasattr(self.model, "get_template_name"):
-                    names.insert(0, self.model.get_template_name(self.get_object()))
+                    names.insert(0, self.model.get_template_name(self.object))
                 return names
 
             def get_success_url(self):
