@@ -201,3 +201,14 @@ def form_with_widgets(obj, widgets_dict):
 
 def extend_class(main, base):
     main.__bases__ = tuple([base, ] + list(main.__bases__))
+
+
+class OverwritableCallable():
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, *argi, **kwargs):
+        self.func(*argi, **kwargs)
+
+    def set_function(self, func):
+        self.func = func

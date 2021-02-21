@@ -151,6 +151,15 @@ STANDARD_ACTIONS = {
     'refresh_frame': {
         'target': "refresh_frame"
     },
+    'refresh_page': {
+        'target': "refresh_page"
+    },
+    'refresh_app': {
+        'target': "refresh_app"
+    },
+    'back': {
+        'target': "null"
+    },
     'top': {
         'target': "_top"
     }
