@@ -662,6 +662,10 @@ class GenericRows(object):
 
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object()
+                if self.object and hasattr(self.object, "redirect_href"):
+                    href = self.object.redirect_href(request)
+                    if href:
+                        return HttpResponseRedirect(href)
 
                 if 'init' in kwargs:
                     kwargs['init'](self)
@@ -792,7 +796,10 @@ class GenericRows(object):
                 if self.field:
                     ppk = int(kwargs['parent_pk'])
                     if ppk > 0:
-                        self.object.parent = self.pmodel.objects.get(id=ppk)
+                        try:
+                            self.object.parent = self.pmodel.objects.get(id=ppk)
+                        except:
+                            self.object.parent = self.pmodel.__bases__[0].objects.get(id=ppk)
                 if hasattr(self.model, 'init_new'):
                     if kwargs['add_param'] and kwargs['add_param'] != '-':
                         self.init_form = self.object.init_new(request, self, kwargs['add_param'])

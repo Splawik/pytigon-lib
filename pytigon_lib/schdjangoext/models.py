@@ -189,13 +189,17 @@ def standard_table_action(cls, list_view, request, data, operations):
     return None
 
 
-def form_with_widgets(obj, widgets_dict):
+def get_form(obj, fields_list=None, widgets_dict=None):
     class _Form(forms.ModelForm):
         class Meta:
-            nonlocal obj, widgets_dict
+            nonlocal obj, fields_list, widgets_dict
             model = obj.__class__
-            fields = '__all__'
-            widgets = widgets_dict
+            if fields_list:
+                fields = fields_list
+            else:
+                fields = '__all__'
+            if widgets_dict:
+                widgets = widgets_dict
     return _Form
 
 
