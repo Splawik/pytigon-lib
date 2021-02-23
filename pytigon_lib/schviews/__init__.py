@@ -663,7 +663,7 @@ class GenericRows(object):
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object()
                 if self.object and hasattr(self.object, "redirect_href"):
-                    href = self.object.redirect_href(request)
+                    href = self.object.redirect_href(self, request)
                     if href:
                         return HttpResponseRedirect(href)
 
@@ -830,6 +830,12 @@ class GenericRows(object):
                         if hasattr(form.fields[field].widget, 'py_client'):
                             if request.META['HTTP_USER_AGENT'].startswith('Py'):
                                 form.fields[field].widget.set_py_client(True)
+
+                if self.object and hasattr(self.object, "redirect_href"):
+                    href = self.object.redirect_href(self, request)
+                    if href:
+                        return HttpResponseRedirect(href)
+
                 return self.render_to_response(context=self.get_context_data(form=form))
 
             def post(self, request, *args, **kwargs):
