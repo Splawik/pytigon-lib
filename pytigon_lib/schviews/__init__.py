@@ -421,6 +421,7 @@ class GenericRows(object):
                 context['title'] = self.title
                 context['rel_field'] = self.rel_field
                 context['filter'] = self.kwargs['filter']
+                context['model'] = self.model
                 parent_class.table_paths_to_context(self, context)
 
                 if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
