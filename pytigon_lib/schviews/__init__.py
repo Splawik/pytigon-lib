@@ -169,9 +169,30 @@ class GenericTable(object):
                 else:
                     m = apps.get_model(self.app, tab)
                 try:
-                    f = getattr(m, field).related
+                    try:
+                        f = getattr(m, field).rel
+                    except:
+                        f = getattr(m, field).related
                 except:
-                    f = getattr(m, field).rel
+                    for item in dir(m):
+                        print(item)
+                    print("----------")
+                    print(field)
+                    print("----------")
+                #try:
+                #    try:
+                #        f = getattr(m, field).related
+                #    except:
+                #        f = getattr(m, field).rel
+                #except:
+                #    try:
+                #        f = getattr(m.parent_link, field).related
+                #    except:
+                #        try:
+                #            f = getattr(m.parent_link, field).rel
+                #        except:
+                #            print(dir(m))
+
                 try:
                     table_name = f.name
                 except:
@@ -347,7 +368,6 @@ class GenericRows(object):
                     names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
                 if hasattr(self.model, "get_template_name"):
                     names.insert(0, self.model.get_template_name(None))
-                    print(names)
                 return names
 
             def get_paginate_by(self, queryset):
@@ -516,7 +536,7 @@ class GenericRows(object):
                         else:
                             ret = ret.order_by('-id')
 
-                if self.form:
+                if self.form and not self.rel_field:
                     if self.form_valid == True:
                         return self.form.process(self.request, ret)
                     else:
@@ -773,7 +793,6 @@ class GenericRows(object):
             init_form = None
             fields = "__all__"
 
-
             def doc_type(self):
                 return "html"
 
@@ -836,7 +855,6 @@ class GenericRows(object):
                     href = self.object.redirect_href(self, request)
                     if href:
                         return HttpResponseRedirect(href)
-
                 return self.render_to_response(context=self.get_context_data(form=form))
 
             def post(self, request, *args, **kwargs):
