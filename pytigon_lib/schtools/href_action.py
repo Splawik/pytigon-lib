@@ -38,7 +38,7 @@ STANDARD_ACTIONS = {
     },
     'new_row': {
         'target': 'popup_edit',
-        'class': "btn {{btn_size}} btn-outline-secondary edit new-row"
+        'class': "btn {{btn_size}} btn-outline-secondary edit new-row",
     },
     'edit': {
         'target':  "popup_edit",
