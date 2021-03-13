@@ -574,6 +574,15 @@ class GenericRows(object):
             title = self.title
             response_class = ExtTemplateResponse
 
+            def get_object(self, queryset=None):
+                obj = super().get_object(queryset)
+                if hasattr(obj, 'get_derived_object'):
+                    obj2 = obj.get_derived_object({'view': self,})
+                    self.model = type(obj2)
+                    return obj2
+                else:
+                    return obj
+
             def doc_type(self):
                 if self.kwargs['target']=='pdf':
                     return "pdf"
@@ -599,6 +608,9 @@ class GenericRows(object):
                 context = super(DetailView, self).get_context_data(**kwargs)
                 context['view'] = self
                 context['title'] = self.title + ' - '+str(_('element information'))
+                #context['object'] = self.object
+                #context['title'] = type(self.object).__name__
+                #print("XX", self.object)
                 #context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
@@ -612,8 +624,8 @@ class GenericRows(object):
                 return context
 
             def get(self, request, *args, **kwargs):
+                self.object = self.get_object()
                 if self.kwargs['vtype'] == 'row_action':
-                    self.object = self.get_object()
                     if hasattr(self.object, 'row_action'):
                         ret =  getattr(self.model, 'row_action')(self.model, request, args, kwargs)
                         if ret == None:
@@ -652,6 +664,14 @@ class GenericRows(object):
             title = self.title
             fields = "__all__"
 
+            def get_object(self, queryset=None):
+                obj = super().get_object(queryset)
+                if hasattr(obj, 'get_derived_object'):
+                    obj2 = obj.get_derived_object({'view': self,})
+                    self.model = type(obj2)
+                    return obj2
+                else:
+                    return obj
 
             def doc_type(self):
                 return "html"
@@ -793,6 +813,15 @@ class GenericRows(object):
             init_form = None
             fields = "__all__"
 
+            def get_object(self, queryset=None):
+                obj = self.model()
+                if hasattr(obj, 'get_derived_object'):
+                    obj2 = obj.get_derived_object({'view': self,})
+                    self.model = type(obj2)
+                    return obj2
+                else:
+                    return obj
+
             def doc_type(self):
                 return "html"
 
@@ -812,7 +841,8 @@ class GenericRows(object):
                 return success_url
 
             def _get_form(self, request, *args, **kwargs):
-                self.object = self.model()
+                #self.object = self.model()
+                self.object = self.get_object()
                 if self.field:
                     ppk = int(kwargs['parent_pk'])
                     if ppk > 0:
@@ -980,6 +1010,15 @@ class GenericRows(object):
             success_url = make_path_lazy('ok')
             template_name = self.template_name
             title = self.title
+
+            def get_object(self, queryset=None):
+                obj = super().get_object(queryset)
+                if hasattr(obj, 'get_derived_object'):
+                    obj2 = obj.get_derived_object({'view': self,})
+                    self.model = type(obj2)
+                    return obj2
+                else:
+                    return obj
 
             def get_context_data(self, **kwargs):
                 nonlocal parent_class

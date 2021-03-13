@@ -158,6 +158,9 @@ class JSONModel(models.Model):
                 form_class = connected_obj.extend_form(form_class)
         return form_class
 
+    def get_derived_object(self, param=None):
+        return self
+
 
 class TreeModel(JSONModel):
     class Meta:
