@@ -39,22 +39,26 @@ STANDARD_ACTIONS = {
     'new_row': {
         'target': 'popup_edit',
         'class': "btn {{btn_size}} btn-outline-secondary edit new-row",
+        'attrs': "data-inline-position='^tr, .tr:after'",
+        'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
     'edit': {
         'target':  "popup_edit",
         'title': _('Update'),
         'class': "btn {{btn_size}} btn-outline-secondary edit",
-        'attrs': "data-role='button' data-inline='true' data-mini='true'",
+        'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
         'url': "{tp}{id}/{action}/",
         'icon': 'edit fa fa-lg fa-pencil',
+        'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
     'edit2': {
         'target':  "popup_edit",
         'title': _('Update'),
         'class': "btn {{btn_size}} btn-outline-secondary edit",
-        'attrs': "data-role='button' data-inline='true' data-mini='true'",
+        'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
         'url': "{tp}{id}/{action}/",
         'icon': 'edit fa fa-lg fa-pencil',
+        'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
     'delete': {
         'target': "popup_delete",

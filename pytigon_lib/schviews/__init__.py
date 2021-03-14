@@ -932,7 +932,7 @@ class GenericRows(object):
                 """
                 If the form is valid, save the associated model.
                 """
-
+                nonlocal parent_class
                 _data = {}
                 for key, value in form.data.items():
                     if key.startswith('json_'):
@@ -967,7 +967,12 @@ class GenericRows(object):
                 form.save_m2m()
 
                 if self.object:
-                    return new_row_ok(request, int(self.object.id), str(self.object))
+                    if 'redirect' in self.request.GET and self.request.GET['redirect']:
+                        ctx = self.get_context_data(form=form)
+                        tp = ctx['table_path']
+                        return HttpResponseRedirect(tp+('%d/edit/' % self.object.pk))
+                    else:
+                        return new_row_ok(request, int(self.object.id), str(self.object))
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 
