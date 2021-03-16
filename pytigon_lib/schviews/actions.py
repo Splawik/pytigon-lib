@@ -108,13 +108,13 @@ def new_row_ok(request, id, title):
     if request.META['HTTP_USER_AGENT'].lower().startswith('py'):
         return HttpResponse(_NEW_ROW_OK_SHTML % (id, title))
     else:
-        return HttpResponse(_NEW_ROW_OK_HTML)
+        return HttpResponse(_NEW_ROW_OK_HTML+"id:"+str(id))
 
 def update_row_ok(request, id, title):
     if request.META['HTTP_USER_AGENT'].lower().startswith('py'):
         return HttpResponse(_UPDATE_ROW_OK_SHTML % (id, title))
     else:
-        return HttpResponse(_UPDATE_ROW_OK_HTML)
+        return HttpResponse(_UPDATE_ROW_OK_HTML+"id:"+str(id))
 
 def ok(request):
     return HttpResponse(_OK_HTML)

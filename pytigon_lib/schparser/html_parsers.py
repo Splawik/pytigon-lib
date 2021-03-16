@@ -22,6 +22,9 @@ from pytigon_lib.schhtml.parser import Parser, content_tostring, Elem, Script, t
 from pytigon_lib.schhtml.htmltools import Td
 from pyquery import PyQuery as pq
 
+class ExtList(list):
+    row_id = 0
+
 class SimpleTabParserBase(Parser):
     """Parses html for tables. Found tables save to self.tables variable"""
     def __init__(self):
@@ -36,7 +39,10 @@ class SimpleTabParserBase(Parser):
         for elem in self._tree.iterfind(".//table"):
             table = []
             for elem2 in elem.iterfind(".//tr"):
-                tr = []
+                tr = ExtList()
+                if 'row-id' in elem2.attrib:
+                    tr.row_id = elem2.attrib['row-id']
+
                 for elem3 in elem2.iterfind(".//th"):
                     tr.append(self._preprocess(elem3))
                 for elem3 in elem2.iterfind(".//td"):

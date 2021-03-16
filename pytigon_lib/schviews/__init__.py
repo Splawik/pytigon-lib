@@ -536,16 +536,20 @@ class GenericRows(object):
                         else:
                             ret = ret.order_by('-id')
 
-                if self.form and not self.rel_field:
-                    if self.form_valid == True:
-                        return self.form.process(self.request, ret)
-                    else:
-                        if hasattr(self.form, 'process_empty_or_invalid'):
-                            return self.form.process_empty_or_invalid(self.request, ret)
-                        else:
-                            return ret
-                else:
+                if 'pk' in self.request.GET:
+                    ret = ret.filter(pk=self.request.GET['pk'])
                     return ret
+                else:
+                    if self.form and not self.rel_field:
+                        if self.form_valid == True:
+                            return self.form.process(self.request, ret)
+                        else:
+                            if hasattr(self.form, 'process_empty_or_invalid'):
+                                return self.form.process_empty_or_invalid(self.request, ret)
+                            else:
+                                return ret
+                    else:
+                        return ret
 
         fun = make_perms_test_fun(self.base_model, self.base_perm % 'list', ListView.as_view())
         self._append(url, fun)

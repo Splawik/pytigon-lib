@@ -225,10 +225,13 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     row_title[i] = "%d" % i
                 row_title[0] = 'cid'
                 row_title[-1] = 'caction'
-
+                row_title.append('id')
                 tab2 = []
                 for row in tab:
-                    tab2.append(dict(zip(row_title, row)))
+                    d = dict(zip(row_title, row))
+                    if hasattr(row, "row_id"):
+                        d['id'] = row.row_id
+                    tab2.append(d)
 
                 d = {}
                 d['total'] = c
