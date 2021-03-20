@@ -355,7 +355,7 @@ class GenericRows(object):
                     return "odf"
                 elif self.kwargs['target'] == 'xlsx':
                     return "xlsx"
-                elif self.kwargs['target']=='json':
+                elif self.kwargs['target']=='json' or ('json' in self.request.GET and self.request.GET['json']=='1'):
                     return "json"
                 elif self.kwargs['target']=='txt':
                     return "txt"
@@ -493,7 +493,8 @@ class GenericRows(object):
                                 parent = int(self.kwargs['base_filter'])
                             else:
                                 parent = None
-                        ret =  ret.filter(parent=parent)
+                        if not 'pk' in self.request.GET:
+                            ret =  ret.filter(parent=parent)
                 else:
                     if self.queryset:
                         ret = self.queryset

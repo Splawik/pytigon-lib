@@ -166,6 +166,9 @@ STANDARD_ACTIONS = {
     },
     'top': {
         'target': "_top"
+    },
+    'parent': {
+        'target': "_parent"
     }
 }
 

@@ -48,8 +48,15 @@ def import_model(app, tab):
 def gettempdir():
     return settings.TEMP_PATH
 
-def make_href(href):
+def make_href(href, base_url=None):
     if settings.URL_ROOT_FOLDER and href.startswith('/'):
-        return "/" + settings.URL_ROOT_FOLDER + href
+        href2 =  "/" + settings.URL_ROOT_FOLDER + href
     else:
-        return href
+        href2 = href
+    if base_url and '?' in base_url:
+        x = base_url.split('?', 1)[1]
+        if '?' in href2:
+            href2 += '&' + x
+        else:
+            href2 += '?' + x
+    return href2

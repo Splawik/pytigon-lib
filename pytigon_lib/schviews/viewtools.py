@@ -222,7 +222,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     c = len(tab)-1
 
                 for i in range(len(row_title)):
-                    row_title[i] = "%d" % i
+                    row_title[i] = "%d" % (i+1)
                 row_title[0] = 'cid'
                 row_title[-1] = 'caction'
                 row_title.append('id')
