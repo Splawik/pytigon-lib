@@ -212,16 +212,16 @@ class ForeignKey(models.ForeignKey):
 
 
 class Select2Field(forms.ModelChoiceField):
-    def __init__(self, queryset, search_fields):
+    def __init__(self, queryset, search_fields, **kwargs):
         widget=ModelSelect2Widget(
             queryset = queryset,
             search_fields=search_fields,
             attrs={'class': 'select2-full-width'}
         )
-        super().__init__(queryset=queryset, widget=widget)
+        super().__init__(queryset=queryset, widget=widget, **kwargs)
 
     def to_python(self, value):
-        if type(value) in (int, str):
+        if type(value) in (int, str) or value == None:
             return value
         else:
             return value.id

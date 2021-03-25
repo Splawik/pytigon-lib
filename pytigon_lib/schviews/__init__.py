@@ -747,11 +747,6 @@ class GenericRows(object):
                 else:
                     self.form_class = self.get_form_class()
 
-                #if self.object and hasattr(self.object, 'get_form'):
-                #    form = self.object.get_form(self, request, form_class, False)
-                #    if not form:
-                #        form = self.get_form(form_class)
-                #else:
                 form = self.get_form(self.form_class)
 
                 if self.model and hasattr(self.model, 'is_form_valid'):
