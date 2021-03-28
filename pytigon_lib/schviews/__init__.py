@@ -23,6 +23,7 @@
 
 import collections
 import uuid
+import datetime
 
 from django.urls import get_script_prefix
 from django.apps import apps
@@ -33,7 +34,7 @@ from django.utils.functional import lazy
 from django.conf import settings
 from django.urls import path, re_path
 
-from django.db.models import CharField
+import django.db.models
 from django.db.models import  Q
 from django.utils.translation import ugettext_lazy as _
 
@@ -44,6 +45,7 @@ from pytigon_lib.schtools.schjson import json_loads, json_dumps
 from .viewtools import transform_template_name, LocalizationTemplateResponse, ExtTemplateResponse
 from .form_fun import form_with_perms
 from .perms import make_perms_test_fun, filter_by_permissions
+
 
 # url:  /table/TableName/filter/target/list url width field:
 # /table/TableName/parent_pk/field/filter/target/list
@@ -56,6 +58,27 @@ def make_path(view_name, args=None):
 
 make_path_lazy = lazy(make_path, str)
 
+def _isinstance(field, instances):
+    for instance in instances:
+        if isinstance(field, instance):
+            return True
+    return False
+
+def convert_str_to_model_field(s, field):
+    if _isinstance(field, (django.db.models.CharField, django.db.models.TextField)):
+        return s
+    elif _isinstance(field, (django.db.models.DateTimeField,)):
+        return datetime.datetime.fromisoformat(s[:19])
+    elif _isinstance(field, (django.db.models.DateField,)):
+        return datetime.date.fromisoformat(s)
+    elif _isinstance(field, (django.db.models.FloatField,)):
+        return float(s)
+    elif _isinstance(field, (django.db.models.IntegerField, django.db.models.BigAutoField,)):
+        return int(s)
+    elif _isinstance(field, (django.db.models.BooleanField,)):
+        return True if s and s!="0" and s!="False" else False
+    else:
+        return s
 
 def gen_tab_action(table, action, fun, extra_context=None):
     return re_path(r'table/%s/action/%s/$' % (table, action), fun, extra_context)
@@ -521,7 +544,7 @@ class GenericRows(object):
                         ret = ret.filter(parent=parent)
 
                 if self.search:
-                    fields = [f for f in self.model._meta.fields if isinstance(f, CharField)]
+                    fields = [f for f in self.model._meta.fields if isinstance(f, django.db.models.CharField)]
                     queries = [Q(**{f.name+"__icontains": self.search}) for f in fields]
                     qs = Q()
                     for query in queries:
@@ -904,6 +927,11 @@ class GenericRows(object):
 
             def get_initial(self):
                 d = super(CreateView, self).get_initial()
+
+                for field in self.model._meta.fields:
+                    if field.name in self.request.GET:
+                        value = convert_str_to_model_field(self.request.GET[field.name], field)
+                        d[field.name] = value
 
                 if self.field:
                     if int(self.kwargs['parent_pk']) > 0:
