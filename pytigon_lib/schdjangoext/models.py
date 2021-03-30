@@ -170,7 +170,7 @@ def standard_table_action(cls, list_view, request, data, operations):
     if 'action' in data and data['action'] in operations:
         if data['action'] == 'copy':
             if 'pk' in request.GET:
-                x = request.GET['pk'].split(',')
+                x = request.GET['pks'].split(',')
                 x2 = [int(pos) for pos in x]
                 return serializers.serialize("json", list_view.get_queryset().filter(pk__in=x2))
             else:
@@ -189,6 +189,14 @@ def standard_table_action(cls, list_view, request, data, operations):
                                 setattr(obj2, key, value)
                     obj2.save()
             return {'success': 1}
+        if data['action'] == 'delete':
+            if 'pks' in request.GET:
+                x = request.GET['pks'].split(',')
+                x2 = [int(pos) for pos in x]
+                if x2:
+                    list_view.get_queryset().filter(pk__in=x2).delete()
+                    print("DELETE: ", x2)
+                return []
     return None
 
 
