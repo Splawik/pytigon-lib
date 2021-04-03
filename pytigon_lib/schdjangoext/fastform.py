@@ -118,7 +118,7 @@ def form_from_str(input_str, init_data = {}, base_form_class = forms.Form, prefi
         make_form_str = "def make_form_class(base_form):\n" + "\n".join(
             ['    ' + pos for pos in input_str.split('\n')]) + "\n"
         exec(make_form_str)
-        _Form = locals()['make_form_class'](base_form_class)
+        _Form = locals()['make_form_class'](base_form_class, init_data)
         return _Form
     else:
         class _Form(base_form_class):

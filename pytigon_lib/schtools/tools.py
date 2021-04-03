@@ -163,3 +163,17 @@ def get_from_dicts(elem, dicts):
         if elem in dict:
             return dict[elem]
     return False
+
+def content_to_function(function_content, function_parameters=None, locals_dict=None):
+    if function_parameters:
+        if function_content:
+            fun_txt = "def _tmp(" + function_parameters + "):\n" + "\n".join([4*' '+row for row in function_content.replace('\r','').split('\n')])
+        else:
+            fun_txt = "def _tmp(" + function_parameters + "):\n    pass\n"
+    else:
+        fun_txt = function_content
+    f = {}
+    if locals_dict:
+        f.update(locals_dict)
+    exec(fun_txt, globals(), f)
+    return f["_tmp"]
