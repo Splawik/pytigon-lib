@@ -24,6 +24,7 @@ from pyquery import PyQuery as pq
 
 class ExtList(list):
     row_id = 0
+    class_attr = ""
 
 class SimpleTabParserBase(Parser):
     """Parses html for tables. Found tables save to self.tables variable"""
@@ -42,6 +43,8 @@ class SimpleTabParserBase(Parser):
                 tr = ExtList()
                 if 'row-id' in elem2.attrib:
                     tr.row_id = elem2.attrib['row-id']
+                if 'class' in elem2.attrib:
+                    tr.class_attr = elem2.attrib['class']
 
                 for elem3 in elem2.iterfind(".//th"):
                     tr.append(self._preprocess(elem3))

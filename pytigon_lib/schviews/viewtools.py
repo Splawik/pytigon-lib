@@ -232,6 +232,8 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     d = dict(zip(row_title, row))
                     if hasattr(row, "row_id"):
                         d['id'] = row.row_id
+                    if hasattr(row, "class_attr"):
+                        d['class'] = row.class_attr
                     tab2.append(d)
 
                 d = {}

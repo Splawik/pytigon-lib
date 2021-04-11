@@ -151,7 +151,7 @@ def iter_lines(f, f_name, lang):
 
 
 class ConwertToHtml:
-    def __init__(self, file_name, simple_close_elem, auto_close_elem, no_auto_close_elem, input_str=None, lang='en'):
+    def __init__(self, file_name, simple_close_elem, auto_close_elem, no_auto_close_elem, input_str=None, lang='en', output_processors=None):
         self.file_name = file_name
         self.input_str = input_str
         self.code = []
@@ -162,6 +162,7 @@ class ConwertToHtml:
         self.auto_close_elem = auto_close_elem
         self.no_auto_close_elem = no_auto_close_elem
         self.lang = lang
+        self.output_processors = output_processors
 
     def _output_buf(self, nr):
         for pos in reversed(self.bufor):
@@ -491,7 +492,7 @@ class ConwertToHtml:
                             output = output + '\n'
                         if line[2] == 4 and nextline and nextline[0] > line[0]:
                             output = output + '\n'
-                return output.replace('|||', '\n')
+                ret = output.replace('|||', '\n')
             else:
                 if len(self.output) > 0:
                     for (line, nextline) in list_with_next_generator(self.output):
@@ -510,7 +511,32 @@ class ConwertToHtml:
                             output = output + '\n'
                 ret = output
                 ret = ret.replace('|||', '\n')
-                return ret
+
+            if self.output_processors and '@@(' in ret:
+                tab_tmp1 = ret.split('@@(')
+                ret2 = []
+                for pos in tab_tmp1:
+                    if ret2:
+                        tab_tmp2 = pos.split(")", 1)
+                        if len(tab_tmp2)>1:
+                            value = tab_tmp2[0]
+                            if '://' in value:
+                                fun, value = value.split('://', 1)
+                            elif '-' in value:
+                                fun, value = value.split('-', 1)
+                            else:
+                                fun = 'default'
+                            if fun in self.output_processors:
+                                ret2.append(self.output_processors[fun](value))
+                            ret2.append(tab_tmp2[1])
+                        else:
+                            ret2.append(pos)
+                    else:
+                        ret2.append(pos)
+
+                ret = "".join(ret2)
+
+            return ret
 
 
 def ihtml_to_html_base(file_name, input_str=None, lang='en'):

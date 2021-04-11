@@ -48,7 +48,10 @@ STANDARD_ACTIONS = {
         'class': "btn {{btn_size}} btn-outline-secondary edit",
         'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
         'url': "{tp}{id}/{action}/",
-        'icon': 'edit fa fa-lg fa-pencil',
+        'icon': 'edit fa-pencil fa-lg',
+        #'icon': 'edit bi bi-pencil',
+        #'icon': 'edit icon-whatsapp',
+        #'icon': 'edit svg-categories--applications-office',
         'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
     'edit2': {
@@ -57,7 +60,7 @@ STANDARD_ACTIONS = {
         'class': "btn {{btn_size}} btn-outline-secondary edit",
         'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
         'url': "{tp}{id}/{action}/",
-        'icon': 'edit fa fa-lg fa-pencil',
+        'icon': 'edit fa-pencil fa-lg',
         'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
     'delete': {
@@ -66,7 +69,7 @@ STANDARD_ACTIONS = {
         'class': "popup_delete btn {{btn_size}} btn-outline-danger",
         'attrs': "data-role='button' data-inline='true' data-mini='true'",
         'url': "{tp}{id}/{action}/",
-        'icon': 'delete fa fa-lg fa-trash-o'
+        'icon': 'delete fa-trash-o fa-lg'
     },
     'delete2': {
         'target': "popup_delete",
@@ -74,7 +77,7 @@ STANDARD_ACTIONS = {
         'class': "popup_delete btn {{btn_size}} btn-outline-danger",
         'attrs': "data-role='button' data-inline='true' data-mini='true'",
         'url': "{tp}{id}/{action}/",
-        'icon': 'delete fa fa-lg fa-trash-o'
+        'icon': 'delete fa-trash-o fa-lg'
     },
     'field_list': {
         'target': 'inline_info',
@@ -82,14 +85,14 @@ STANDARD_ACTIONS = {
         'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after' ",
         'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
         'url': "{ap}table/{object_name}/{id}/{x1}/-/form/sublist/",
-        'icon': 'grid fa fa-lg fa-caret-down',
+        'icon': 'grid fa-caret-down fa-lg',
     },
     'field_list_get': {
         'target': 'inline_info',
         'class': "popup_inline btn {{btn_size}} btn-outline-secondary",
         'attrs': "data-role='button' data-inline='true' data-mini='true'",
         'url': "{ap}{object_name}/{id}/{x1}/-/form/get/",
-        'icon': "grid fa fa-lg fa-caret-down",
+        'icon': "grid fa-caret-down fa-lg",
     },
     'field_action': {
         'target': 'inline_edit',
@@ -97,21 +100,21 @@ STANDARD_ACTIONS = {
         'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
         'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
         'url': "{ap}{object_name}/{id}/{x1}/-/form/sublist/",
-        'icon': 'grid fa fa-lg fa-angle-double-down',
+        'icon': 'grid fa-angle-double-down fa-lg',
     },
     'field_edit': {
         'url': "{ap}table/{object_name}/{id}/{x1}/py/editor/",
-        'icon': 'edit fa fa-lg fa-pencil-square-o',
+        'icon': 'edit fa-pencil-square-o fa-lg',
         'attrs': "data-inline-position='^tr, .tr:after'",
         'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
     'any_field_edit': {
         'url': "{app_path}table/{object_name}/{id}/{x1}/{x2}/editor/",
-        'icon': 'edit fa fa-lg fa-pencil-square-o',
+        'icon': 'edit fa-pencil-square-o fa-lg',
     },
     'print': {
         'target': '_blank',
-        'icon': 'arrow-d fa fa-lg fa-print',
+        'icon': 'arrow-d fa-print fa-lg',
     },
     'template_edit': {
         'icon': 'client://mimetypes/x-office-presentation.png',
@@ -119,17 +122,17 @@ STANDARD_ACTIONS = {
     'pdf': {
         'target': '_blank',
         'url': "{tp}{id}/pdf/view/",
-        'icon': 'eye fa fa-lg fa-eye',
+        'icon': 'eye fa-eye fa-lg',
     },
     'odf': {
         'target': '_blank',
         'url': "{tp}{id}/odf/view/",
-        'icon': 'bullets fa fa-lg fa-list',
+        'icon': 'bullets fa-list fa-lg',
     },
     'xlsx': {
         'target': '_blank',
         'url': "{tp}{id}/xlsx/view/",
-        'icon': 'bullets fa fa-lg fa-list',
+        'icon': 'bullets fa-list fa-lg',
     },
     'null': {
         'target': 'null',

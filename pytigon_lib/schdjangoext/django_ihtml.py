@@ -39,6 +39,8 @@ NO_AUTO_CLOSE_DJANGO_ELEM = [
     'elif',
     ]
 
+def fa_icons(value):
+    return "<i class='fa fa-%s'></i>" % value
 
 def ihtml_to_html(file_name, input_str=None, lang='en'):
     """Convert ihtml syntax to html
@@ -49,7 +51,7 @@ def ihtml_to_html(file_name, input_str=None, lang='en'):
         lang - language
     """
     conwert = ConwertToHtml(file_name, SIMPLE_CLOSE_ELEM, AUTO_CLOSE_DJANGO_ELEM, NO_AUTO_CLOSE_DJANGO_ELEM,
-        input_str, lang)
+        input_str, lang, output_processors={ 'fa': fa_icons, })
     try:
         conwert.process()
         return conwert.to_str()
