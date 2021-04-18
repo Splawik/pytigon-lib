@@ -161,6 +161,13 @@ class JSONModel(models.Model):
     def get_derived_object(self, param=None):
         return self
 
+    def set_field_value(self, field_name, attr_name, value):
+        for f in self._meta.fields:
+            if f.name == field_name:
+                setattr(f, attr_name, value)
+                return f
+        else:
+            return None
 
 class TreeModel(JSONModel):
     class Meta:
