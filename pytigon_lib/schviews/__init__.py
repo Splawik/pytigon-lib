@@ -121,7 +121,6 @@ def view_editor(request, pk, app, tab, model, template_name, field_edit_name, po
             return HttpResponse('OK')
         else:
             data = request.POST['data']
-            #print(type(data), data)
             buf = data.replace('\r\n', '\n')
             #if type(buf)==str:
             #    buf = buf.encode('utf-8')
@@ -202,19 +201,6 @@ class GenericTable(object):
                     print("----------")
                     print(field)
                     print("----------")
-                #try:
-                #    try:
-                #        f = getattr(m, field).related
-                #    except:
-                #        f = getattr(m, field).rel
-                #except:
-                #    try:
-                #        f = getattr(m.parent_link, field).related
-                #    except:
-                #        try:
-                #            f = getattr(m.parent_link, field).rel
-                #        except:
-                #            print(dir(m))
 
                 try:
                     table_name = f.name
@@ -372,23 +358,28 @@ class GenericRows(object):
             search = None
 
             def doc_type(self):
-                if self.kwargs['target']=='pdf':
+                if self.kwargs['target'].startswith('pdf'):
                     return "pdf"
-                elif self.kwargs['target']=='odf':
+                elif self.kwargs['target'].startswith('odf'):
                     return "odf"
-                elif self.kwargs['target'] == 'xlsx':
+                elif self.kwargs['target'].startswith('xlsx'):
                     return "xlsx"
-                elif self.kwargs['target']=='json' or ('json' in self.request.GET and self.request.GET['json']=='1'):
+                elif self.kwargs['target'].startswith('json') or ('json' in self.request.GET and self.request.GET['json']=='1'):
                     return "json"
-                elif self.kwargs['target']=='txt':
+                elif self.kwargs['target'].startswith('txt'):
                     return "txt"
                 else:
                     return "html"
 
             def get_template_names(self):
                 names = super().get_template_names()
-                if 'target' in self.kwargs and self.kwargs['target'].startswith('ver'):
-                    names.insert(0, self.template_name.replace(".html",  self.kwargs['target'][3:] + ".html"))
+                if 'target' in self.kwargs and '__' in  self.kwargs['target']:
+                    target2 = self.kwargs['target'].split('__', 1)[1]
+                    if '__' in target2:
+                        app, t = target2.split('__')
+                        names.insert(0, app+"/"+self.template_name.split('/')[-1].replace(".html", t + ".html"))
+                    else:
+                        names.insert(0, self.template_name.replace(".html",  target2 + ".html"))
                 if hasattr(self.model, "get_template_name"):
                     names.insert(0, self.model.get_template_name(None))
                 return names
@@ -404,17 +395,36 @@ class GenericRows(object):
                     kwargs['init'](self)
 
                 if self.kwargs['vtype'] == 'table_action':
-                    queryset = self.get_queryset()
-                    if hasattr(queryset.model, 'table_action'):
+                    parent = None
+                    try:
+                        parent_id = int(self.kwargs['filter'])
+                        if parent_id > 0:
+                            parent = self.model.objects.get(id=parent_id)
+                        else:
+                            if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
+                                parent_id = int(self.kwargs['base_filter'])
+                                parent = self.model.objects.get(id=parent_id)
+                    except:
+                        parent = None
+
+                    if hasattr(parent, 'get_derived_object'):
+                        obj2 = parent.get_derived_object({'view': self, })
+                        model = type(obj2)
+                    else:
+                        model = self.get_queryset().model
+                    #queryset = self.get_queryset()
+                    if hasattr(model, 'table_action'):
                         data = request.POST
                         if request.content_type == 'application/json':
                             data = json_loads(request.body)
-                        ret =  getattr(queryset.model, 'table_action')(self, request, data)
+                        ret =  getattr(model, 'table_action')(self, request, data)
                         if ret == None:
                             raise Http404("Action doesn't exists")
                         else:
                             if type(ret) == str:
                                 return HttpResponse(ret, content_type='application/json')
+                            elif isinstance(ret, HttpResponse):
+                                return ret
                             else:
                                 return JsonResponse(ret, safe=False)
                     raise Http404("Action doesn't exists")
@@ -465,6 +475,7 @@ class GenericRows(object):
                 context['rel_field'] = self.rel_field
                 context['filter'] = self.kwargs['filter']
                 context['model'] = self.model
+                context['target'] = self.kwargs['target']
                 parent_class.table_paths_to_context(self, context)
 
                 if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
@@ -612,13 +623,16 @@ class GenericRows(object):
                     return obj
 
             def doc_type(self):
-                if self.kwargs['target']=='pdf':
+                if self.kwargs['target'].startswith('pdf'):
                     return "pdf"
-                elif self.kwargs['target']=='odf':
+                elif self.kwargs['target'].startswith('odf'):
                     return "odf"
-                elif self.kwargs['target'] == 'xlsx':
+                elif self.kwargs['target'].startswith('xlsx'):
                     return "xlsx"
-                elif self.kwargs['target']=='txt':
+                elif self.kwargs['target'].startswith('json') or (
+                        'json' in self.request.GET and self.request.GET['json'] == '1'):
+                    return "json"
+                elif self.kwargs['target'].startswith('txt'):
                     return "txt"
                 else:
                     return "html"
@@ -636,19 +650,9 @@ class GenericRows(object):
                 context = super(DetailView, self).get_context_data(**kwargs)
                 context['view'] = self
                 context['title'] = self.title + ' - '+str(_('element information'))
-                #context['object'] = self.object
-                #context['title'] = type(self.object).__name__
-                #print("XX", self.object)
-                #context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
 
-                #for app in settings.APPS:
-                #    if '.' in app and parent_class.table.app in app:
-                #        _app = app.split('.')[0]
-                #        if not _app.startswith('_'):
-                #            context['prj'] = app.split('.')[0]
-                #        break
                 return context
 
             def get(self, request, *args, **kwargs):
