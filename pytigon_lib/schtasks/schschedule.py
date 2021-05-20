@@ -17,7 +17,8 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-import pendulum
+#import pendulum
+import datetime
 import asyncio
 import types
 
@@ -31,8 +32,8 @@ import logging
 
 LOGGER = logging.getLogger("pytigon_task")
 
-INIT_TIME = pendulum.now()
-
+#INIT_TIME = pendulum.now()
+INIT_TIME = datetime.datetime.now()
 
 def at_iterate(param):
     ret = []
@@ -73,7 +74,8 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz='local'):
             else:
                 x = INIT_TIME
                 try:
-                    x2 = pendulum.datetime(x.year, x.month, _day, _hour, _minute, _second, tz=tz)
+                    #x2 = pendulum.datetime(x.year, x.month, _day, _hour, _minute, _second, tz=tz)
+                    x2 = datetime.datetime(x.year, x.month, _day, _hour, _minute, _second, tz=tz)
                     if x > x2:
                         x = x.add(months=1)
                 except:
@@ -122,7 +124,8 @@ def daily(at=0, in_weekdays=None, tz='local'):
                 x = dt.add(days=1)
             else:
                 x = INIT_TIME
-                x2 = pendulum.datetime(x.year, x.month, x.day, _hour, _minute, _second, tz=tz)
+                #x2 = pendulum.datetime(x.year, x.month, x.day, _hour, _minute, _second, tz=tz)
+                x2 = datetime.datetime(x.year, x.month, x.day, _hour, _minute, _second, tz=tz)
                 if x > x2:
                     x = x.add(days=1)
             x = x.set(hour=_hour, minute=_minute, second=_second)
@@ -367,7 +370,8 @@ class SChScheduler():
             while True:
                 try:
                     loop = asyncio.get_event_loop()
-                    loop.create_task(self.process(pendulum.now()))
+                    #loop.create_task(self.process(pendulum.now()))
+                    loop.create_task(self.process(datetime.datetime.now()))
                     if not self.tasks and not self.rpcserver_activated and not self.imap4:
                         return
                 except:
@@ -379,7 +383,8 @@ class SChScheduler():
         loop.run_until_complete(self._run())
 
 if __name__ == '__main__':
-    INIT_TIME = pendulum.datetime(2016, 5, 1)
+    #INIT_TIME = pendulum.datetime(2016, 5, 1)
+    INIT_TIME = datetime.datetime(2016, 5, 1)
 
     scheduler = SChScheduler(rpc_port=7080)
 
