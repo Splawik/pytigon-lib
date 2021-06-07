@@ -357,6 +357,28 @@ class GenericRows(object):
             order = None
             search = None
 
+
+            def _context_for_tree(self):
+                try:
+                    parent_pk = int(self.kwargs['filter'])
+                    if parent_pk > 0:
+                        parent = self.model.objects.get(pk=parent_pk)
+                    else:
+                        parent = None
+                except:
+                    parent_pk = None
+                    parent = None
+                try:
+                    base_parent_pk = int(self.kwargs['base_filter'])
+                    if base_parent_pk > 0:
+                        base_parent = self.model.objects.get(pk=base_parent_pk)
+                    else:
+                        base_parent = None
+                except:
+                    base_parent_pk = None
+                    base_parent = None
+                return { 'parent_pk': parent_pk, 'parent': parent, 'base_parent_pk': base_parent_pk, 'base_parent': base_parent }
+
             def doc_type(self):
                 if self.kwargs['target'].startswith('pdf'):
                     return "pdf"
@@ -430,18 +452,26 @@ class GenericRows(object):
                     raise Http404("Action doesn't exists")
 
                 if 'tree' in self.kwargs['vtype']:
-                    try:
-                        parent = int(kwargs['filter'])
-                        if parent < 0:
-                            parent_old = parent
-                            try:
-                                parent = self.model.objects.get(id=-1 * parent).parent.id
-                            except:
-                                parent = 0
-                            path2 = request.get_full_path().replace(str(parent_old), str(parent))
-                            return HttpResponseRedirect(path2)
-                    except:
-                        pass
+                    c = self._context_for_tree()
+
+                    #try:
+                    #    parent = int(kwargs['filter'])
+                    #except:
+                    #    try:
+                    #        parent = int(kwargs['base_filter'])
+                    #    except:
+                    #        parent = None
+
+                    if c['parent_pk'] != None and c['parent_pk']<0:
+                        parent_old = c['parent_pk']
+                        try:
+                            parent = self.model.objects.get(id=-1 * parent_old).parent.id
+                        except:
+                            parent = 0
+
+                        path2 = ('/'+str(parent)+'/').join(request.get_full_path().rsplit('/'+str(parent_old)+'/',1))
+                        #path2 = request.get_full_path().replace(str(parent_old), str(parent))
+                        return HttpResponseRedirect(path2)
 
                 offset = request.GET.get('offset')
 
@@ -505,15 +535,22 @@ class GenericRows(object):
                 #        break
 
                 if 'tree' in self.kwargs['vtype']:
-                    try:
-                        parent = int(self.kwargs['filter'])
-                        context['parent_pk'] = parent
-                        if parent > 0:
-                            context['parent_obj'] = self.model.objects.get(id=parent)
-                        else:
-                            context['parent_obj'] = None
-                    except:
-                        pass
+                    c = self._context_for_tree()
+                    context.update(c)
+                    #try:
+                    #    parent = int(self.kwargs['filter'])
+                    #except:
+                    #    try:
+                    #        parent = int(self.kwargs['base_filter'])
+                    #    except:
+                     #       parent = None
+                    # print("XXXX1", parent, kwargs, self.kwargs)
+                    #if parent != None:
+                    #    context['parent_pk'] = parent
+                    #    if parent > 0:
+                    #        context['parent_obj'] = self.model.objects.get(id=parent)
+                    #    else:
+                    #        context['parent_obj'] = None
 
                 return transform_extra_context(context, self.extra_context)
 
@@ -522,36 +559,23 @@ class GenericRows(object):
                 if 'tree' in self.kwargs['vtype']:
                     filter = self.kwargs['filter']
                     parent = None
-                    if filter and filter != '-':
-                        if hasattr(self.model, 'filter'):
-                            ret = self.model.filter(filter)
-                        else:
-                            #ret = self.model.objects.all()\
-                            if self.queryset:
-                                ret = self.queryset
-                            else:
-                                ret = self.model.objects.all()
-                        try:
-                            parent = int(self.kwargs['filter'])
-                        except:
-                            parent = None
+                    c = self._context_for_tree()
+                    if hasattr(self.model, 'filter'):
+                        ret = self.model.filter(filter)
                     else:
                         if self.queryset:
                             ret = self.queryset
                         else:
                             ret = self.model.objects.all()
+                        if not 'pk' in self.request.GET:
+                            if c['parent_pk'] and c['parent_pk']> 0:
+                                ret = ret.filter(parent=c['parent_pk'])
 
-                    #parent = int(self.kwargs['filter'])
-#                    if parent != None and parent >= 0:
-                    if parent == 0 or parent == None:
-                        if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
-                            parent = int(self.kwargs['base_filter'])
-                            if parent == 0:
-                                parent = None
-                        else:
-                            parent = None
                     if not 'pk' in self.request.GET:
-                        ret =  ret.filter(parent=parent)
+                        if (not filter or filter == '-') and c['base_parent_pk'] and c['base_parent_pk']> 0:
+                            ret = ret.filter(parent=c['base_parent_pk'])
+                    #if not 'pk' in self.request.GET:
+                    #    ret =  ret.filter(parent=parent)
                 else:
                     if self.queryset:
                         ret = self.queryset
