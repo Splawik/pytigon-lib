@@ -1,3 +1,5 @@
+from itertools import chain
+
 from django.forms.widgets import CheckboxSelectMultiple, CheckboxInput, RadioSelect
 from django.utils.safestring import mark_safe
 from django.utils.html import conditional_escape, format_html, html_safe

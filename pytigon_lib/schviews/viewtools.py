@@ -19,7 +19,8 @@
 
 import os
 import os.path
-import io
+import logging
+LOGGER = logging.getLogger(__name__)
 
 from django.apps import apps
 from django.db.models import Max, Min
@@ -143,6 +144,10 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             else:
                 template2 = template
 
+        if type(template2) == list:
+            LOGGER.debug("templates: " + str(template2))
+        else:
+            LOGGER.debug("template: " + str(template2.template.name))
         TemplateResponse.__init__(self, request, template2, context, content_type, status, current_app)
 
 

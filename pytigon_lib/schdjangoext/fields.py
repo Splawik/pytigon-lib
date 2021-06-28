@@ -21,7 +21,7 @@
 """Module contains many additional fields for django models.
 """
 
-from itertools import chain
+#from itertools import chain
 
 from django.utils.translation import gettext_lazy as _
 from django.db import models

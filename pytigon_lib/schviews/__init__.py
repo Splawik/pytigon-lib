@@ -525,6 +525,7 @@ class GenericRows(object):
                 context['doc_type'] = self.doc_type()
                 context['uuid'] = uuid.uuid4()
                 context['vtype'] = self.kwargs['vtype']
+                context['parent_id'] = None
 
                 #context['prj'] = ""
                 #for app in settings.APPS:
@@ -596,7 +597,6 @@ class GenericRows(object):
                                 ret = self.model.objects.all()
 
                     ret = filter_by_permissions(self.model, ret, self.request)
-
                     if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
                         parent = int(self.kwargs['base_filter'])
                         ret = ret.filter(parent=parent)
