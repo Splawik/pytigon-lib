@@ -133,9 +133,9 @@ def get_request():
             frame = f[0]
             code = frame.f_code
 
-            if code.co_varnames[:1] == ("request",):
+            if code.co_varnames[:1] == ("request",) and 'request' in frame.f_locals:
                 r = frame.f_locals["request"]
-            elif code.co_varnames[:2] == ("self", "request",):
+            elif code.co_varnames[:2] == ("self", "request",) and 'request' in frame.f_locals:
                 r = frame.f_locals["request"]
             if r and hasattr(r, 'session'):
                 return r

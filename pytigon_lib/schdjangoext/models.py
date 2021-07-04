@@ -21,6 +21,8 @@
 """Module contains many additional db models.
 """
 
+import sys
+
 from django.db import models
 from django import forms
 from django.core import serializers
@@ -225,12 +227,22 @@ def extend_class(main, base):
     main.__bases__ = tuple([base, ] + list(main.__bases__))
 
 
-class OverwritableCallable():
-    def __init__(self, func):
-        self.func = func
+if 'makemigrations' in sys.argv:
+    def OverwritableCallable(func):
 
-    def __call__(self, *argi, **kwargs):
-        self.func(*argi, **kwargs)
+        def __none__(fun):
+            pass
 
-    def set_function(self, func):
-        self.func = func
+        func.set_function = __none__
+
+        return func
+else:
+    class OverwritableCallable():
+        def __init__(self, func):
+            self.func = func
+
+        def __call__(self, *argi, **kwargs):
+            return self.func(*argi, **kwargs)
+
+        def set_function(self, func):
+            self.func = func
