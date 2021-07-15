@@ -227,7 +227,7 @@ def extend_class(main, base):
     main.__bases__ = tuple([base, ] + list(main.__bases__))
 
 
-if 'makemigrations' in sys.argv:
+if 'makemigrations' in sys.argv or 'makeallmigrations' in sys.argv:
     def OverwritableCallable(func):
 
         def __none__(fun):

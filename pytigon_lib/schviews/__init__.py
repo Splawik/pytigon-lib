@@ -377,6 +377,9 @@ class GenericRows(object):
                 except:
                     base_parent_pk = None
                     base_parent = None
+                if not parent_pk and base_parent_pk:
+                    parent_pk = base_parent_pk
+                    parent = base_parent
                 return { 'parent_pk': parent_pk, 'parent': parent, 'base_parent_pk': base_parent_pk, 'base_parent': base_parent }
 
             def doc_type(self):

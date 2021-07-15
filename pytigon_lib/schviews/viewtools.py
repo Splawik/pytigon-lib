@@ -145,9 +145,9 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 template2 = template
 
         if type(template2) == list:
-            LOGGER.debug("templates: " + str(template2))
+            LOGGER.info("templates: " + str(template2))
         else:
-            LOGGER.debug("template: " + str(template2.template.name))
+            LOGGER.info("template: " + str(template2.template.name))
         TemplateResponse.__init__(self, request, template2, context, content_type, status, current_app)
 
 
