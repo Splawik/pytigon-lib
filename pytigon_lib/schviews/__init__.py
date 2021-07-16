@@ -601,9 +601,11 @@ class GenericRows(object):
 
                     ret = filter_by_permissions(self.model, ret, self.request)
                     if 'base_filter' in self.kwargs and self.kwargs['base_filter']:
-                        parent = int(self.kwargs['base_filter'])
-                        ret = ret.filter(parent=parent)
-
+                        try:
+                            parent = int(self.kwargs['base_filter'])
+                            ret = ret.filter(parent=parent)
+                        except:
+                            pass
                 if self.search:
                     fields = [f for f in self.model._meta.fields if isinstance(f, django.db.models.CharField)]
                     queries = [Q(**{f.name+"__icontains": self.search}) for f in fields]
