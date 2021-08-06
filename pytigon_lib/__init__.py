@@ -21,9 +21,12 @@ import sys
 import os
 from os import environ
 from pytigon_lib.schtools.main_paths import get_main_paths
+from pytigon_lib.schtools.env import get_environ
 
+def init_paths(prj_name = None, env_path = None):
+    if env_path:
+        get_environ(env_path)
 
-def init_paths(prj_name = None):
     cfg = get_main_paths(prj_name)
 
     tmp = []
