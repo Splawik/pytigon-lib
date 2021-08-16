@@ -3,7 +3,6 @@ lxml
 httpx
 httpie
 fs
-fs.sshfs
 openpyxl
 pyexcel_odsr
 fpdf
