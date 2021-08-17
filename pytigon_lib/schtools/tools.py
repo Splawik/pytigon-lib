@@ -99,7 +99,7 @@ def is_null(value, value2):
 def get_executable():
     x = sys.executable
     p = x.replace('\\','/').split('/')[-1]
-    if 'python' in p:
+    if 'python' or 'pypy' in p:
         return x
     else:
         if platform.system() == "Windows":
