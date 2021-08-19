@@ -157,9 +157,23 @@ class Loader(BaseLoader):
                                                          'w', encoding='utf-8') as f:
                                             f.write(ret)
                                 except:
-                                    size1 = os.path.getmtime(filepath2)
-                                    size2 = os.path.getmtime(filepath)
-                                    if size1 != size2:
+                                    try:
+                                        if lang == 'en':
+                                            with codecs.open(filepath2, 'r', encoding='utf-8') as f:
+                                                if f.read()!=ret:
+                                                    import traceback
+                                                    import sys
+                                                    print(sys.exc_info())
+                                                    print(traceback.print_exc())
+                                        else:
+                                            with codecs.open(filepath2.replace('.html', '_' + lang + ".html"),
+                                                             'r', encoding='utf-8') as f:
+                                                if f.read()!=ret:
+                                                    import traceback
+                                                    import sys
+                                                    print(sys.exc_info())
+                                                    print(traceback.print_exc())
+                                    except:
                                         import traceback
                                         import sys
                                         print(sys.exc_info())
