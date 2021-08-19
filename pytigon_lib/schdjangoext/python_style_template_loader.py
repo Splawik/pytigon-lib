@@ -125,6 +125,7 @@ class Loader(BaseLoader):
             except ValueError:
                 pass
 
+
     def get_contents(self, origin):
         filepath = origin
         filepath2 = filepath.replace('_src', '').replace('.ihtml', '.html')
