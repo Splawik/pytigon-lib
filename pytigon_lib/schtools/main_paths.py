@@ -129,6 +129,12 @@ def get_main_paths(prj_name=None):
             ret['STATIC_PATH'] = static_path
             ret['STATICFILES_DIR'] = static_path
 
+    if prj_name:
+        ret['MEDIA_PATH'] = os.path.join(os.path.join(ret['DATA_PATH'], prj_name), "media")
+        ret['MEDIA_PATH_PROTECTED'] = os.path.join(os.path.join(ret['DATA_PATH'], prj_name), "protected_media")
+        ret['UPLOAD_PATH'] = os.path.join(ret['MEDIA_PATH'], "upload")
+        ret['UPLOAD_PATH_PROTECTED'] = os.path.join(ret['MEDIA_PATH'], "protected_upload")
+
     return ret
 
 def get_prj_name():

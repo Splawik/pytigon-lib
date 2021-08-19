@@ -17,14 +17,10 @@
 #license: "LGPL 3.0"
 #version: "0.1a"
 
-import os
 import datetime
 import zipfile
 from shutil import move
-from pathlib import Path
 
-#from django.conf import settings
-from pytigon.schserw import settings
 from pytigon_lib.schdjangoext.django_manage import *
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.process import py_run
@@ -33,20 +29,19 @@ from pytigon_lib.schtools.main_paths import get_prj_name
 
 def install():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
-    from django.conf import settings as dsettings
+    from django.conf import settings
+
     prj_name = get_prj_name()
     data_path = settings.DATA_PATH
-    root_path = settings.ROOT_PATH
     prj_path = settings.PRJ_PATH
     app_data_path = os.path.join(data_path, prj_name)
     db_path = os.path.join(app_data_path, prj_name+".db")
-    compiler_base_path = os.path.join(data_path, "ext_prg")
 
     upgrade = False
 
     if os.path.exists(db_path):
         upgrade = True
-    if 'local' in dsettings.DATABASES:
+    if 'local' in settings.DATABASES:
         db_profile = 'local'
     else:
         db_profile = 'default'
@@ -88,6 +83,7 @@ def install():
 
 def export_to_local_db():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
+    from django.conf import settings
     if 'local' in settings.DATABASES:
         db_profile = 'local'
     else:
@@ -115,10 +111,9 @@ def export_to_local_db():
         from django.contrib.auth.models import User
         User.objects.db_manager(db_profile).create_superuser('auto', 'auto@pytigon.com', 'anawa')
 
-
-
 def extract_ptig(zip_file, name):
-
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
+    from django.conf import settings
     ret = []
     ret.append("Install file: " + name)
     test_update = True
