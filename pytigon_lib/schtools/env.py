@@ -41,4 +41,7 @@ def get_environ(path=None):
         env_path = os.path.join(path, '.env')
         if os.path.exists(env_path):
             environ.Env.read_env(env_path)
+        env_path = os.path.join(path, 'env')
+        if os.path.exists(env_path):
+            environ.Env.read_env(env_path)
     return ENV
