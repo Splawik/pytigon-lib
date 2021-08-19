@@ -134,7 +134,11 @@ def get_main_paths(prj_name=None):
         ret['MEDIA_PATH_PROTECTED'] = os.path.join(os.path.join(ret['DATA_PATH'], prj_name), "protected_media")
         ret['UPLOAD_PATH'] = os.path.join(ret['MEDIA_PATH'], "upload")
         ret['UPLOAD_PATH_PROTECTED'] = os.path.join(ret['MEDIA_PATH'], "protected_upload")
-
+        if os.path.exists(os.path.join(ret['PRJ_PATH_ALT'], prj_name)) and not os.path.exists(os.path.join(ret['PRJ_PATH'], prj_name)):
+            tmp = ret['PRJ_PATH']
+            ret['PRJ_PATH'] = ret['PRJ_PATH_ALT']
+            ret['PRJ_PATH_ALT'] = tmp
+            
     return ret
 
 def get_prj_name():
