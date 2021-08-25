@@ -36,6 +36,7 @@ from pytigon_lib.schhttptools.wsgi_bridge import get_or_post as wsgi_get_or_post
 from pytigon_lib.schhttptools.asgi_bridge import get_or_post, websocket
 from pytigon_lib.schtools.platform_info import platform_name
 from django.core.wsgi import get_wsgi_application
+from django.test import Client
 
 import threading
 import logging
@@ -125,7 +126,28 @@ class RetHttp():
                 self.url = value
 
 
+CLIENT = Client()
+
 def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
+    global CLIENT
+    url2 = url.replace('http://127.0.0.2', "")
+    if post:
+        response = CLIENT.post(url2, params)
+    else:
+        response = CLIENT.get(url2)
+
+    result = {}
+    result['headers'] = dict(response.headers)
+    result['type'] = 'http.response.starthttp.response.body'
+    result['status'] = response.status_code
+    result['body'] = response.getvalue()
+    result['more_body'] = False
+    if response.status_code in (301, 302):
+        return asgi_or_wsgi_get_or_post(application, response.headers['Location'], headers, params, post, ret)
+
+    ret.append(result)
+
+def old_asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
     if platform_name() == "Emscripten" or FORCE_WSGI:
         ret2 = wsgi_get_or_post(application, url, headers, params=params, post=post)
         ret.append(ret2)
