@@ -7,3 +7,4 @@ openpyxl
 pyexcel_odsr
 fpdf2
 Django
+django-environ-2
