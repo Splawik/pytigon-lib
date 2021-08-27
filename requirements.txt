@@ -5,5 +5,5 @@ httpie
 fs
 openpyxl
 pyexcel_odsr
-fpdf
+fpdf2
 Django
