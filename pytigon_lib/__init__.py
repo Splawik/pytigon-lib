@@ -63,6 +63,8 @@ def init_paths(prj_name = None, env_path = None):
         sys.path.append(cfg["SERW_PATH"])
     if not cfg["ROOT_PATH"] in sys.path:
         sys.path.append(cfg["ROOT_PATH"])
+    if not cfg["PRJ_PATH_ALT"] in sys.path:
+        sys.path.append(cfg["PRJ_PATH_ALT"])
 
     p1 = os.path.join(cfg["ROOT_PATH"], "ext_lib")
     p2 = os.path.join(cfg["ROOT_PATH"], "appdata", "plugins")
