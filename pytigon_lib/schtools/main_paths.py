@@ -112,6 +112,10 @@ def get_main_paths(prj_name=None):
                 ret["PRJ_PATH"] = os.path.join(data_path, "prj")
                 ret["PRJ_PATH_ALT"] = os.path.join(root_path, "prj")
 
+            if platform_name() == "Emscripten":
+                ret["PRJ_PATH"] = os.path.abspath(os.path.join(pytigon_path, ".."))
+                ret["PRJ_PATH_ALT"] = os.path.join(pytigon_path, "prj")
+
         if 'STATIC_PATH' in environ:
             static_path = environ['STATIC_PATH']
         elif pytigon_path:
@@ -134,11 +138,13 @@ def get_main_paths(prj_name=None):
         ret['MEDIA_PATH_PROTECTED'] = os.path.join(os.path.join(ret['DATA_PATH'], prj_name), "protected_media")
         ret['UPLOAD_PATH'] = os.path.join(ret['MEDIA_PATH'], "upload")
         ret['UPLOAD_PATH_PROTECTED'] = os.path.join(ret['MEDIA_PATH'], "protected_upload")
-        if os.path.exists(os.path.join(ret['PRJ_PATH_ALT'], prj_name)) and not os.path.exists(os.path.join(ret['PRJ_PATH'], prj_name)):
-            tmp = ret['PRJ_PATH']
-            ret['PRJ_PATH'] = ret['PRJ_PATH_ALT']
-            ret['PRJ_PATH_ALT'] = tmp
-            
+        if not os.path.exists(os.path.join(ret['PRJ_PATH'], prj_name)):
+            if os.path.exists(os.path.join(ret['PRJ_PATH_ALT'], prj_name)):
+                tmp = ret['PRJ_PATH']
+                ret['PRJ_PATH'] = ret['PRJ_PATH_ALT']
+                ret['PRJ_PATH_ALT'] = tmp
+            else:
+                ret["PRJ_PATH"] = os.path.abspath(os.path.join(pytigon_path, ".."))
     return ret
 
 def get_prj_name():
