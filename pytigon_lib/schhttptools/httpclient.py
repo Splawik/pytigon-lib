@@ -128,7 +128,7 @@ class RetHttp():
 
 CLIENT = Client()
 
-def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
+def emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
     global CLIENT
     url2 = url.replace('http://127.0.0.2', "")
     if post:
@@ -147,10 +147,9 @@ def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, r
 
     ret.append(result)
 
-def old_asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
+def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
     if platform_name() == "Emscripten" or FORCE_WSGI:
-        ret2 = wsgi_get_or_post(application, url, headers, params=params, post=post)
-        ret.append(ret2)
+        return emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params, post, ret)
     else:
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
