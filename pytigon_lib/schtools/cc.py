@@ -21,7 +21,11 @@
 import os
 import sys
 import platform
-import httpx
+
+from pytigon_lib.schtools.platform_info import platform_name
+if platform_name() != "Emscripten":
+    import httpx
+
 import tarfile
 import zipfile
 import io
@@ -103,8 +107,9 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
     if platform.system() == 'Windows':
         tcc_dir = os.path.join(base_path, "ext_prg", "tcc")
         h_dir = os.path.join(tcc_dir, "include", "python")
-        if not os.path.exists(h_dir):
-            install_tcc(tcc_dir)
+        if platform_name() != "Emscripten":
+            if not os.path.exists(h_dir):
+                install_tcc(tcc_dir)
         include1 = os.path.join(tcc_dir, "include")
         include2 = os.path.join(tcc_dir, "include", "python")
         include3 = os.path.join(tcc_dir, "include", "winapi")
