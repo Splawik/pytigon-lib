@@ -154,6 +154,8 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
 
 
 def make(data_path, files_path):
+    if platform_name() == "Emscripten":
+        return None, None, None
     ret_output = []
     ret_errors = []
     ret = 0

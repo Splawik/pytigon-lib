@@ -26,6 +26,7 @@ from threading import Thread
 import importlib
 
 from pytigon_lib.schtools.tools import get_executable
+from pytigon_lib.schtools.platform_info import platform_name
 
 class FrozenModules():
     def __init__(self):
@@ -131,7 +132,7 @@ def _manage(path, cmd):
     #    if not module in tmp:
     #        to_delete.append(module)
 
-    #for module in to_delete:
+    #for module in to_delete:py_managepy_manage
     #    del sys.modules[module]
 
     #for pos in to_reload:
@@ -140,14 +141,17 @@ def _manage(path, cmd):
     frozen_modules.restore()
 
 def py_manage(cmd, thread_version = False):
-    if len(cmd) > 0:
-        if thread_version:
-            thread = Thread(target=_manage, args=(os.getcwd(), cmd,))
-            thread.start()
-            thread.join()
-            return 0, [], []
-        else:
-            return py_run(['manage.py',] + cmd)
+    if platform_name() == "Emscripten":
+        return (None, None, None)
+    else:
+        if len(cmd) > 0:
+            if thread_version:
+                thread = Thread(target=_manage, args=(os.getcwd(), cmd,))
+                thread.start()
+                thread.join()
+                return 0, [], []
+            else:
+                return py_run(['manage.py',] + cmd)
 
 
 
