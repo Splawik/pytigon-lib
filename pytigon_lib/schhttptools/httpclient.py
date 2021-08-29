@@ -32,7 +32,7 @@ from threading import Thread
 from pytigon_lib.schfs.vfstools import norm_path
 from pytigon_lib.schtools.schjson import json_loads
 from pytigon_lib.schtools.platform_info import platform_name
-if platform_name() != "Emscripten"
+if platform_name() != "Emscripten":
     import httpx
 from pytigon_lib.schhttptools.wsgi_bridge import get_or_post as wsgi_get_or_post
 from pytigon_lib.schhttptools.asgi_bridge import get_or_post, websocket
