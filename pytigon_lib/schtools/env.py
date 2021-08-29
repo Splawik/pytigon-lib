@@ -33,6 +33,7 @@ def get_environ(path=None):
             PYTIGON_TASK=(bool, False),
             LOGS_TO_DOCKER=(bool, False),
             PWA=(bool, False),
+            GRAPHQL=(bool, False),
             SECRET_KEY=(str, ""),
             CHANNELS_REDIS=(str, ""),
         )
