@@ -128,13 +128,20 @@ class RetHttp():
                 self.url = value
 
 
-CLIENT = Client()
+CLIENT = Client(HTTP_USER_AGENT = 'Emscripten' if platform_name() == "Emscripten" else "Pytigon")
 
 def emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
     global CLIENT
+
     url2 = url.replace('http://127.0.0.2', "")
     if post:
-        response = CLIENT.post(url2, params)
+        params2 = {}
+        for key, value in params.items():
+            if type(value) == bytes:
+                params2[key] = value.decode('utf-8')
+            else:
+                params2[key] = value
+        response = CLIENT.post(url2, params2)
     else:
         response = CLIENT.get(url2)
 
@@ -150,7 +157,7 @@ def emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params={}, po
     ret.append(result)
 
 def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
-    if platform_name() == "Emscripten" or FORCE_WSGI:
+    if True or platform_name() == "Emscripten" or FORCE_WSGI:
         return emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params, post, ret)
     else:
         event_loop = asyncio.new_event_loop()
