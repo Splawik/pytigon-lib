@@ -58,21 +58,23 @@ def init_embeded_django():
     global ASGI_APPLICATION
     import django
 
-    django.setup()
-
-    if platform_name() == "Emscripten" or FORCE_WSGI:
+    if platform_name() == "Emscripten":
+        django.setup()
+        ASGI_APPLICATION = True
+    elif FORCE_WSGI:
         ASGI_APPLICATION = get_wsgi_application()
     else:
+        django.setup()
         from channels.routing import get_default_application
         ASGI_APPLICATION = get_default_application()
 
     import pytigon.schserw.urls
 
+
 BLOCK = False
 COOKIES_EMBEDED = {}
 COOKIES = {}
 HTTP_LOCK = threading.Lock()
-
 
 HTTP_ERROR_FUNC = None
 
