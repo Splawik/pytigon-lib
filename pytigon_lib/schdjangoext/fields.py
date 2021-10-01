@@ -29,10 +29,10 @@ from django import forms
 from django.utils.safestring import mark_safe
 from django_select2.forms import ModelSelect2Widget
 from django.forms.widgets import HiddenInput, CheckboxInput, CheckboxSelectMultiple, RadioSelect
-from django.db.models.fields import TextField
-from django.utils.encoding import force_text
-from django.utils.html import conditional_escape, format_html, html_safe
-from django.forms.utils import flatatt
+#from django.db.models.fields import TextField
+#from django.utils.encoding import force_text
+#from django.utils.html import conditional_escape, format_html, html_safe
+#from django.forms.utils import flatatt
 
 from pytigon_lib.schdjangoext.tools import make_href
 from pytigon_lib.schdjangoext.formfields import ModelMultipleChoiceFieldWithIcon, ModelChoiceFieldWithIcon

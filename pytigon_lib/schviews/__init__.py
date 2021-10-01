@@ -36,7 +36,7 @@ from django.urls import path, re_path
 
 import django.db.models
 from django.db.models import  Q
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from pytigon_lib.schviews.actions import new_row_ok, update_row_ok
 from pytigon_lib.schviews.viewtools import render_to_response
