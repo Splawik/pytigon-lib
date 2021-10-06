@@ -133,13 +133,13 @@ def get_main_paths(prj_name=None):
             ret['STATIC_PATH'] = static_path
             ret['STATICFILES_DIR'] = static_path
 
-    if prj_name:
-        ret['MEDIA_PATH'] = os.path.join(os.path.join(ret['DATA_PATH'], prj_name), "media")
-        ret['MEDIA_PATH_PROTECTED'] = os.path.join(os.path.join(ret['DATA_PATH'], prj_name), "protected_media")
+    if PRJ_NAME:
+        ret['MEDIA_PATH'] = os.path.join(os.path.join(ret['DATA_PATH'], PRJ_NAME), "media")
+        ret['MEDIA_PATH_PROTECTED'] = os.path.join(os.path.join(ret['DATA_PATH'], PRJ_NAME), "protected_media")
         ret['UPLOAD_PATH'] = os.path.join(ret['MEDIA_PATH'], "upload")
         ret['UPLOAD_PATH_PROTECTED'] = os.path.join(ret['MEDIA_PATH'], "protected_upload")
-        if not os.path.exists(os.path.join(ret['PRJ_PATH'], prj_name)):
-            if os.path.exists(os.path.join(ret['PRJ_PATH_ALT'], prj_name)):
+        if not os.path.exists(os.path.join(ret['PRJ_PATH'], PRJ_NAME)):
+            if os.path.exists(os.path.join(ret['PRJ_PATH_ALT'], PRJ_NAME)):
                 tmp = ret['PRJ_PATH']
                 ret['PRJ_PATH'] = ret['PRJ_PATH_ALT']
                 ret['PRJ_PATH_ALT'] = tmp

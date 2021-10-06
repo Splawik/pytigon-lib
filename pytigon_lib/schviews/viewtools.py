@@ -144,10 +144,10 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             else:
                 template2 = template
 
-        if type(template2) == list:
-            LOGGER.info("templates: " + str(template2))
-        else:
+        if hasattr(template2, "template"):
             LOGGER.info("template: " + str(template2.template.name))
+        else:
+            LOGGER.info("templates: " + str(template2))
         TemplateResponse.__init__(self, request, template2, context, content_type, status, current_app)
 
 

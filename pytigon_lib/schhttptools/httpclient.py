@@ -130,10 +130,13 @@ class RetHttp():
                 self.url = value
 
 
-CLIENT = Client(HTTP_USER_AGENT = 'Emscripten' if platform_name() == "Emscripten" else "Pytigon")
+CLIENT = None
+#Client(HTTP_USER_AGENT = 'Emscripten' if platform_name() == "Emscripten" else "Pytigon")
 
-def emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
+def emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[], user_agent="Pytigon"):
     global CLIENT
+    if not CLIENT:
+        CLIENT = Client(HTTP_USER_AGENT='Emscripten' if platform_name() == "Emscripten" else user_agent)
 
     url2 = url.replace('http://127.0.0.2', "")
     if post:
@@ -158,9 +161,9 @@ def emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params={}, po
 
     ret.append(result)
 
-def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[]):
+def asgi_or_wsgi_get_or_post(application, url, headers, params={}, post=False, ret=[], user_agent="pytigon"):
     if True or platform_name() == "Emscripten" or FORCE_WSGI:
-        return emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params, post, ret)
+        return emscripten_asgi_or_wsgi_get_or_post(application, url, headers, params, post, ret, user_agent)
     else:
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
@@ -171,7 +174,7 @@ def requests_request(method, url, argv, ret=[]):
     ret2 = httpx.request(method, url, **argv)
     ret.append(ret2)
 
-def request(method, url, direct_access, argv, app=None):
+def request(method, url, direct_access, argv, app=None, user_agent='pytigon'):
     global ASGI_APPLICATION
     ret = []
     if direct_access and ASGI_APPLICATION:
@@ -190,10 +193,10 @@ def request(method, url, direct_access, argv, app=None):
 
         if post:
             if platform_name() == "Emscripten" or FORCE_WSGI:
-                asgi_or_wsgi_get_or_post(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret)
+                asgi_or_wsgi_get_or_post(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret, user_agent)
             else:
                 t = Thread(target=asgi_or_wsgi_get_or_post,
-                           args=(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret),
+                           args=(ASGI_APPLICATION, url.replace('http://127.0.0.2', ''), headers, argv['data'], post, ret, user_agent),
                            daemon=True)
                 t.start()
                 if app:
@@ -365,7 +368,7 @@ class HttpClient:
         """
         return self.get(parent, address_str, parm, upload, credentials, user_agent, True, json_data = json_data)
 
-    def get(self, parent, address_str, parm=None, upload = False, credentials=False, user_agent=None, \
+    def get(self, parent, address_str, parm=None, upload = False, credentials=False, user_agent="pytigon", \
             post_request=False, json_data = False, callback = None):
         """Prepare get request to the http server
 
@@ -483,7 +486,7 @@ class HttpClient:
         else:
             argv['data'] = parm
 
-        response = request(method, adr, direct_access, argv, self.app)
+        response = request(method, adr, direct_access, argv, self.app, user_agent)
         http_response = HttpResponse(adr, response=response)
         http_response.process_response(self, parent, post_request)
 
