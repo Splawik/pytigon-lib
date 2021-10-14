@@ -113,7 +113,7 @@ def iter_lines(f, f_name, lang):
             nr = line.find('_')
             line2 = ' ' * nr + '.' + gt(line.strip()[1:])
         else:
-            if '_(' in line:
+            if '_(' in line and not '__(' in line:
                 out = []
                 fr = line.split('_(')
                 out.append(fr[0])

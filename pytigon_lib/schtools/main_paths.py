@@ -128,10 +128,10 @@ def get_main_paths(prj_name=None):
                 ret['STATIC_PATH'] = os.path.join(data_path, "static", PRJ_NAME)
             else:
                 ret['STATIC_PATH'] = os.path.join(data_path, "static")
-            ret['STATICFILES_DIR'] = os.path.join(pytigon_path, "static")
+            ret['STATICFILES_DIRS'] = os.path.join(pytigon_path, "static")
         else:
             ret['STATIC_PATH'] = static_path
-            ret['STATICFILES_DIR'] = static_path
+            ret['STATICFILES_DIRS'] = []
 
     if PRJ_NAME:
         ret['MEDIA_PATH'] = os.path.join(os.path.join(ret['DATA_PATH'], PRJ_NAME), "media")

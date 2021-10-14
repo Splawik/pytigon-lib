@@ -331,7 +331,8 @@ class HttpResponse():
         return ret
 
     def json(self):
-        return self.http.json()
+        return json_loads(self.str())
+        #return self.http.json()
 
     def to_python(self):
         """Return request content in json format converted to python object"""
