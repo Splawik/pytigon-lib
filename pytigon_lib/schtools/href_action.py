@@ -54,15 +54,15 @@ STANDARD_ACTIONS = {
         #'icon': 'edit svg-categories--applications-office',
         'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
     },
-    'edit2': {
-        'target':  "popup_edit",
-        'title': _('Update'),
-        'class': "btn {{btn_size}} btn-outline-secondary edit",
-        'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
-        'url': "{tp}{id}/{action}/",
-        'icon': 'edit fa-pencil fa-lg',
-        'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
-    },
+    #'edit2': {
+    #    'target':  "popup_edit",
+    #    'title': _('Update'),
+    #    'class': "btn {{btn_size}} btn-outline-secondary edit",
+    #    'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
+    #    'url': "{tp}{id}/{action}/",
+    #    'icon': 'edit fa-pencil fa-lg',
+    #    'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
+    #},
     'delete': {
         'target': "popup_delete",
         'title': _('Delete'),
@@ -71,14 +71,14 @@ STANDARD_ACTIONS = {
         'url': "{tp}{id}/{action}/",
         'icon': 'delete fa-trash-o fa-lg'
     },
-    'delete2': {
-        'target': "popup_delete",
-        'title': _('Delete'),
-        'class': "popup_delete btn {{btn_size}} btn-outline-danger",
-        'attrs': "data-role='button' data-inline='true' data-mini='true'",
-        'url': "{tp}{id}/{action}/",
-        'icon': 'delete fa-trash-o fa-lg'
-    },
+    #'delete2': {
+    #    'target': "popup_delete",
+    #    'title': _('Delete'),
+    #    'class': "popup_delete btn {{btn_size}} btn-outline-danger",
+    #    'attrs': "data-role='button' data-inline='true' data-mini='true'",
+    #    'url': "{tp}{id}/{action}/",
+    #    'icon': 'delete fa-trash-o fa-lg'
+    #},
     'field_list': {
         'target': 'inline_info',
         'class': "popup_inline btn {{btn_size}} btn-outline-secondary",
@@ -94,6 +94,7 @@ STANDARD_ACTIONS = {
         'url': "{ap}{object_name}/{id}/{x1}/-/form/get/",
         'icon': "grid fa-caret-down fa-lg",
     },
+    # field_action do usunięcia
     'field_action': {
         'target': 'inline_edit',
         'class': "popup_inline btn {{btn_size}} btn-outline-secondary",
@@ -115,6 +116,7 @@ STANDARD_ACTIONS = {
     'print': {
         'target': '_blank',
         'icon': 'arrow-d fa-print fa-lg',
+        'title': _('Print'),
     },
     'template_edit': {
         'icon': 'client://mimetypes/x-office-presentation.png',
@@ -123,6 +125,7 @@ STANDARD_ACTIONS = {
         'target': '_blank',
         'url': "{tp}{id}/pdf/view/",
         'icon': 'eye fa-eye fa-lg',
+        'title': _('Convert to pdf'),
     },
     'odf': {
         'target': '_blank',
@@ -208,6 +211,20 @@ def get_action_parm(standard_web_browser, action, key, default_value=""):
     return unpack_value(standard_web_browser, ret)
 
 
+def set_attrs(obj, params, attr_tab, standard_web_browser):
+    i = 0
+    for pos in params:
+        equal_sign = False
+        for attr in attr_tab:
+            if pos.replace(' ','').startswith(attr+'='):
+                setattr(obj, attr, unpack_value(standard_web_browser, pos.split('=',1)[1]))
+                equal_sign = True
+                break
+        if not equal_sign:
+            if len(attr_tab)>i:
+                setattr(obj, attr_tab[i], unpack_value(standard_web_browser, pos))
+        i+=1
+
 class Action:
     def __init__(self, actions_str, context, d):
         #actions_str: action,title,icon,target,attrs,tag_class,url
@@ -270,18 +287,19 @@ class Action:
         self.d['x2'] = self.x2
         self.d['x3'] = self.x3
 
-        if len(pos)>1:
-            self.title = unpack_value(standard_web_browser, pos[1])
-            if len(pos)>2:
-                self.icon = unpack_value(standard_web_browser, pos[2])
-                if len(pos)>3:
-                    self.target = unpack_value(standard_web_browser, pos[3])
-                    if len(pos)>4:
-                        self.attrs = unpack_value(standard_web_browser, pos[4])
-                        if len(pos)>5:
-                            self.tag_class = unpack_value(standard_web_browser, pos[5])
-                            if len(pos)>6:
-                                self.url = unpack_value(standard_web_browser, pos[6])
+        set_attrs(self, pos[1:], standard_attr[1:], standard_web_browser)
+        #if len(pos)>1:
+        #    self.title = unpack_value(standard_web_browser, pos[1])
+        #    if len(pos)>2:
+        #        self.icon = unpack_value(standard_web_browser, pos[2])
+        #        if len(pos)>3:
+        #            self.target = unpack_value(standard_web_browser, pos[3])
+        #            if len(pos)>4:
+        #                self.attrs = unpack_value(standard_web_browser, pos[4])
+        #                if len(pos)>5:
+        #                    self.tag_class = unpack_value(standard_web_browser, pos[5])
+        #                    if len(pos)>6:
+        #                        self.url = unpack_value(standard_web_browser, pos[6])
 
         if '/' in action:
             tmp = action.split('/')
@@ -416,7 +434,7 @@ def actions_dict(context, actions_str):
         d['action'] = actions2[0]
     return d
 
-#actions_str: action,title,icon_name,target,attrs,class,url
+#actions_str: action,title,icon_name,target,attrs,tag_class,url
 def action_fun(context, action, title="", icon_name="", target="", attrs="", tag_class="", url=""):
     action_str = "%s,%s,%s,%s,%s,%s,%s" % (action, title, icon_name, target, attrs, tag_class, url)
     t = Template(action_str)
