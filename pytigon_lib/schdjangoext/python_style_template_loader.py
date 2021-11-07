@@ -28,6 +28,8 @@ import django.template.loaders.filesystem
 
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
 
+
+
 def compile_template(template_name, template_dirs=None, tried=None, compiled=None, force=False):
     def get_template_sources(template_name, template_dirs=None):
         if not template_dirs:
@@ -41,7 +43,8 @@ def compile_template(template_name, template_dirs=None, tried=None, compiled=Non
             except ValueError:
                 pass
 
-    template_dirs = settings.TEMPLATES[0]['DIRS']
+    if not template_dirs:
+        template_dirs = settings.TEMPLATES[0]['DIRS']
 
     template_name_base = template_name
     for pos in settings.LANGUAGES:

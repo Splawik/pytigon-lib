@@ -227,12 +227,12 @@ def set_attrs(obj, params, attr_tab, standard_web_browser):
 
 class Action:
     def __init__(self, actions_str, context, d):
-        #actions_str: action,title,icon,target,attrs,tag_class,url
+        #actions_str: action,title,icon_name,target,attrs,tag_class,url
         self.d = d
         self.context = context
         self.action = ""
         self.title = ""
-        self.icon = ""
+        self.icon_name = ""
         self.icon2 = ""
         self.target = ""
         self.attrs = ""
@@ -245,7 +245,7 @@ class Action:
         self.x2 = ""
         self.x3 = ""
 
-        standard_attr = ('action', 'title', 'icon', 'target', 'attrs', 'tag_class', 'url')
+        standard_attr = ('action', 'title', 'icon_name', 'target', 'attrs', 'tag_class', 'url')
 
         if 'standard_web_browser' in d:
             standard_web_browser = d['standard_web_browser']
@@ -312,8 +312,8 @@ class Action:
             if not self.title:
                 self.title = action2.split('-')[0]
 
-        if not self.icon:
-            self.icon = get_action_parm(standard_web_browser, action2, 'icon')
+        if not self.icon_name:
+            self.icon_name = get_action_parm(standard_web_browser, action2, 'icon')
 
         if not self.target:
             self.target = get_action_parm(standard_web_browser, action2, 'target', "_blank")
@@ -342,20 +342,20 @@ class Action:
 
         self.url = self.format(self.url)
 
-        if self.icon:
+        if self.icon_name:
             if not standard_web_browser:
-                if not '://' in self.icon and not 'wx.' in self.icon:
-                    if 'fa-' in self.icon:
-                        x = self.icon.split(' ')
+                if not '://' in self.icon_name and not 'wx.' in self.icon_name:
+                    if 'fa-' in self.icon_name:
+                        x = self.icon_name.split(' ')
                         for pos in x:
                             if '-' in x and x != 'fa-lg':
-                                self.icon = "src=fa://%s?size=1" % x
+                                self.icon_name = "src=fa://%s?size=1" % x
                     else:
-                        self.icon = ""
+                        self.icon_name = ""
             else:
-                if '/' in self.icon:
-                    x = self.icon.split('/')
-                    self.icon = x[0]
+                if '/' in self.icon_name:
+                    x = self.icon_name.split('/')
+                    self.icon_name = x[0]
                     self.icon2 = x[1]
 
     def format(self, s):

@@ -28,6 +28,30 @@ from pytigon_lib.schindent.py_to_js import compile
 
 from .indent_tools import convert_js
 
+try:
+    import markdown
+    def convert_md(stream_in, stream_out):
+        if stream_in and stream_out:
+            buf = markdown.markdown(
+                stream_in.getvalue,
+                extensions=[
+                    "abbr",
+                    "attr_list",
+                    "def_list",
+                    "fenced_code",
+                    "footnotes",
+                    "md_in_html",
+                    "tables",
+                    "admonition",
+                    "codehilite",
+                ]
+            )
+            stream_out.write(buf)
+            return True
+        return False
+except:
+    pass
+
 PY_TO_JS = None
 
 def list_with_next_generator(l):
@@ -387,6 +411,10 @@ class ConwertToHtml:
                             codejs = py_to_js(v, None)
                             x = self._pre_process_line(
                                 buf0.replace('pscript', 'script').replace(' language=python', '') + codejs)
+                        if test == 6:
+                            buf2 = io.StringIO()
+                            convert_md(buf, buf2)
+                            x = self._pre_process_line(buf0 + buf2.getvalue())
                         else:
                             x = self._pre_process_line(buf0 + buf.getvalue())
                         for pos in x:
@@ -456,6 +484,16 @@ class ConwertToHtml:
                     buf0 = line + '...|||'
                     buf = io.StringIO()
                     test = 5
+                elif '###>' in line:
+                    indent_pos = self._space_count(line)
+                    pos = line.find('###>')
+                    if len(line[:pos].strip()) > 0:
+                        buf0 = line[:pos + 4].replace('###>', '...|||')
+                    else:
+                        buf0 = line[:pos + 4].replace('###>', '.|||')
+                    buf = io.StringIO()
+                    buf.write(line[pos + 4:].replace('\n', '').replace('\r', '').replace('\t', '        ').rstrip())
+                    test = 6
                 else:
                     l = line.replace('\n', '').replace('\r', '').replace('\t', '        ').rstrip()
                     x = self._pre_process_line(l)
