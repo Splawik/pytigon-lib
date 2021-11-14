@@ -152,7 +152,3 @@ def py_manage(cmd, thread_version = False):
                 return 0, [], []
             else:
                 return py_run(['manage.py',] + cmd)
-
-
-
-

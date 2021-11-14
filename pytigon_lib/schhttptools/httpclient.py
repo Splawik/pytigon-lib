@@ -480,7 +480,13 @@ class HttpClient:
                 for key in files:
                     del parm[key]
 
-                argv['files'] = files
+                if direct_access:
+                    if not 'data' in argv:
+                        argv['data'] = {}
+                    for key, value in files.items():
+                        argv['data'][key] = value
+                else:
+                    argv['files'] = files
             else:
                 if json_data:
                     argv['json'] = parm

@@ -56,7 +56,8 @@ class BodyTag(ParBase):
             'form',
             'hr',
             'pre',
-            'div'
+            'div',
+            'label'
             ]
         self.page = 1
         self.y = 0

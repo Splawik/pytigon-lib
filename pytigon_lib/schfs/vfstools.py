@@ -22,6 +22,7 @@ import os.path
 import tempfile
 import email.generator
 import zipfile
+import hashlib
 
 from pytigon_lib.schdjangoext.tools import gettempdir
 
@@ -118,7 +119,7 @@ def _cmp_txt_str_content(b1, b2):
         return False
 
 
-def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup_zip=None, backup_exts=None):
+def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup_zip=None, backup_exts=None, only_path=None):
     """Extract content from zip file
 
     Args:
@@ -137,6 +138,9 @@ def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup
     if members is None:
         members = zip_file.namelist()
     for zipinfo in members:
+        if only_path:
+            if not zipinfo.startswith(only_path):
+                continue
         if zipinfo.endswith('/') or zipinfo.endswith('\\'):
             if not os.path.exists(path + '/' + zipinfo):
                 os.makedirs(path + '/' + zipinfo)
@@ -163,7 +167,7 @@ def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup
 class ZipWriter:
     """Helper class to create zip files"""
 
-    def __init__(self, filename, basepath="", exclude=[]):
+    def __init__(self, filename, basepath="", exclude=[], sha256 = False):
         """Constructor
 
         Args:
@@ -177,38 +181,53 @@ class ZipWriter:
         #self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
 
         self.exclude = exclude
+        if sha256:
+            self.sha256_tab = []
+        else:
+            self.sha256_tab = None
 
     def close(self):
         self.zip_file.close()
 
-    def write(self, file_name, name_in_zip=None):
+    def _sha256_gen(self, file_name, data):
+        if self.sha256_tab != None:
+            sha256 = hashlib.sha256()
+            sha256.update(data)
+            self.sha256_tab.append((file_name, sha256.hexdigest(), len(data)))
+
+    def write(self, file_name, name_in_zip=None, base_path_in_zip=None):
         test = True
         for pos in self.exclude:
             if re.match(pos, file_name, re.I) != None:
                 test=False
                 break
         if test:
-            f = open(file_name, "rb")
-            data = f.read()
-            f.close()
-            if name_in_zip:
-                self.zip_file.writestr(name_in_zip, data)
-            else:
-                self.zip_file.writestr(file_name[self.base_len+1:], data)
+            with open(file_name, "rb") as f:
+                data = f.read()
+                if name_in_zip:
+                    self.writestr(name_in_zip, data)
+                elif base_path_in_zip:
+                    self.writestr(base_path_in_zip+file_name[self.base_len + 1:], data)
+                else:
+                    self.writestr(file_name[self.base_len+1:], data)
 
-    def toZip(self, file):
+    def writestr(self, path, data):
+        self._sha256_gen(path, data)
+        return self.zip_file.writestr(path, data)
+
+    def to_zip(self, file, base_path_in_zip=None):
         if os.path.isfile(file):
-            self.write(file)
+            self.write(file, base_path_in_zip=base_path_in_zip)
         else:
-            self.addFolderToZip(file)
+            self.add_folder_to_zip(file, base_path_in_zip=base_path_in_zip)
 
-    def addFolderToZip(self, folder):
+    def add_folder_to_zip(self, folder, base_path_in_zip=None):
         for file in os.listdir(folder):
             full_path = os.path.join(folder, file)
             if os.path.isfile(full_path):
-                self.write(full_path)
+                self.write(full_path, base_path_in_zip=base_path_in_zip)
             elif os.path.isdir(full_path):
-                self.addFolderToZip(full_path)
+                self.add_folder_to_zip(full_path, base_path_in_zip=base_path_in_zip)
 
 
 #Perhaps for delete

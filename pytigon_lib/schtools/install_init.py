@@ -162,10 +162,10 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         for p in paths:
             _mkdir(p)
 
-    applib = os.path.join(os.path.join(_prj_path, prj), "applib")
-    if os.path.exists(applib):
-        if not applib in sys.path:
-            sys.path.append(applib)
+    prjlib = os.path.join(os.path.join(_prj_path, prj), "prjlib")
+    if os.path.exists(prjlib):
+        if not prjlib in sys.path:
+            sys.path.append(prjlib)
         if test1 or test2 or test3:
             ret = make(_data_path, os.path.join(_prj_path, prj))
             if ret:

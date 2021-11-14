@@ -105,65 +105,126 @@ def export_to_local_db():
             os.mkdir(temp_path)
         json_path = os.path.join(temp_path, prj_name + '.json')
         cmd(['dumpdata', '--database', 'default', '--format', 'json', '--indent', '4',
-             '-e', 'auth', '-e', 'contenttypes', '-e', 'sessions', '-e', 'sites', '-e', 'admin',
+             '-e', 'auth', '-e', 'contenttypes', '-e', 'sessions', '-e', 'sites', '-e', 'admin', '-e', 'schprofile'
              '--output', json_path])
         cmd(['loaddata', '--database', db_profile, json_path])
         from django.contrib.auth.models import User
         User.objects.db_manager(db_profile).create_superuser('auto', 'auto@pytigon.com', 'anawa')
 
-def extract_ptig(zip_file, name):
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
-    from django.conf import settings
-    ret = []
-    ret.append("Install file: " + name)
-    test_update = True
 
-    extract_to = os.path.join(settings.PRJ_PATH, name)
-    ret.append("install to: " + extract_to)
+class Ptig():
+    def __init__(self, ptig_path_or_file):
+        if type(ptig_path_or_file) == str:
+            self.archive = zipfile.ZipFile(ptig_path_or_file, "r")
+        else:
+            self.archive = zipfile.ZipFile(ptig_path_or_file)
+        namelist = self.archive.namelist()
+        self.prj_name = None
+        self.version = None
+        self.meta_path = None
+        for name in namelist:
+            if ".dist-info" in name:
+                self.meta_path = name.split('/')[0]
+                x = self.meta_path.split(".")[0]
+                x2 = x.split('-', 1)
+                if len(x2)>1:
+                    self.version = x2[1]
+                else:
+                    self.version = 'latest'
+                self.prj_name = x2[0]
+                break
+        self.extract_to = None
 
-    if not os.path.exists(settings.PRJ_PATH):
-        os.mkdir(settings.PRJ_PATH)
-    if not os.path.exists(extract_to):
-        os.mkdir(extract_to)
-        test_update = False
+    def is_ok(self):
+        if self.prj_name:
+            return True
+        else:
+            return False
 
-    zipname = datetime.datetime.now().isoformat('_')[:19].replace(':', '').replace('-', '')
-    zipname2 = os.path.join(extract_to, zipname + ".zip")
-    if test_update:
-        backup_zip = zipfile.ZipFile(zipname2, 'a')
-        exclude = ['.*settings_local.py.*', ]
-    else:
-        backup_zip = None
-        exclude = None
+    def get_license(self):
+        ret = self.archive.read(self.prj_name + "/LICENSE").decode('utf-8')
+        if ret:
+            return ret
+        return ""
 
-    extractall(zip_file, extract_to, backup_zip=backup_zip, exclude=exclude,
-               backup_exts=['py', 'txt', 'wsgi', 'ihtml', 'htlm', 'css', 'js', ])
+    def get_readme(self):
+        ret = self.archive.read(self.prj_name + "/README.md").decode('utf-8')
+        if ret:
+            return ret
+        return ""
 
-    if backup_zip:
-        backup_zip.close()
-    zip_file.close()
+    def get_db(self):
+        return self.archive.read(self.meta_path + "/" + self.prj_name + ".db")
 
-    src_db = os.path.join(extract_to, name + ".db")
-    if os.path.exists(src_db):
-        ret.append("Synchronize database:")
-        dest_path_db = os.path.join(settings.DATA_PATH, name)
+    def extract_ptig(self):
+        import pytigon.schserw.settings
+        from django.conf import settings
 
-        if not os.path.exists(settings.DATA_PATH):
-            os.mkdir(settings.DATA_PATH)
-        if not os.path.exists(dest_path_db):
-            os.mkdir(dest_path_db)
-        dest_db = os.path.join(dest_path_db, name + ".db")
-        if not os.path.exists(dest_db):
-            move(src_db, os.path.join(dest_path_db, name + ".new"))
+        if hasattr(pytigon.schserw.settings, "_PRJ_PATH_ALT"):
+            base_path = os.path.join(pytigon.schserw.settings._PRJ_PATH_ALT, self.prj_name)
+        else:
+            base_path = os.path.join(settings.PRJ_PATH_ALT, self.prj_name)
 
-        (ret_code, output, err) = py_run([os.path.join(extract_to, 'manage.py'), 'post_installation'])
+        ret = []
+        ret.append("Install file: " + self.prj_name)
+        test_update = True
 
-        if output:
-            for pos in output:
-                ret.append(pos)
-        if err:
-            ret.append("ERRORS:")
-            for pos in err:
-                ret.append(pos)
+        extract_to = os.path.join(base_path, self.prj_name)
+        ret.append("install to: " + extract_to)
 
-    return ret
+        if not os.path.exists(base_path):
+            os.mkdir(settings.PRJ_PATH)
+        if not os.path.exists(extract_to):
+            os.mkdir(extract_to)
+            test_update = False
+
+        self.extract_to = extract_to
+
+        zipname = datetime.datetime.now().isoformat('_')[:19].replace(':', '').replace('-', '')
+        zipname2 = os.path.join(extract_to, zipname + ".zip")
+        if test_update:
+            backup_zip = zipfile.ZipFile(zipname2, 'a')
+            exclude = ['.*settings_local.py.*',]
+        else:
+            backup_zip = None
+            exclude = None
+
+        extractall(self.archive, base_path, backup_zip=backup_zip, exclude=exclude, only_path=self.prj_name+'/',
+                   backup_exts=['py', 'txt', 'wsgi', 'asgi', 'ihtml', 'htlm', 'css', 'js', 'prj', ])
+
+        if backup_zip:
+            backup_zip.close()
+
+        src_db = self.get_db()
+        if src_db:
+            ret.append("Synchronize database:")
+            dest_path_db = os.path.join(settings.DATA_PATH, self.prj_name)
+            dest_db = os.path.join(dest_path_db, self.prj_name + ".db")
+
+            if not os.path.exists(settings.DATA_PATH):
+                os.mkdir(settings.DATA_PATH)
+            if not os.path.exists(dest_path_db):
+                os.mkdir(dest_path_db)
+            if not os.path.exists(dest_db):
+                with open(dest_path_db, "wb") as f:
+                    f.write(src_db)
+
+            (ret_code, output, err) = py_run([os.path.join(extract_to, 'manage.py'), 'post_installation'])
+
+            if output:
+                for pos in output:
+                    ret.append(pos)
+            if err:
+                ret.append("ERRORS:")
+                for pos in err:
+                    ret.append(pos)
+        return ret
+
+    def close(self):
+        self.archive.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
