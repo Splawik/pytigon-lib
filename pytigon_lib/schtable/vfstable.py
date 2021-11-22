@@ -21,8 +21,8 @@ import binascii
 import datetime
 import re
 import sys
-from base64 import b32encode, b32decode
 import gettext
+import uuid
 
 import fs.path
 from django.core.cache import cache
@@ -35,7 +35,9 @@ from pytigon_lib.schfs.vfstools import norm_path
 from pytigon_lib.schtable.table import Table
 #from pytigon_lib.schtasks.task import get_process_manager
 from pytigon_lib.schtools import schjson
-from pytigon_lib.schtools.tools import bdecode, is_null
+from pytigon_lib.schtools.tools import bencode, bdecode, is_null
+
+from django_q.tasks import async_task, result
 
 _ = gettext.gettext
 
@@ -120,7 +122,7 @@ class VfsTable(Table):
             pos = fs.path.join(self.folder, p)
             if default_storage.fs.isdir(pos) or p.lower().endswith('.zip'):
                 if cmp and cmp.match(p) or not cmp:
-                    id = b32encode(pos.encode('utf-8')).decode('utf-8')
+                    id = bencode(pos)
                     info = default_storage.fs.getdetails(pos)
                     #if not ha'created_time' in info:
                     #    info['created_time'] = ''
@@ -139,7 +141,7 @@ class VfsTable(Table):
             p=pp[0]
             pos=pp[1]
             if cmp and cmp.match(p) or not cmp:
-                id = b32encode(pos.encode('utf-8')).decode('utf-8')
+                id = bencode(pos)
                 info = default_storage.fs.getdetails(pos)
                 #size = info['size']
                 #ctime = info['created_time']
@@ -156,7 +158,7 @@ class VfsTable(Table):
         return elements
 
     def page(self,nr,sort=None,value=None):
-        key = 'FOLDER_' + b32encode(self.folder.encode('utf-8')).decode('utf-8') + '_TAB'
+        key = 'FOLDER_' + bencode(self.folder) + '_TAB'
         tabvalue = None
         if tabvalue:
             tab = tabvalue
@@ -183,8 +185,9 @@ class VfsTable(Table):
         return tab
 
     def count(self, value):
-        key = 'FOLDER_' + b32encode(self.folder.encode('utf-8')).decode('utf-8') + '_COUNT'
-        countvalue = cache.get(key + '::' + is_null(value, ''))
+        key = 'FOLDER_' + bencode(self.folder) + '_COUNT'
+        #countvalue = cache.get(key + '::' + is_null(value, ''))
+        countvalue = None
 
         if countvalue:
             return countvalue
@@ -225,11 +228,12 @@ class VfsTable(Table):
                 parm["files"] = [ bdecode(v) for v in value[1][1] ]
             else:
                 parm["files"] = [ bdecode(value[1][0]), ]
-            parm["dest"] = bdecode(value[2][1])
-            #task_manager = get_process_manager(self.task_href if self.task_href else '127.0.0.1:8080')
-            #_id = task_manager.put('system', parm["cmd"], "@pytigon_lib.schfs:filesystemcmd", user_parm = parm)
-            #TODO
-            c = { 'process': _id }
+            if len(value[2]) > 1:
+                parm["dest"] = bdecode(value[2][1])
+
+            publish_id = uuid.uuid4().hex
+            task_id = async_task("schcommander.tasks.vfs_action", task_publish_id=publish_id, param=parm)
+            c = { "task_id": task_id, "process_id": "vfs_action__" + publish_id }
         elif value[0] == 'MKDIR':
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
@@ -238,13 +242,15 @@ class VfsTable(Table):
         elif value[0] == 'NEWFILE':
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
-            default_storage.fs.createfile(path+"/"+name)
+            with default_storage.fs.open(path+"/"+name, "wb") as f:
+                pass
+            #default_storage.fs.createfile(path+"/"+name)
             c = {}
         elif value[0] == 'RENAME':
             source = bdecode(value[1][0])
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
-            default_storage.fs.rename(source, path+"/"+name)
+            default_storage.fs.move(source, path+"/"+name)
             c = {}
         else:
             c = { }
@@ -261,9 +267,9 @@ def vfstable_view(request, folder, value=None):
     else:
         d = {}
     if value and value != '' and value != '_':
-        d['value'] = b32decode(value.encode('utf-8')).decode('utf-8')
+        d['value'] = bdecode(value)
     if folder and folder != '' and folder != '_':
-        folder2 = b32decode(folder.encode('utf-8')).decode('utf-8')
+        folder2 = bdecode(folder)
     else:
         folder2 = '/'
     #folder2 = replace_dot(folder2)
@@ -276,9 +282,9 @@ def vfstable_view(request, folder, value=None):
 def vfsopen(request, file):
     try:
         try:
-            file2 = b32decode(file).decode('utf-8')
+            file2 = bdecode(file)
         except:
-            file2 = b32decode(file.encode('utf-8')).decode('utf-8')
+            file2 = bdecode(file)
         plik = default_storage.fs.open(automount(file2),'rb')
         buf = plik.read()
         plik.close()
@@ -289,7 +295,7 @@ def vfsopen(request, file):
 
 def vfsopen_page(request, file, page):
     try:
-        file2 = b32decode(file).decode('utf-8')
+        file2 = bdecode(file)
         page2 = int(page)
         plik = default_storage.fs.open(automount(file2),'rb')
         try:
@@ -309,7 +315,7 @@ def vfssave(request, file):
     if request.POST:
         try:
             data = request.POST['data']
-            file2 = b32decode(file).decode('utf-8')
+            file2 = bdecode(file)
             plik = default_storage.fs.open(automount(file2),"w")
             plik.write(data)
             plik.close()

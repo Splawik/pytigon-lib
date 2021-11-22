@@ -4,21 +4,26 @@
 
 from django.core.files.storage import default_storage
 
-def filesystemcmd(cproxy, *args, **kwargs):
+def filesystemcmd(cproxy=None, **kwargs):
     """bacground tasks related to file system"""
-    param = kwargs['user_parm']
+
+    if cproxy:
+        cproxy.send_event("start")
+
+    param = kwargs['param']
     cmd = param['cmd']
     files = param['files']
-    dest = param['dest'] + "/"
+    if 'dest' in param:
+        dest = param['dest'] + "/"
     if cmd == 'DELETE':
         for f in files:
             try:
                 if default_storage.fs.isfile(f):
                     default_storage.fs.remove(f)
                 else:
-                    default_storage.fs.removedir(f, recursive=True, force=True)
-            except:
-                pass
+                    default_storage.fs.removetree(f)
+            except Exception as exception:
+                print(str(exception))
     elif cmd == 'COPY':
         for f in files:
             try:
@@ -39,4 +44,5 @@ def filesystemcmd(cproxy, *args, **kwargs):
                     default_storage.fs.movedir(f, dest+name, overwrite=True, ignore_errors=True)
             except:
                 pass
-    cproxy.log("finish")
+    if cproxy:
+        cproxy.send_event("stop")

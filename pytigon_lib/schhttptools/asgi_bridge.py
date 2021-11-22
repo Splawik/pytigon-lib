@@ -94,8 +94,6 @@ async def get_or_post(application, path, headers, params={}, post=False):
         nonlocal content
         return {'type': 'http', 'body': content.encode('utf-8')}
 
-    #app_instance = application(scope)
-    #application_queue = await app_instance(receive, send)
     application_queue = await application(scope, receive, send)
 
     if 'status' in ret and ret['status'] == 302:
@@ -116,6 +114,8 @@ async def websocket(application, path, headers, input_queue, output):
     ret = {}
     status = 0
     scope = get_scope_websocket(path.replace('ws://127.0.0.2/', ''), headers)
+    connected = False
+
 
     async def send(message):
         nonlocal output
@@ -134,6 +134,10 @@ async def websocket(application, path, headers, input_queue, output):
                 output.onClose(None, None, None)
 
     async def receive():
+        nonlocal connected
+        if not connected:
+            connected = True
+            return {'type': 'websocket.connect'}
         nonlocal status
         nonlocal input_queue
         item = await input_queue.get()
@@ -142,7 +146,5 @@ async def websocket(application, path, headers, input_queue, output):
         else:
             return {'type': 'websocket.disconnect'}
 
-    #app_instance = application(scope)
-    #application_queue = await app_instance(receive, send)
     application_queue = await application(scope, receive, send)
     return ret

@@ -29,11 +29,13 @@ if platform_name() != "Emscripten":
 import tarfile
 import zipfile
 import io
+import sys
 import importlib
 from shutil import copyfile
 from pathlib import Path
 from pytigon_lib.schtools.process import run, py_run
-from pytigon_lib.schtools.main_paths import get_main_paths
+from pytigon_lib.schtools.main_paths import get_main_paths, get_python_version
+
 
 def check_compiler(base_path):
     if platform.system() == 'Windows':
@@ -119,7 +121,7 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
     else:
         #include1 = os.path.join(tcc_dir, "include")
         include1 = '/usr/include'
-        include2 = '/usr/include/python3.7'
+        include2 = '/usr/include/python%s' % get_python_version(segments=2)
         includes = [include1, include2]
 
     if output_file_name:
@@ -133,11 +135,12 @@ def compile(base_path, input_file_name, output_file_name=None, pyd=True):
             compiler = ".\\tcc.exe"
         else:
             ofn = input_file_name.replace('.c', '')+".so"
-            compiler = "gcc"
+            compiler = "tcc"
 
     if platform.system() == 'Windows':
-        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-L" + tcc_dir, "-B"+tcc_dir , "-ltcc", "-lpython37"]
+        cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-L" + tcc_dir, "-B"+tcc_dir , "-ltcc", "-lpython%s" % (get_python_version(segments=2).replace('.','')) ]
     else:
+        #cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-L" + tcc_dir, "-B"+tcc_dir , "-ltcc", "-lpython39"]
         cmd = [compiler, input_file_name, '-o', ofn, '-shared', "-fPIC"]
 
     for include in includes:
@@ -165,7 +168,7 @@ def make(data_path, files_path):
     for pos in fl:
         pyx_filename = p.joinpath(pos).as_posix()
         c_filename = pyx_filename.replace('.pyx', '.c')
-        (ret_code, output, err) = py_run(['-m', 'cython',  pyx_filename])
+        (ret_code, output, err) = py_run(['-m', 'cython', '-3',  pyx_filename])
         if ret_code:
             ret = ret_code
         if output:

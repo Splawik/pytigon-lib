@@ -2,6 +2,7 @@ import tempfile
 import os
 from os import environ
 from pytigon_lib.schtools.platform_info import platform_name
+import sys
 
 #                Client(appimage,emscripten)     Client/DEV                  Server                          Android                         pytigon-lib
 #
@@ -150,3 +151,8 @@ def get_main_paths(prj_name=None):
 def get_prj_name():
     global PRJ_NAME
     return PRJ_NAME
+
+
+def get_python_version(segments=3):
+    x = sys.version.split(' ')[0].split('.')
+    return ".".join(x[:segments])
