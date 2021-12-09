@@ -27,7 +27,7 @@ from django.db import models
 from django import forms
 from django.core import serializers
 
-from pytigon_lib.schtools.schjson import json_dumps, json_loads
+from pytigon_lib.schtools.schjson import ComplexEncoder, ComplexDecoder
 from pytigon_lib.schdjangoext.fastform import form_from_str
 
 
@@ -38,6 +38,8 @@ class JSONModel(models.Model):
     # jsondata = models.TextField('Json data', null=True, blank=True, editable=False, )
     jsondata = models.JSONField(
         "Json data",
+        encoder=ComplexEncoder,
+        decoder=ComplexDecoder,
         null=True,
         blank=True,
         editable=False,

@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 """Helper class for json encoder"""
@@ -29,34 +29,34 @@ try:
     from urllib.parse import quote_plus, unquote_plus
 except:
     from urllib import quote_plus, unquote_plus
-    
+
 import datetime
 
 
 class ComplexEncoder(json.JSONEncoder):
-    complex_types = (
-        'list',
-        'unicode',
-        'str',
-        'int',
-        'long',
-        'float',
-        'bool',
-        'NoneType',
-        )
+    standard_types = (
+        "list",
+        "unicode",
+        "str",
+        "int",
+        "long",
+        "float",
+        "bool",
+        "NoneType",
+    )
 
     def default(self, obj):
-        if not obj.__class__.__name__ in self.complex_types:
-            if obj.__class__.__name__ == 'datetime':
-                return {'object': repr(obj).replace(", tzinfo=<UTC>", "") }
+        if not obj.__class__.__name__ in self.standard_types:
+            if obj.__class__.__name__ == "datetime":
+                return {"object": repr(obj).replace(", tzinfo=<UTC>", "")}
             else:
-                return {'object': repr(obj)}
+                return {"object": repr(obj)}
         return json.JSONEncoder.default(self, obj)
 
 
 def as_complex(dct):
-    if 'object' in dct:
-        return eval(dct['object'])
+    if "object" in dct:
+        return eval(dct["object"])
     return dct
 
 
@@ -97,3 +97,7 @@ def json_loads(json_str):
     """
     return json.loads(json_str, object_hook=as_complex)
 
+
+class ComplexDecoder(json.JSONDecoder):
+    def decode(self, s):
+        return json_loads(s)
