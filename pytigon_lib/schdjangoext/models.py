@@ -35,7 +35,6 @@ class JSONModel(models.Model):
     class Meta:
         abstract = True
 
-    # jsondata = models.TextField('Json data', null=True, blank=True, editable=False, )
     jsondata = models.JSONField(
         "Json data",
         encoder=ComplexEncoder,
@@ -45,23 +44,9 @@ class JSONModel(models.Model):
         editable=False,
     )
 
-    # def __getattribute__(self, name):
-    #    if name.startswith('json_'):
-    #        if not hasattr(self, '_data'):
-    #            if self.jsondata:
-    #                self._data = json_loads(self.jsondata)
-    #            else:
-    #                self._data = {}
-    #        if name[5:] in self._data:
-    #            return self._data[name[5:]]
-    #
-    #        return None
-    #
-    #    return super().__getattribute__(name)
-
     def __getattribute__(self, name):
         if name.startswith("json_"):
-            if name[5:] in self.jsondata:
+            if self.jsondata and name[5:] in self.jsondata:
                 return self.jsondata[name[5:]]
             return None
         return super().__getattribute__(name)

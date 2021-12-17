@@ -217,8 +217,15 @@ def view_editor(
             "txt": txt,
             "verbose_field_name": f.verbose_name,
         }
+        t = None
+        if hasattr(obj, 'template_for_object'):
+            t = obj.template_for_object(view_editor, c, ext)
+        if not t:
+            t = "schsys/db_field_edt.html"
+
         return render_to_response(
-            transform_template_name(obj, request, "schsys/db_field_edt.html"),
+            # transform_template_name(obj, request, "schsys/db_field_edt.html"),
+            t,
             context=c,
             request=request,
         )
@@ -590,8 +597,6 @@ class GenericRows(object):
                         names.insert(
                             0, self.template_name.replace(".html", target2 + ".html")
                         )
-                if hasattr(self.model, "get_template_name"):
-                    names.insert(0, self.model.get_template_name(None))
                 return names
 
             def get_paginate_by(self, queryset):
@@ -784,6 +789,7 @@ class GenericRows(object):
                             ret = ret.filter(parent=c["base_parent_pk"])
                     # if not 'pk' in self.request.GET:
                     #    ret =  ret.filter(parent=parent)
+                    ret = filter_by_permissions(self.model, ret, self.request)                    
                 else:
                     if self.queryset:
                         ret = self.queryset
@@ -917,8 +923,6 @@ class GenericRows(object):
                             ".html", self.kwargs["target"][3:] + ".html"
                         ),
                     )
-                if hasattr(self.model, "get_template_name"):
-                    names.insert(0, self.model.get_template_name(self.get_object()))
                 return names
 
             def get_context_data(self, **kwargs):
@@ -1001,8 +1005,6 @@ class GenericRows(object):
                             ".html", self.kwargs["target"][3:] + ".html"
                         ),
                     )
-                if hasattr(self.model, "get_template_name"):
-                    names.insert(0, self.model.get_template_name(self.get_object()))
                 return names
 
             def get_context_data(self, **kwargs):
@@ -1156,8 +1158,6 @@ class GenericRows(object):
                             ".html", self.kwargs["target"][3:] + ".html"
                         ),
                     )
-                if hasattr(self.model, "get_template_name"):
-                    names.insert(0, self.model.get_template_name(self.object))
                 return names
 
             def get_success_url(self):
