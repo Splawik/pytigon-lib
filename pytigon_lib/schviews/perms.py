@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 """Functions to protect access to views.
 """
@@ -29,11 +29,13 @@ from pytigon_lib.schdjangoext.django_init import get_app_name
 
 _ANONYMOUS = None
 
+
 def filter_by_permissions(model, queryset_or_obj, request):
     if hasattr(model, "filter_by_permissions"):
         return model.filter_by_permissions(queryset_or_obj, request)
     else:
         return queryset_or_obj
+
 
 def has_the_right(perm, model, param, request):
     if hasattr(model, "has_the_right"):
@@ -45,11 +47,14 @@ def has_the_right(perm, model, param, request):
 def get_anonymous():
     global _ANONYMOUS
     if not _ANONYMOUS:
-        _ANONYMOUS = user = authenticate(username='AnonymousUser', password='AnonymousUser')
+        _ANONYMOUS = user = authenticate(
+            username="AnonymousUser", password="AnonymousUser"
+        )
     return _ANONYMOUS
 
+
 def default_block(request):
-    return render_to_response('schsys/no_perm.html', context={}, request=request)
+    return render_to_response("schsys/no_perm.html", context={}, request=request)
 
 
 def make_perms_url_test_fun(app_name, fun, if_block_view=default_block):
@@ -63,16 +68,16 @@ def make_perms_url_test_fun(app_name, fun, if_block_view=default_block):
             app = pos
             break
     if app:
-        elementy = app.split('.')
+        elementy = app.split(".")
         appbase = elementy[-1]
         try:
             module = __import__(elementy[0])
             module2 = getattr(module, elementy[-1])
             if module2:
-                module3 = getattr(module2, 'models')
+                module3 = getattr(module2, "models")
                 if module3:
                     perms = module3.Perms
-                    if hasattr(perms, 'PermsForUrl'):
+                    if hasattr(perms, "PermsForUrl"):
                         perm_for_url = perms.PermsForUrl
         except:
             pass
@@ -85,14 +90,14 @@ def make_perms_url_test_fun(app_name, fun, if_block_view=default_block):
                 user = get_anonymous()
                 if not user:
                     user = request.user
-            if not user.has_perm(appbase + '.' + perm):
+            if not user.has_perm(appbase + "." + perm):
                 return if_block_view(request)
         return fun(request, app_name, *args, **kwargs)
 
     return perms_test
 
 
-def make_perms_test_fun(model, perm, fun, if_block_view=default_block):
+def make_perms_test_fun(app, model, perm, fun, if_block_view=default_block):
     """Protect views by the authorization system
 
     Args:
@@ -104,7 +109,12 @@ def make_perms_test_fun(model, perm, fun, if_block_view=default_block):
 
     def perms_test(request, *args, **kwargs):
         nonlocal perm, model
-        print("perms_test", perm, args, kwargs)
+        print("perms_test", app, perm, args, kwargs)
+
+        app_instance = __import__(app)
+        if hasattr(app_instance, "Perms") and not app_instance.Perms:
+            return fun(request, *args, **kwargs)
+
         user = request.user
         if not user.is_authenticated:
             user = get_anonymous()

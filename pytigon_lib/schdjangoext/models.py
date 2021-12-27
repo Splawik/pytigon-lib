@@ -51,14 +51,14 @@ class JSONModel(models.Model):
             return None
         return super().__getattribute__(name)
 
-    def __setattribute__(self, name, value):
+    def __setattr__(self, name, value):
         if name.startswith("json_"):
             if self.jsondata:
                 self.jsondata[name[5:]] = value
             else:
                 self.jsondata = {name[5:]: value}
             return
-        return super().__setattribute__(name, value)
+        return super().__setattr__(name, value)
 
     def get_json_data(self):
         return self.jsondata

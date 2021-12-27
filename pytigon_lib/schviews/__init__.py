@@ -218,7 +218,7 @@ def view_editor(
             "verbose_field_name": f.verbose_name,
         }
         t = None
-        if hasattr(obj, 'template_for_object'):
+        if hasattr(obj, "template_for_object"):
             t = obj.template_for_object(view_editor, c, ext)
         if not t:
             t = "schsys/db_field_edt.html"
@@ -777,8 +777,13 @@ class GenericRows(object):
                         else:
                             ret = self.model.objects.all()
                         if not "pk" in self.request.GET:
-                            if c["parent_pk"] and c["parent_pk"] > 0:
-                                ret = ret.filter(parent=c["parent_pk"])
+                            if c["parent_pk"]:
+                                if c["parent_pk"] > 0:
+                                    ret = ret.filter(parent=c["parent_pk"])
+                                else:
+                                    ret = ret.filter(parent=None)
+                            else:
+                                ret = ret.filter(parent=None)
 
                     if not "pk" in self.request.GET:
                         if (
@@ -789,7 +794,7 @@ class GenericRows(object):
                             ret = ret.filter(parent=c["base_parent_pk"])
                     # if not 'pk' in self.request.GET:
                     #    ret =  ret.filter(parent=parent)
-                    ret = filter_by_permissions(self.model, ret, self.request)                    
+                    ret = filter_by_permissions(self.model, ret, self.request)
                 else:
                     if self.queryset:
                         ret = self.queryset
@@ -857,7 +862,10 @@ class GenericRows(object):
                         return ret
 
         fun = make_perms_test_fun(
-            self.base_model, self.base_perm % "list", ListView.as_view()
+            parent_class.table.app,
+            self.base_model,
+            self.base_perm % "list",
+            ListView.as_view(),
         )
         self._append(url, fun)
 
@@ -954,7 +962,10 @@ class GenericRows(object):
                 return self.get(request, *args, **kwargs)
 
         fun = make_perms_test_fun(
-            self.base_model, self.base_perm % "list", DetailView.as_view()
+            parent_class.table.app,
+            self.base_model,
+            self.base_perm % "list",
+            DetailView.as_view(),
         )
         return self._append(url, fun)
 
@@ -1044,6 +1055,7 @@ class GenericRows(object):
                 #    if not form:
                 #        form = self.get_form(form_class)
                 # else:
+
                 form = self.get_form(self.form_class)
 
                 if form:
@@ -1107,7 +1119,10 @@ class GenericRows(object):
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 
         fun = make_perms_test_fun(
-            self.base_model, self.base_perm % "change", UpdateView.as_view()
+            parent_class.table.app,
+            self.base_model,
+            self.base_perm % "change",
+            UpdateView.as_view(),
         )
         return self._append(url, fun)
 
@@ -1202,7 +1217,6 @@ class GenericRows(object):
                     self.form_class = self.object.get_form_class(self, request, True)
                 else:
                     self.form_class = self.get_form_class()
-
                 form = self.get_form(self.form_class)
                 return form
 
@@ -1338,7 +1352,10 @@ class GenericRows(object):
                 return context
 
         fun = make_perms_test_fun(
-            self.base_model, self.base_perm % "change", CreateView.as_view()
+            parent_class.table.app,
+            self.base_model,
+            self.base_perm % "change",
+            CreateView.as_view(),
         )
         return self._append(url, fun)
 
@@ -1391,14 +1408,17 @@ class GenericRows(object):
                 return context
 
         fun = make_perms_test_fun(
-            self.base_model, self.base_perm % "delete", DeleteView.as_view()
+            parent_class.table.app,
+            self.base_model,
+            self.base_perm % "delete",
+            DeleteView.as_view(),
         )
         return self._append(url, fun)
 
     def editor(self):
         url = r"(?P<pk>\d+)/(?P<field_edit_name>[\w_]*)/(?P<target>[\w_]*)/editor/$"
         fun = make_perms_test_fun(
-            self.base_model, self.base_perm % "change", view_editor
+            self.table.app, self.base_model, self.base_perm % "change", view_editor
         )
         if self.field:
             try:
