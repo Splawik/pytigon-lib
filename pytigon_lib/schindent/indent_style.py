@@ -642,6 +642,7 @@ class ConwertToHtml:
                 file.close()
             else:
                 output = self.input_str.replace("^^^", "")
+            output = output.replace("\r", "").replace("\\\n", "")
             return output
         else:
             output = ""
@@ -708,7 +709,7 @@ class ConwertToHtml:
 
                 ret = "".join(ret2)
 
-            ret = ret.replace("\\\n", "")
+            ret = ret.replace("\r", "").replace("\\\n", "")
 
             return ret
 
