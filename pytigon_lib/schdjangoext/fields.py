@@ -10,32 +10,41 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 """Module contains many additional fields for django models.
 """
 
-#from itertools import chain
+# from itertools import chain
 
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django import forms
 from django.utils.safestring import mark_safe
 from django_select2.forms import ModelSelect2Widget
-from django.forms.widgets import HiddenInput, CheckboxInput, CheckboxSelectMultiple, RadioSelect
-#from django.db.models.fields import TextField
-#from django.utils.encoding import force_text
-#from django.utils.html import conditional_escape, format_html, html_safe
-#from django.forms.utils import flatatt
+from django.forms.widgets import (
+    HiddenInput,
+    CheckboxInput,
+    CheckboxSelectMultiple,
+    RadioSelect,
+)
+
+# from django.db.models.fields import TextField
+# from django.utils.encoding import force_text
+# from django.utils.html import conditional_escape, format_html, html_safe
+# from django.forms.utils import flatatt
 
 from pytigon_lib.schdjangoext.tools import make_href
-from pytigon_lib.schdjangoext.formfields import ModelMultipleChoiceFieldWithIcon, ModelChoiceFieldWithIcon
+from pytigon_lib.schdjangoext.formfields import (
+    ModelMultipleChoiceFieldWithIcon,
+    ModelChoiceFieldWithIcon,
+)
 
 # @html_safe
 # class SubWidget(object):
@@ -119,9 +128,20 @@ _GET_TABLE_BUTTONS_2 = """
     </a>
 """
 
+
 class ModelSelect2WidgetExt(ModelSelect2Widget):
-    input_type = 'select2'
-    def __init__(self, href1=None, href2=None, is_new_button=False, is_get_button=True, label="", *argi, **argv):
+    input_type = "select2"
+
+    def __init__(
+        self,
+        href1=None,
+        href2=None,
+        is_new_button=False,
+        is_get_button=True,
+        label="",
+        *argi,
+        **argv
+    ):
         ModelSelect2Widget.__init__(self, *argi, label=label, **argv)
         self.href1 = href1
         self.href2 = href2
@@ -135,44 +155,53 @@ class ModelSelect2WidgetExt(ModelSelect2Widget):
         txt = ""
         if self.queryset:
             objs = self.queryset.filter(pk=value)
-            if len(objs)==1:
+            if len(objs) == 1:
                 txt = str(objs[0])
         if self.is_get_button:
-            buttons = _GET_TABLE_BUTTONS_1 % (self.href1, self._label + str(_(" - get object")))
+            buttons = _GET_TABLE_BUTTONS_1 % (
+                self.href1,
+                self._label + str(_(" - get object")),
+            )
         else:
             buttons = ""
         if self.is_new_button:
-            buttons += _GET_TABLE_BUTTONS_2 % (self.href2, self._label + str(_(" - new object")))
+            buttons += _GET_TABLE_BUTTONS_2 % (
+                self.href2,
+                self._label + str(_(" - new object")),
+            )
 
-        return mark_safe("<div class='select2 input-group' item_id='%s' item_str='%s'>%s%s</div>" %
-            (value, txt, x, buttons))
+        return mark_safe(
+            "<div class='select2 input-group' name='%s' item_id='%s' item_str='%s'>%s%s</div>"
+            % (name, value, txt, x, buttons)
+        )
 
 
 class ForeignKey(models.ForeignKey):
     """Extended version of django models.ForeignKey class. Class allows you to add new objects and
     selecting existing objects in better way.
     """
+
     def __init__(self, *args, **kwargs):
-        if 'search_fields' in kwargs:
-            self.search_fields = kwargs['search_fields']
-            del kwargs['search_fields']
+        if "search_fields" in kwargs:
+            self.search_fields = kwargs["search_fields"]
+            del kwargs["search_fields"]
         else:
             self.search_fields = None
-        if 'query' in kwargs:
-            self.query = kwargs['query']
-            del kwargs['query']
+        if "query" in kwargs:
+            self.query = kwargs["query"]
+            del kwargs["query"]
         else:
             self.query = None
-        if 'is_new_button' in kwargs:
-            self.is_new_button = kwargs['is_new_button']
-            del kwargs['is_new_button']
+        if "is_new_button" in kwargs:
+            self.is_new_button = kwargs["is_new_button"]
+            del kwargs["is_new_button"]
         else:
             self.is_new_button = None
 
         super().__init__(*args, **kwargs)
-        if len(args)>0:
+        if len(args) > 0:
             self.to = args[0]
-        self.filter =  '-'
+        self.filter = "-"
 
     def formfield(self, **kwargs):
         if type(self.to) == str:
@@ -180,30 +209,46 @@ class ForeignKey(models.ForeignKey):
         else:
             to = self.to
 
-        href1 = make_href("/%s/table/%s/%s/form/get/?schtml=1" % (to._meta.app_label, to._meta.object_name, self.filter))
-        href2 = make_href("/%s/table/%s/%s/add/?schtml=1" % (to._meta.app_label, to._meta.object_name, self.filter))
+        href1 = make_href(
+            "/%s/table/%s/%s/form/get/?schtml=1"
+            % (to._meta.app_label, to._meta.object_name, self.filter)
+        )
+        href2 = make_href(
+            "/%s/table/%s/%s/add/?schtml=1"
+            % (to._meta.app_label, to._meta.object_name, self.filter)
+        )
         field = self
 
         if self.search_fields:
             _search_fields = self.search_fields
             _query = self.query
+
             class _Field(forms.ModelChoiceField):
                 def __init__(self, queryset, *argi, **argv):
                     nonlocal _query, _search_fields
                     if _query:
-                        if 'Q' in _query:
-                            queryset = queryset.filter(_query['Q'])
-                        if 'order' in _query:
-                            queryset = queryset.order_by(*_query['order'])
-                        if 'limmit' in _query:
-                            queryset=queryset[:_query['limit']]
+                        if "Q" in _query:
+                            queryset = queryset.filter(_query["Q"])
+                        if "order" in _query:
+                            queryset = queryset.order_by(*_query["order"])
+                        if "limmit" in _query:
+                            queryset = queryset[: _query["limit"]]
 
-                    widget=ModelSelect2WidgetExt(href1, href2, False, True, field.verbose_name, queryset = queryset,search_fields=_search_fields)
-                    widget.attrs['style'] = 'width:400px;'
-                    argv['widget'] = widget
+                    widget = ModelSelect2WidgetExt(
+                        href1,
+                        href2,
+                        False,
+                        True,
+                        field.verbose_name,
+                        queryset=queryset,
+                        search_fields=_search_fields,
+                    )
+                    widget.attrs["style"] = "width:400px;"
+                    argv["widget"] = widget
                     forms.ModelChoiceField.__init__(self, queryset, *argi, **argv)
+
             defaults = {
-                'form_class': _Field,
+                "form_class": _Field,
             }
         else:
             defaults = {}
@@ -227,20 +272,21 @@ class ForeignKey(models.ForeignKey):
 #             return value.id
 
 
-
 class HiddenForeignKey(models.ForeignKey):
     """Version of django models.ForeignKey class with hidden widget."""
+
     def formfield(self, **kwargs):
         field = models.ForeignKey.formfield(self, **kwargs)
         field.widget = HiddenInput()
         field.widget.choices = None
         return field
 
+
 class ManyToManyField(models.ManyToManyField):
     pass
 
 
-#class ManyToManyFieldAlternateRel(models.ManyToManyField):
+# class ManyToManyFieldAlternateRel(models.ManyToManyField):
 #    """Extended version of django models.ManyToManyField class."""
 #    def __init__(self,to,queryset_field,**kwargs):
 #        """Constructor
@@ -308,9 +354,9 @@ class ManyToManyFieldWithIcon(models.ManyToManyField):
 
     def formfield(self, **kwargs):
         if kwargs:
-            kwargs['form_class']= ModelMultipleChoiceFieldWithIcon
+            kwargs["form_class"] = ModelMultipleChoiceFieldWithIcon
         else:
-            kwargs = { 'form_class': ModelMultipleChoiceFieldWithIcon }
+            kwargs = {"form_class": ModelMultipleChoiceFieldWithIcon}
         return super().formfield(**kwargs)
 
 
@@ -372,16 +418,21 @@ class ForeignKeyWithIcon(models.ForeignKey):
     If label contains contains '|' its value split to two parts. First part should be image address, second
     part should be a label.
     """
+
     def formfield(self, **kwargs):
-        db = kwargs.pop('using', None)
-        defaults = {'form_class': ModelChoiceFieldWithIcon,
-                    'queryset': self.rel.to._default_manager.using(db).complex_filter(self.rel.limit_choices_to),
-                    'to_field_name': self.rel.field_name}
+        db = kwargs.pop("using", None)
+        defaults = {
+            "form_class": ModelChoiceFieldWithIcon,
+            "queryset": self.rel.to._default_manager.using(db).complex_filter(
+                self.rel.limit_choices_to
+            ),
+            "to_field_name": self.rel.field_name,
+        }
         defaults.update(kwargs)
         return super(models.ForeignKey, self).formfield(**defaults)
 
 
-#class RadioInputTree(RadioChoiceInput):
+# class RadioInputTree(RadioChoiceInput):
 #    def __str__(self):
 #        if 'id' in self.attrs:
 #            label_for = ' for="%s_%s"' % (self.attrs['id'], self.index)
@@ -396,7 +447,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #        return mark_safe('<label%s>%s</label>%s' % (label_for, label, self.tag()))
 
 
-#class RadioFieldRendererExt(object):
+# class RadioFieldRendererExt(object):
 #    """An object used by RadioSelect to enable customization of radio widgets."""
 #
 #    def __init__(self,name,value,attrs,choices):
@@ -419,7 +470,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #        return mark_safe("""<ul class='radio'>%s</ul>""" % '\n'.join(['<li>%s</li>' % w for w in self]))
 
 
-#class PyRadioFieldRendererExt(object):
+# class PyRadioFieldRendererExt(object):
 #
 #    def __init__(self,name,value,attrs,choices):
 #        (self.name, self.value, self.attrs) = (name, value, attrs)
@@ -441,7 +492,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #        return mark_safe(s2 % (href, self.name))
 
 
-#class RadioSelectExt(RadioSelect):
+# class RadioSelectExt(RadioSelect):
 #
 #    renderer = RadioFieldRendererExt
 #
@@ -466,7 +517,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #        return rend
 
 
-#class ModelChoiceFieldExt(forms.ModelChoiceField):
+# class ModelChoiceFieldExt(forms.ModelChoiceField):
 #    widget = RadioSelectExt
 #
 #    def __init__(self, queryset, **kwargs):
@@ -475,7 +526,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #        self.widget.set_ext_data(self.model_to)
 
 
-#class ForeignKeyExt(models.ForeignKey):
+# class ForeignKeyExt(models.ForeignKey):
 #    """Extended version of models.ForeignKey
 #    """
 #    def formfield(self, **kwargs):
@@ -489,7 +540,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #        return super(models.ForeignKey, self).formfield(**defaults)
 
 
-#class AutoCharField(forms.CharField):
+# class AutoCharField(forms.CharField):
 #
 #    def __init__(self, max_length=None, min_length=None, *args, **kwargs):
 #        if 'src' in kwargs:
@@ -505,7 +556,7 @@ class ForeignKeyWithIcon(models.ForeignKey):
 #            return {'src': self.src}
 
 
-#class AutocompleteTextField(TextField):
+# class AutocompleteTextField(TextField):
 
 #    def __init__(self, *args, **kwargs):
 #        if 'src' in kwargs:
@@ -526,11 +577,13 @@ class ForeignKeyWithIcon(models.ForeignKey):
 
 class NullBooleanField(models.BooleanField):
     def __init__(self, *args, **kwargs):
-        kwargs['null'] = True
+        kwargs["null"] = True
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
-        defaults = {'form_class': forms.BooleanField, }
+        defaults = {
+            "form_class": forms.BooleanField,
+        }
         defaults.update(kwargs)
         return super().formfield(**defaults)
 
@@ -538,7 +591,8 @@ class NullBooleanField(models.BooleanField):
 class TreeForeignKey(ForeignKey):
     pass
 
-#class GTreeForeignKey(ForeignKey):
+
+# class GTreeForeignKey(ForeignKey):
 #    pass
 
 PtigForeignKey = ForeignKey
@@ -548,22 +602,28 @@ PtigManyToManyField = ManyToManyField
 PtigManyToManyFieldWithIcon = ManyToManyFieldWithIcon
 PtigTreeForeignKey = TreeForeignKey
 
+
 class PtigModelSelect2Field(models.ForeignKey):
-    """Extended version of django django models, used select2 widget.
-    """
+    """Extended version of django django models, used select2 widget."""
+
     def formfield(self, **kwargs):
-        defaults = {'form_class': ModelSelect2Field,
-                    'queryset': self.rel.to,
-                    'to_field_name': self.rel.field_name}
+        defaults = {
+            "form_class": ModelSelect2Field,
+            "queryset": self.rel.to,
+            "to_field_name": self.rel.field_name,
+        }
         defaults.update(kwargs)
         return super(models.ForeignKey, self).formfield(**defaults)
 
+
 class PtigModelSelect2Field(models.ManyToManyField):
-    """Extended version of django django models, used select2 widget.
-    """
+    """Extended version of django django models, used select2 widget."""
+
     def formfield(self, **kwargs):
-        defaults = {'form_class': ModelSelect2MultipleField,
-                    'queryset': self.rel.to,
-                    'to_field_name': self.rel.field_name}
+        defaults = {
+            "form_class": ModelSelect2MultipleField,
+            "queryset": self.rel.to,
+            "to_field_name": self.rel.field_name,
+        }
         defaults.update(kwargs)
         return super(models.ManyToManyField, self).formfield(**defaults)

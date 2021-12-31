@@ -1339,6 +1339,7 @@ class GenericRows(object):
                 context["view"] = self
                 context["title"] = self.title + " - " + str(_("new element"))
                 context["object"] = self.object
+                context["add_param"] = self.kwargs["add_param"]
                 # context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)

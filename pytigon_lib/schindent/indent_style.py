@@ -708,6 +708,8 @@ class ConwertToHtml:
 
                 ret = "".join(ret2)
 
+            ret = ret.replace("\\\n", "")
+
             return ret
 
 

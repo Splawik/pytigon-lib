@@ -164,6 +164,9 @@ STANDARD_ACTIONS = {
     'refresh_page': {
         'target': "refresh_page"
     },
+    '_self': {
+        'target': "_self"
+    },
     'refresh_app': {
         'target': "refresh_app"
     },
