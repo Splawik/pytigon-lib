@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 from django.http import HttpResponse
@@ -104,32 +104,46 @@ _ERROR_HTML = """
 </body>
 """
 
+
 def new_row_ok(request, id, title):
-    if not 'HTTP_USER_AGENT' in request.META or request.META['HTTP_USER_AGENT'].lower().startswith('py'):
+    if not "HTTP_USER_AGENT" in request.META or (
+        request.META["HTTP_USER_AGENT"]
+        and request.META["HTTP_USER_AGENT"].lower().startswith("py")
+    ):
         return HttpResponse(_NEW_ROW_OK_SHTML % (id, title))
     else:
-        return HttpResponse(_NEW_ROW_OK_HTML+"id:"+str(id))
+        return HttpResponse(_NEW_ROW_OK_HTML + "id:" + str(id))
+
 
 def update_row_ok(request, id, title):
-    if not 'HTTP_USER_AGENT' in request.META or request.META['HTTP_USER_AGENT'].lower().startswith('py'):
+    if not "HTTP_USER_AGENT" in request.META or (
+        request.META["HTTP_USER_AGENT"]
+        and request.META["HTTP_USER_AGENT"].lower().startswith("py")
+    ):
         return HttpResponse(_UPDATE_ROW_OK_SHTML % (id, title))
     else:
-        return HttpResponse(_UPDATE_ROW_OK_HTML+"id:"+str(id))
+        return HttpResponse(_UPDATE_ROW_OK_HTML + "id:" + str(id))
+
 
 def ok(request):
     return HttpResponse(_OK_HTML)
 
+
 def refresh(request):
     return HttpResponse(_REFRESH_HTML)
+
 
 def refresh_parent(request):
     return HttpResponse(_REFRESH_PARENT_HTML)
 
+
 def reload(request, new_html):
     return HttpResponse(_RELOAD_HTML % new_html)
 
+
 def cancel(request):
     return HttpResponse(_CANCEL_HTML)
+
 
 def error(request, error_txt):
     return HttpResponse(_ERROR_HTML % error_txt)

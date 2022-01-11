@@ -717,6 +717,8 @@ class GenericRows(object):
                 context["filter"] = self.kwargs["filter"]
                 context["model"] = self.model
                 context["target"] = self.kwargs["target"]
+                context["sort"] = self.sort
+                context["order"] = self.order
                 parent_class.table_paths_to_context(self, context)
 
                 if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
