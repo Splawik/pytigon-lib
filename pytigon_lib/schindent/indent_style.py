@@ -24,7 +24,7 @@ import io
 import gettext
 import codecs
 from pytigon_lib.schindent.py_to_js import compile
-
+from pytigon_lib.schtools.tools import norm_indent
 
 from .indent_tools import convert_js
 
@@ -34,7 +34,7 @@ try:
     def convert_md(stream_in, stream_out):
         if stream_in and stream_out:
             buf = markdown.markdown(
-                stream_in.getvalue,
+                norm_indent(stream_in.getvalue()),
                 extensions=[
                     "abbr",
                     "attr_list",
@@ -101,9 +101,9 @@ def iter_lines(f, f_name, lang):
             try:
                 p = open(os.path.join(base_path, "translate.py"), "rt")
                 for line in p.readlines():
-                    fr = line.split('_("')
+                    fr = line.split("_(")
                     if len(fr) > 1:
-                        fr = fr[1].split('")')
+                        fr = fr[1].split(")")
                         if len(fr) == 2:
                             tab_translate.append(fr[0])
                 p.close()
@@ -143,13 +143,17 @@ def iter_lines(f, f_name, lang):
     for line in f:
         if len(line.lstrip()) == 0:
             continue
-        if line.lstrip().startswith("_"):
+        if line.lstrip().startswith("_") and not line.lstrip().startswith("_("):
             nr = line.find("_")
             line2 = " " * nr + "." + gt(line.strip()[1:])
         else:
             if "_(" in line and not "__(" in line:
                 out = []
-                fr = line.split("_(")
+                if line.lstrip().startswith("_("):
+                    fr0 = line.split("_(")
+                    fr = (fr0[0] + ".", fr0[1])
+                else:
+                    fr = line.split("_(")
                 out.append(fr[0])
                 for pos in fr[1:]:
                     id2 = pos.find(")")
@@ -460,6 +464,7 @@ class ConwertToHtml:
                                 self.code.append((old_pos * 4, None, None, 1))
                         buf = None
                         test = 0
+                        continue
                     if test > 1:
                         if not cont:
                             l = (

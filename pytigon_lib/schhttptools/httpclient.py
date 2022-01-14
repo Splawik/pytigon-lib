@@ -154,6 +154,7 @@ def emscripten_asgi_or_wsgi_get_or_post(
     application, url, headers, params={}, post=False, ret=[], user_agent="Pytigon"
 ):
     global CLIENT
+    _user_agent = None
     if not CLIENT:
         CLIENT = Client(
             HTTP_USER_AGENT="Emscripten"
@@ -162,7 +163,9 @@ def emscripten_asgi_or_wsgi_get_or_post(
         )
 
     if user_agent and CLIENT.defaults['HTTP_USER_AGENT'] != user_agent:
+        _user_agent = CLIENT.defaults['HTTP_USER_AGENT']
         CLIENT.defaults['HTTP_USER_AGENT'] = user_agent
+        
 
     url2 = url.replace("http://127.0.0.2", "")
     if post:
@@ -194,6 +197,9 @@ def emscripten_asgi_or_wsgi_get_or_post(
         )
 
     ret.append(result)
+
+    if _user_agent:
+        CLIENT.defaults['HTTP_USER_AGENT'] = _user_agent
 
 
 def asgi_or_wsgi_get_or_post(

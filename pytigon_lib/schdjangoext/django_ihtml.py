@@ -10,39 +10,41 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 from pytigon_lib.schindent.indent_style import ConwertToHtml
 
 
-SIMPLE_CLOSE_ELEM = ['br', 'meta', 'input']
+SIMPLE_CLOSE_ELEM = ["br", "meta", "input"]
 
 AUTO_CLOSE_DJANGO_ELEM = [
-    'for',
-    'if',
-    'ifequal',
-    'ifnotequal',
-    'ifchanged',
-    'block',
-    'filter',
-    'with',
-    ]
+    "for",
+    "if",
+    "ifequal",
+    "ifnotequal",
+    "ifchanged",
+    "block",
+    "filter",
+    "with",
+]
 
 NO_AUTO_CLOSE_DJANGO_ELEM = [
-    'else',
-    'elif',
-    ]
+    "else",
+    "elif",
+]
+
 
 def fa_icons(value):
     return "<i class='fa fa-%s'></i>" % value
 
-def ihtml_to_html(file_name, input_str=None, lang='en'):
+
+def ihtml_to_html(file_name, input_str=None, lang="en"):
     """Convert ihtml syntax to html
 
     Args:
@@ -50,12 +52,23 @@ def ihtml_to_html(file_name, input_str=None, lang='en'):
         input_str - input string with ihtml content
         lang - language
     """
-    conwert = ConwertToHtml(file_name, SIMPLE_CLOSE_ELEM, AUTO_CLOSE_DJANGO_ELEM, NO_AUTO_CLOSE_DJANGO_ELEM,
-        input_str, lang, output_processors={ 'fa': fa_icons, })
+    conwert = ConwertToHtml(
+        file_name,
+        SIMPLE_CLOSE_ELEM,
+        AUTO_CLOSE_DJANGO_ELEM,
+        NO_AUTO_CLOSE_DJANGO_ELEM,
+        input_str,
+        lang,
+        output_processors={
+            "fa": fa_icons,
+        },
+    )
     try:
         conwert.process()
         return conwert.to_str()
     except:
-        import sys
+        import sys, traceback
+
         print(sys.exc_info())
+        traceback.print_exc()
         return ""
