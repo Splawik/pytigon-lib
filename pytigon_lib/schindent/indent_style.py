@@ -33,6 +33,7 @@ try:
 
     def convert_md(stream_in, stream_out):
         if stream_in and stream_out:
+            # print(norm_indent(stream_in.getvalue()))
             buf = markdown.markdown(
                 norm_indent(stream_in.getvalue()),
                 extensions=[
@@ -101,9 +102,9 @@ def iter_lines(f, f_name, lang):
             try:
                 p = open(os.path.join(base_path, "translate.py"), "rt")
                 for line in p.readlines():
-                    fr = line.split("_(")
+                    fr = line.split('_("')
                     if len(fr) > 1:
-                        fr = fr[1].split(")")
+                        fr = fr[1].split('")')
                         if len(fr) == 2:
                             tab_translate.append(fr[0])
                 p.close()
@@ -141,8 +142,8 @@ def iter_lines(f, f_name, lang):
         gt = translate
 
     for line in f:
-        if len(line.lstrip()) == 0:
-            continue
+        # if len(line.lstrip()) == 0:
+        #    continue
         if line.lstrip().startswith("_") and not line.lstrip().startswith("_("):
             nr = line.find("_")
             line2 = " " * nr + "." + gt(line.strip()[1:])

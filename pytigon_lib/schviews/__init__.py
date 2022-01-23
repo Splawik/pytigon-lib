@@ -796,7 +796,7 @@ class GenericRows(object):
                             ret = ret.filter(parent=c["base_parent_pk"])
                     # if not 'pk' in self.request.GET:
                     #    ret =  ret.filter(parent=parent)
-                    ret = filter_by_permissions(self.model, ret, self.request)
+                    ret = filter_by_permissions(self, self.model, ret, self.request)
                 else:
                     if self.queryset:
                         ret = self.queryset
@@ -816,7 +816,7 @@ class GenericRows(object):
                             else:
                                 ret = self.model.objects.all()
 
-                    ret = filter_by_permissions(self.model, ret, self.request)
+                    ret = filter_by_permissions(self, self.model, ret, self.request)
                     if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
                         try:
                             parent = int(self.kwargs["base_filter"])

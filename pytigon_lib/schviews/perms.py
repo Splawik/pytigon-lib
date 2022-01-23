@@ -30,9 +30,9 @@ from pytigon_lib.schdjangoext.django_init import get_app_name
 _ANONYMOUS = None
 
 
-def filter_by_permissions(model, queryset_or_obj, request):
+def filter_by_permissions(view, model, queryset_or_obj, request):
     if hasattr(model, "filter_by_permissions"):
-        return model.filter_by_permissions(queryset_or_obj, request)
+        return model.filter_by_permissions(view, queryset_or_obj, request)
     else:
         return queryset_or_obj
 
