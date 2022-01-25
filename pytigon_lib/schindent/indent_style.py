@@ -27,6 +27,9 @@ from pytigon_lib.schindent.py_to_js import compile
 from pytigon_lib.schtools.tools import norm_indent
 
 from .indent_tools import convert_js
+from django.conf import settings
+from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
+
 
 try:
     import markdown
@@ -73,15 +76,16 @@ def translate(s):
 
 def iter_lines(f, f_name, lang):
     in_table = 0
-    if f_name:
-        if "prj" in f_name:
-            l = f_name.replace("\\", "/").split("prj")
-            base_path = l[0] + "prj/" + l[1].split("/")[1] + "/"
-        else:
-            l = f_name.replace("\\", "/").split("templates_src")
-            base_path = l[0] + "schserw/"
-    else:
-        base_path = "./"
+    #if f_name:
+    #    if "prj" in f_name:
+    #        l = f_name.replace("\\", "/").split("prj")
+    #        base_path = l[0] + "prj/" + l[1].split("/")[1] + "/"
+    #    else:
+    #        l = f_name.replace("\\", "/").split("templates_src")
+    #        base_path = l[0] + "schserw/"
+    #else:
+    #    base_path = "./"
+    base_path = os.path.join(settings.PRJ_PATH, get_prj_name())
     locale_path = os.path.join(base_path, "locale")
 
     tab_translate = []
@@ -193,6 +197,7 @@ def iter_lines(f, f_name, lang):
         yield line2
     yield "."
     if len(tab_translate) > 0:
+        print("TRANSLATE: ", os.path.join(base_path, "translate.py"))
         p = open(os.path.join(base_path, "translate.py"), "wt")
         for word in tab_translate:
             p.write('_("' + word + '")\n')

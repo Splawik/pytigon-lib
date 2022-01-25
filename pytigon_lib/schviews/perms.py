@@ -109,7 +109,6 @@ def make_perms_test_fun(app, model, perm, fun, if_block_view=default_block):
 
     def perms_test(request, *args, **kwargs):
         nonlocal perm, model
-        print("perms_test", app, perm, args, kwargs)
 
         app_instance = __import__(app)
         if hasattr(app_instance, "Perms") and not app_instance.Perms:

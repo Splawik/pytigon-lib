@@ -89,12 +89,9 @@ def install_tcc(path):
             print(f.read())
             os.chdir(temp)
     h_path = os.path.join(path, "include", "python")
-    print("A1:", h_path)
     if not os.path.exists(h_path):
-        print("A2")
         info = sys.version_info
         url2 = f"https://www.python.org/ftp/python/{info.major}.{info.minor}.{info.micro}/Python-{info.major}.{info.minor}.{info.micro}.tgz"
-        print(url2)
         r = httpx.get(url2, allow_redirects=True)
         with tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz") as tar:
             extract_tar_folder(
