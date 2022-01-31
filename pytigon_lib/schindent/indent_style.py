@@ -76,14 +76,14 @@ def translate(s):
 
 def iter_lines(f, f_name, lang):
     in_table = 0
-    #if f_name:
+    # if f_name:
     #    if "prj" in f_name:
     #        l = f_name.replace("\\", "/").split("prj")
     #        base_path = l[0] + "prj/" + l[1].split("/")[1] + "/"
     #    else:
     #        l = f_name.replace("\\", "/").split("templates_src")
     #        base_path = l[0] + "schserw/"
-    #else:
+    # else:
     #    base_path = "./"
     base_path = os.path.join(settings.PRJ_PATH, get_prj_name())
     locale_path = os.path.join(base_path, "locale")
@@ -197,7 +197,6 @@ def iter_lines(f, f_name, lang):
         yield line2
     yield "."
     if len(tab_translate) > 0:
-        print("TRANSLATE: ", os.path.join(base_path, "translate.py"))
         p = open(os.path.join(base_path, "translate.py"), "wt")
         for word in tab_translate:
             p.write('_("' + word + '")\n')
@@ -324,11 +323,15 @@ class ConwertToHtml:
         return status
 
     def transform_line(self, line, next_line):
-        self._output_buf(line[0])
+        if not (line[1] == None and line[2] == None):
+            self._output_buf(line[0])
+
         if line[1]:
             if line[1][0] == "%":
                 if line[1][1] == "%":
-                    if next_line[0] <= line[0]:
+                    if next_line[0] <= line[0] and not (
+                        next_line[1] == None and next_line[2] == None
+                    ):
                         self.output.append(
                             [
                                 line[0],
@@ -369,7 +372,9 @@ class ConwertToHtml:
                     if line[2]:
                         self.output.append([line[0], line[2], line[3]])
             else:
-                if next_line[0] <= line[0]:
+                if next_line[0] <= line[0] and not (
+                    next_line[1] == None and next_line[2] == None
+                ):
                     if line[2] or not self._get_elem(line[1]) in self.simple_close_elem:
                         s = line[2] if line[2] else ""
                         self.output.append(
@@ -403,6 +408,7 @@ class ConwertToHtml:
 
     def transform(self):
         old_line = None
+        # breakpoint()
         for line in self.code:
             if old_line == None:
                 old_line = line

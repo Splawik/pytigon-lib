@@ -15,7 +15,7 @@ import sys
 # PRJ_PATH_ALT    site-packages/pytigon/prj       site-packages/pytigon/prj   site-packages/pytigon/prj      site-packages/pytigon/prj       None
 # STATIC_PATH     site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static   site-packages/pytigon/static    site-packages/pytigon/static
 
-PRJ_NAME = None
+PRJ_NAME = ""
 
 
 def if_not_in_env(name, value):

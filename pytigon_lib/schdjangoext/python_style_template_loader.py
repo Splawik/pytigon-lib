@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import os
 import codecs
@@ -23,34 +23,39 @@ import codecs
 from django.conf import settings
 from django.template import TemplateDoesNotExist
 from django.utils._os import safe_join
-from django.template.loaders.base  import Loader as BaseLoader
+from django.template.loaders.base import Loader as BaseLoader
 import django.template.loaders.filesystem
+import django.template.loaders.app_directories
 
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
 
 
-
-def compile_template(template_name, template_dirs=None, tried=None, compiled=None, force=False):
+def compile_template(
+    template_name, template_dirs=None, tried=None, compiled=None, force=False
+):
     def get_template_sources(template_name, template_dirs=None):
         if not template_dirs:
-            template_dirs = settings.TEMPLATES[0]['DIRS']
+            template_dirs = settings.TEMPLATES[0]["DIRS"]
         for template_dir in template_dirs:
             try:
-                yield safe_join(template_dir + '_src',
-                                template_name.replace('.html', '.ihtml'))
+                yield safe_join(
+                    template_dir + "_src", template_name.replace(".html", ".ihtml")
+                )
             except UnicodeDecodeError:
                 raise
             except ValueError:
                 pass
 
     if not template_dirs:
-        template_dirs = settings.TEMPLATES[0]['DIRS']
+        template_dirs = settings.TEMPLATES[0]["DIRS"]
 
     template_name_base = template_name
     for pos in settings.LANGUAGES:
-        template_name_base = template_name_base.replace('_' + pos[0] + '.html', '.html')
+        template_name_base = template_name_base.replace("_" + pos[0] + ".html", ".html")
         for filepath in get_template_sources(template_name_base, template_dirs):
-            filepath2 = filepath.replace('_src', '').replace('.ihtml', '.html')
+            # if not type(filepath) == str:
+            #    continue
+            filepath2 = filepath.replace("_src", "").replace(".ihtml", ".html")
             try:
                 write = False
                 if os.path.exists(filepath):
@@ -75,28 +80,40 @@ def compile_template(template_name, template_dirs=None, tried=None, compiled=Non
                                 ret = ihtml_to_html(filepath, lang=lang)
                                 if ret:
                                     try:
-                                        if lang == 'en':
-                                            with codecs.open(filepath2, 'w', encoding='utf-8') as f:
+                                        if lang == "en":
+                                            with codecs.open(
+                                                filepath2, "w", encoding="utf-8"
+                                            ) as f:
                                                 f.write(ret)
-                                            if compiled!=None:
+                                            if compiled != None:
                                                 compiled.append(filepath2)
                                         else:
-                                            with codecs.open(filepath2.replace('.html', '_' + lang + ".html"),
-                                                             'w', encoding='utf-8') as f:
+                                            with codecs.open(
+                                                filepath2.replace(
+                                                    ".html", "_" + lang + ".html"
+                                                ),
+                                                "w",
+                                                encoding="utf-8",
+                                            ) as f:
                                                 f.write(ret)
-                                            if compiled!=None:
-                                                compiled.append(filepath2.replace('.html', '_' + lang + ".html"))
+                                            if compiled != None:
+                                                compiled.append(
+                                                    filepath2.replace(
+                                                        ".html", "_" + lang + ".html"
+                                                    )
+                                                )
                                     except:
                                         import traceback
                                         import sys
+
                                         print(sys.exc_info())
                                         print(traceback.print_exc())
                             except:
                                 pass
-                    if tried!=None:
+                    if tried != None:
                         tried.append(filepath)
             except IOError:
-                if tried!=None:
+                if tried != None:
                     tried.append(filepath)
 
 
@@ -104,7 +121,9 @@ class FSLoader(django.template.loaders.filesystem.Loader):
     is_usable = True
 
     def load_template_source(self, template_name, template_dirs=None):
-        return django.template.loaders.filesystem.Loader.load_template_source(self, template_name, template_dirs)
+        return django.template.loaders.filesystem.Loader.load_template_source(
+            self, template_name, template_dirs
+        )
 
 
 class Loader(BaseLoader):
@@ -114,24 +133,26 @@ class Loader(BaseLoader):
 
     def get_template_sources(self, template_name, template_dirs=None):
         if not template_dirs:
-            template_dirs = settings.TEMPLATES[0]['DIRS']
+            template_dirs = settings.TEMPLATES[0]["DIRS"]
         for template_dir in template_dirs:
             try:
                 for pos in settings.LANGUAGES:
-                    if '_'+pos[0]+'.html' in template_name:
-                        template_name = template_name.replace('_'+pos[0]+'.html', '.html')
+                    if "_" + pos[0] + ".html" in template_name:
+                        template_name = template_name.replace(
+                            "_" + pos[0] + ".html", ".html"
+                        )
 
-                yield safe_join(template_dir + '_src',
-                                template_name.replace('.html', '.ihtml'))
+                yield safe_join(
+                    template_dir + "_src", template_name.replace(".html", ".ihtml")
+                )
             except UnicodeDecodeError:
                 raise
             except ValueError:
                 pass
 
-
     def get_contents(self, origin):
         filepath = origin
-        filepath2 = filepath.replace('_src', '').replace('.ihtml', '.html')
+        filepath2 = filepath.replace("_src", "").replace(".ihtml", ".html")
         try:
             write = False
             if os.path.exists(filepath):
@@ -153,33 +174,50 @@ class Loader(BaseLoader):
                             ret = ihtml_to_html(filepath, lang=lang)
                             if ret:
                                 try:
-                                    if lang == 'en':
-                                        with codecs.open(filepath2, 'w', encoding='utf-8') as f:
+                                    if lang == "en":
+                                        with codecs.open(
+                                            filepath2, "w", encoding="utf-8"
+                                        ) as f:
                                             f.write(ret)
                                     else:
-                                        with codecs.open(filepath2.replace('.html', '_' + lang + ".html"),
-                                                         'w', encoding='utf-8') as f:
+                                        with codecs.open(
+                                            filepath2.replace(
+                                                ".html", "_" + lang + ".html"
+                                            ),
+                                            "w",
+                                            encoding="utf-8",
+                                        ) as f:
                                             f.write(ret)
                                 except:
                                     try:
-                                        if lang == 'en':
-                                            with codecs.open(filepath2, 'r', encoding='utf-8') as f:
-                                                if f.read()!=ret:
+                                        if lang == "en":
+                                            with codecs.open(
+                                                filepath2, "r", encoding="utf-8"
+                                            ) as f:
+                                                if f.read() != ret:
                                                     import traceback
                                                     import sys
+
                                                     print(sys.exc_info())
                                                     print(traceback.print_exc())
                                         else:
-                                            with codecs.open(filepath2.replace('.html', '_' + lang + ".html"),
-                                                             'r', encoding='utf-8') as f:
-                                                if f.read()!=ret:
+                                            with codecs.open(
+                                                filepath2.replace(
+                                                    ".html", "_" + lang + ".html"
+                                                ),
+                                                "r",
+                                                encoding="utf-8",
+                                            ) as f:
+                                                if f.read() != ret:
                                                     import traceback
                                                     import sys
+
                                                     print(sys.exc_info())
                                                     print(traceback.print_exc())
                                     except:
                                         import traceback
                                         import sys
+
                                         print(sys.exc_info())
                                         print(traceback.print_exc())
                         except:
