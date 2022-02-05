@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import re
 import os.path
@@ -26,34 +26,35 @@ import hashlib
 
 from pytigon_lib.schdjangoext.tools import gettempdir
 
+
 def norm_path(url):
     """Normalize url"""
     ldest = []
-    if url == '' or url == None:
-        return ''
-    url2 = url.replace(' ', '%20').replace('://', '###').replace('\\','/')
-    if not '.' in url2:
-        return url2.replace('###', '://').replace('%20', ' ')
-    lsource = url2.split('/')
+    if url == "" or url == None:
+        return ""
+    url2 = url.replace(" ", "%20").replace("://", "###").replace("\\", "/")
+    if not "." in url2:
+        return url2.replace("###", "://").replace("%20", " ")
+    lsource = url2.split("/")
     for l in lsource:
-        if l == '..':
+        if l == "..":
             ldest.pop()
         else:
-            if l != '.':
+            if l != ".":
                 ldest.append(l)
     ret = None
     for l in ldest:
         if ret == None:
             ret = l
         else:
-            ret = ret + '/' + l
+            ret = ret + "/" + l
     if ret != None:
-        if ret == '':
-            return '/'
+        if ret == "":
+            return "/"
         else:
-            return ret.replace('###', '://').replace('%20', ' ')
+            return ret.replace("###", "://").replace("%20", " ")
     else:
-        return ''
+        return ""
 
 
 def open_and_create_dir(filename, mode):
@@ -77,10 +78,9 @@ def get_temp_filename(base_name=None):
     """
     boundary = email.generator._make_boundary()
     if base_name:
-        return os.path.join(gettempdir(),boundary+"_"+base_name)
+        return os.path.join(gettempdir(), boundary + "_" + base_name)
     else:
-        return os.path.join(gettempdir(),boundary)
-
+        return os.path.join(gettempdir(), boundary)
 
 
 def delete_from_zip(zip_name, del_file_names):
@@ -93,8 +93,8 @@ def delete_from_zip(zip_name, del_file_names):
     del_file_names2 = [pos.lower() for pos in del_file_names]
 
     tmpname = get_temp_filename()
-    zin = zipfile.ZipFile (zip_name, 'r')
-    zout = zipfile.ZipFile (tmpname, 'w', zipfile.ZIP_STORED)
+    zin = zipfile.ZipFile(zip_name, "r")
+    zout = zipfile.ZipFile(tmpname, "w", zipfile.ZIP_STORED)
     for item in zin.infolist():
         if not item.filename.lower() in del_file_names2:
             buffer = zin.read(item.filename)
@@ -102,24 +102,35 @@ def delete_from_zip(zip_name, del_file_names):
     zout.close()
     zin.close()
     os.remove(zip_name)
-    os.rename(tmpname,zip_name)
+    os.rename(tmpname, zip_name)
     return 1
 
 
 def _clear_content(b):
-    return b.replace(b' ', b'').replace(b'\n', b'').replace(b'\t', b'').replace(b'\r',b'')
+    return (
+        b.replace(b" ", b"").replace(b"\n", b"").replace(b"\t", b"").replace(b"\r", b"")
+    )
 
 
 def _cmp_txt_str_content(b1, b2):
     _b1 = _clear_content(b1)
     _b2 = _clear_content(b2)
-    if _b1==_b2:
+    if _b1 == _b2:
         return True
     else:
         return False
 
 
-def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup_zip=None, backup_exts=None, only_path=None):
+def extractall(
+    zip_file,
+    path=None,
+    members=None,
+    pwd=None,
+    exclude=None,
+    backup_zip=None,
+    backup_exts=None,
+    only_path=None,
+):
     """Extract content from zip file
 
     Args:
@@ -141,23 +152,23 @@ def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup
         if only_path:
             if not zipinfo.startswith(only_path):
                 continue
-        if zipinfo.endswith('/') or zipinfo.endswith('\\'):
-            if not os.path.exists(path + '/' + zipinfo):
-                os.makedirs(path + '/' + zipinfo)
+        if zipinfo.endswith("/") or zipinfo.endswith("\\"):
+            if not os.path.exists(path + "/" + zipinfo):
+                os.makedirs(path + "/" + zipinfo)
         else:
-            test=True
+            test = True
             if exclude:
                 for pos in exclude:
                     if re.match(pos, zipinfo, re.I) != None:
-                        test=False
+                        test = False
                         break
             if test:
                 if backup_zip:
-                    if not backup_exts or zipinfo.split('.')[-1] in backup_exts:
+                    if not backup_exts or zipinfo.split(".")[-1] in backup_exts:
                         out_name = os.path.join(path, zipinfo)
                         if os.path.exists(out_name):
                             bytes = zip_file.read(zipinfo, pwd)
-                            with open(out_name, 'rb') as f:
+                            with open(out_name, "rb") as f:
                                 bytes2 = f.read()
                             if not _cmp_txt_str_content(bytes, bytes2):
                                 backup_zip.writestr(zipinfo, bytes2)
@@ -167,7 +178,7 @@ def extractall(zip_file, path=None, members=None, pwd=None, exclude=None, backup
 class ZipWriter:
     """Helper class to create zip files"""
 
-    def __init__(self, filename, basepath="", exclude=[], sha256 = False):
+    def __init__(self, filename, basepath="", exclude=[], sha256=False):
         """Constructor
 
         Args:
@@ -177,8 +188,10 @@ class ZipWriter:
         self.filename = filename
         self.basepath = basepath
         self.base_len = len(self.basepath)
-        self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_BZIP2, compresslevel=9)
-        #self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
+        self.zip_file = zipfile.ZipFile(
+            filename, "w", zipfile.ZIP_BZIP2, compresslevel=9
+        )
+        # self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
 
         self.exclude = exclude
         if sha256:
@@ -199,7 +212,7 @@ class ZipWriter:
         test = True
         for pos in self.exclude:
             if re.match(pos, file_name, re.I) != None:
-                test=False
+                test = False
                 break
         if test:
             with open(file_name, "rb") as f:
@@ -207,9 +220,11 @@ class ZipWriter:
                 if name_in_zip:
                     self.writestr(name_in_zip, data)
                 elif base_path_in_zip:
-                    self.writestr(base_path_in_zip+file_name[self.base_len + 1:], data)
+                    self.writestr(
+                        base_path_in_zip + file_name[self.base_len + 1 :], data
+                    )
                 else:
-                    self.writestr(file_name[self.base_len+1:], data)
+                    self.writestr(file_name[self.base_len + 1 :], data)
 
     def writestr(self, path, data):
         self._sha256_gen(path, data)
@@ -230,14 +245,19 @@ class ZipWriter:
                 self.add_folder_to_zip(full_path, base_path_in_zip=base_path_in_zip)
 
 
-#Perhaps for delete
+# Perhaps for delete
 class Cmp(object):
     def __init__(self, masks, key, convert_to_re=False):
         if masks:
             self.masks = []
             for mask in masks:
                 if convert_to_re:
-                    x = mask[1:].replace('.', '\\.').replace('*', '.*').replace('?', '.')
+                    x = (
+                        mask[1:]
+                        .replace(".", "\\.")
+                        .replace("*", ".*")
+                        .replace("?", ".")
+                    )
                 else:
                     x = mask[1:]
                 self.masks.append((mask[0], re.compile(x)))
@@ -259,7 +279,7 @@ class Cmp(object):
         if self.masks:
             sel = False
             for filter in self.masks:
-                if filter[0] == '+':
+                if filter[0] == "+":
                     if self.re_cmp(file_name, filter[1]):
                         sel = True
                 else:
@@ -281,4 +301,3 @@ class Cmp(object):
         if self.key_filter(file_name) and self.masks_filter(file_name):
             return True
         return False
-

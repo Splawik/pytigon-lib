@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
 from .tags.block_tags import *
@@ -28,20 +28,19 @@ from .tags.extra_tags import *
 
 
 class HtmlTag(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ['head', 'body', 'script']
+        self.child_tags = ["head", "body", "script"]
         self.width = 2480
         self.height = 3508
         self.y = 0
         self.dc = None
-        self.attrs['color'] = '#000'
-        self.attrs['font-family'] = 'sans-serif'
-        self.attrs['font-size'] = '100%'
-        self.attrs['font-style'] = 'normal'
-        self.attrs['font-weight'] = 'normal'
-        self.attrs['text-decoration'] = 'none'
+        self.attrs["color"] = "#000"
+        self.attrs["font-family"] = "sans-serif"
+        self.attrs["font-size"] = "100%"
+        self.attrs["font-style"] = "normal"
+        self.attrs["font-weight"] = "normal"
+        self.attrs["text-decoration"] = "none"
 
     def handle_data(self, data):
         pass
@@ -57,11 +56,10 @@ class HtmlTag(BaseHtmlElemParser):
 class HeaderTag(BaseHtmlElemParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ['style', 'link']
+        self.child_tags = ["style", "link"]
 
     def close(self):
         pass
-
 
 
 class CommentTag(BaseHtmlElemParser):
@@ -75,6 +73,6 @@ class CommentTag(BaseHtmlElemParser):
         pass
 
 
-register_tag_map('html', HtmlTag)
-register_tag_map('head', HeaderTag)
-register_tag_map('comment', CommentTag)
+register_tag_map("html", HtmlTag)
+register_tag_map("head", HeaderTag)
+register_tag_map("comment", CommentTag)

@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import sys
 import os
@@ -28,7 +28,8 @@ import importlib
 from pytigon_lib.schtools.tools import get_executable
 from pytigon_lib.schtools.platform_info import platform_name
 
-class FrozenModules():
+
+class FrozenModules:
     def __init__(self):
         self.to_restore = {}
         self.all = []
@@ -36,7 +37,12 @@ class FrozenModules():
 
         for pos in sys.modules:
             self.all.append(pos)
-            if pos.startswith('django') or pos.startswith('pytigon_lib') or pos.startswith('schserw') or pos.startswith('settings'):
+            if (
+                pos.startswith("django")
+                or pos.startswith("pytigon_lib")
+                or pos.startswith("schserw")
+                or pos.startswith("settings")
+            ):
                 self.to_restore[pos] = sys.modules[pos]
                 to_delete.append(pos)
 
@@ -54,6 +60,7 @@ class FrozenModules():
 
         for pos in self.to_restore:
             sys.modules[pos] = self.to_restore[pos]
+
 
 def run(cmd):
     """run extern command
@@ -74,19 +81,19 @@ def run(cmd):
     exit_code = process.wait()
     if output:
         if type(output) != str:
-            s = output.decode('utf-8')
+            s = output.decode("utf-8")
         else:
             s = output
-        output_tab = [ pos.replace('\r','') for pos in s.split('\n') ]
+        output_tab = [pos.replace("\r", "") for pos in s.split("\n")]
     else:
         output_tab = None
 
     if err:
         if type(err) != str:
-            s = err.decode('utf-8')
+            s = err.decode("utf-8")
         else:
             s = err
-        err_tab = [pos.replace('\r', '') for pos in s.split('\n')]
+        err_tab = [pos.replace("\r", "") for pos in s.split("\n")]
     else:
         err_tab = None
     return (exit_code, output_tab, err_tab)
@@ -106,7 +113,13 @@ def py_run(cmd):
     example:
         py_run(["manage.py", "help"])
     """
-    return run([get_executable(), ]+cmd)
+    return run(
+        [
+            get_executable(),
+        ]
+        + cmd
+    )
+
 
 def _manage(path, cmd):
     frozen_modules = FrozenModules()
@@ -114,11 +127,11 @@ def _manage(path, cmd):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     os.chdir(path)
-    #tmp = []
-    #to_reload = {}
-    #for m in sys.modules:
+    # tmp = []
+    # to_reload = {}
+    # for m in sys.modules:
     #    tmp.append(m)
-    #for pos in tmp:
+    # for pos in tmp:
     #    if pos.startswith('django') or pos.startswith('schserw') or pos.startswith('settings'):
     #        to_reload[pos] = sys.modules[pos]
     #        del sys.modules[pos]
@@ -127,28 +140,40 @@ def _manage(path, cmd):
     sys.path.insert(0, path)
     m.schdjangoext.django_manage.cmd(cmd, from_main=False)
     sys.path.pop(0)
-    #to_delete = []
-    #for module in sys.modules:
+    # to_delete = []
+    # for module in sys.modules:
     #    if not module in tmp:
     #        to_delete.append(module)
 
-    #for module in to_delete:py_managepy_manage
+    # for module in to_delete:py_managepy_manage
     #    del sys.modules[module]
 
-    #for pos in to_reload:
+    # for pos in to_reload:
     #    sys.modules[pos] = to_reload[pos]
 
     frozen_modules.restore()
 
-def py_manage(cmd, thread_version = False):
+
+def py_manage(cmd, thread_version=False):
     if platform_name() == "Emscripten":
         return (None, None, None)
     else:
         if len(cmd) > 0:
             if thread_version:
-                thread = Thread(target=_manage, args=(os.getcwd(), cmd,))
+                thread = Thread(
+                    target=_manage,
+                    args=(
+                        os.getcwd(),
+                        cmd,
+                    ),
+                )
                 thread.start()
                 thread.join()
                 return 0, [], []
             else:
-                return py_run(['manage.py',] + cmd)
+                return py_run(
+                    [
+                        "manage.py",
+                    ]
+                    + cmd
+                )

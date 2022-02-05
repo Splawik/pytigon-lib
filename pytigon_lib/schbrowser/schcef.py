@@ -19,8 +19,9 @@ LOADER = """
     <p class="centered">Loading ...</img>
 """
 
+
 def exists(site, path="/"):
-    if '127.0.0.2' in site:
+    if "127.0.0.2" in site:
         return True
     try:
         conn = http.client.HTTPConnection(site.split("//")[1])
@@ -30,6 +31,7 @@ def exists(site, path="/"):
         return response.status == 200
     except:
         False
+
 
 def check_versions():
     ver = cef.GetVersion()
@@ -43,10 +45,11 @@ def check_versions():
     )
     assert cef.__version__ >= "57.0", "CEF Python v57.0+ required to run this"
 
-class KeyEvent():
+
+class KeyEvent:
     def __init__(self, event):
         self.event = event
-        m = event['modifiers']
+        m = event["modifiers"]
         if m & 2:
             self.shift_down = True
         else:
@@ -60,7 +63,7 @@ class KeyEvent():
         else:
             self.alt_down = False
 
-        self.KeyCode = event['windows_key_code']
+        self.KeyCode = event["windows_key_code"]
 
     def AltDown(self):
         return self.alt_down
@@ -85,7 +88,7 @@ class ClientHandler:
         self.close = True
 
     def GetResourceHandler(self, browser, frame, request):
-        if not '127.0.0.2' in request.GetUrl():
+        if not "127.0.0.2" in request.GetUrl():
             return None
         resHandler = ResourceHandler()
         resHandler._clientHandler = self
@@ -108,6 +111,7 @@ class ClientHandler:
                 "_ReleaseStrongReference() FAILED: resource handler "
                 "not found, id = %s" % (resHandler._resourceHandlerId)
             )
+
 
 class ResourceHandler:
     _resourceHandlerId = None
@@ -194,7 +198,7 @@ class WebRequestClient:
         if web_request.GetRequestStatus() in cef.WebRequest.Status:
             statusText = cef.WebRequest.Status[web_request.GetRequestStatus()]
         self._response = web_request.GetResponse()
-        if web_request.GetRequest().GetMethod() == 'POST':
+        if web_request.GetRequest().GetMethod() == "POST":
             params = web_request.GetRequest().GetPostData()
             ret = pytigon_request(web_request.GetRequest().GetUrl(), params)
         else:
@@ -206,7 +210,9 @@ class WebRequestClient:
         self._resourceHandler._responseHeadersReadyCallback.Continue()
 
 
-def create_browser(url=None, title="Pytigon", parent_win = None, x=200, y=200, width=1024, height=768):
+def create_browser(
+    url=None, title="Pytigon", parent_win=None, x=200, y=200, width=1024, height=768
+):
 
     info = cef.WindowInfo()
     if parent_win:
@@ -214,13 +220,17 @@ def create_browser(url=None, title="Pytigon", parent_win = None, x=200, y=200, w
     else:
         info.SetAsChild(0, [x, y, x + width, y + height])
 
-    browser = cef.CreateBrowserSync(window_info=info, url=cef.GetDataUrl(LOADER), window_title=title)
+    browser = cef.CreateBrowserSync(
+        window_info=info, url=cef.GetDataUrl(LOADER), window_title=title
+    )
 
     if platform.system() == "Windows":
         window_handle = browser.GetOuterWindowHandle()
         insert_after_handle = 0
         SWP_NOMOVE = 0x0002
-        ctypes.windll.user32.SetWindowPos(window_handle, insert_after_handle, 0, 0, 900, 640, SWP_NOMOVE)
+        ctypes.windll.user32.SetWindowPos(
+            window_handle, insert_after_handle, 0, 0, 900, 640, SWP_NOMOVE
+        )
 
     client_handler = ClientHandler()
 
@@ -239,34 +249,44 @@ def create_browser(url=None, title="Pytigon", parent_win = None, x=200, y=200, w
 
     return browser, client_handler
 
-async def run_async(url, title="Pytigon", parent_win = None, x=200, y=200, width=1024, height=768):
+
+async def run_async(
+    url, title="Pytigon", parent_win=None, x=200, y=200, width=1024, height=768
+):
     def py_function(value, js_callback):
         url = value[0]
         params = value[1]
         url2 = url.replace("file:///home/sch/prj/pytigon/pytigon", "http://127.0.0.2")
         print(url2, params)
         print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2")
-        #print(url, url2)
+        # print(url, url2)
         ret = request(url2 + "/", params)
-        #print(ret.str())
+        # print(ret.str())
         print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA3")
-        #ret = "Hello world!"
-        ret = """<base href="file:///home/sch/prj/pytigon/pytigon/" target="_blank">""" + ret.str()
-        ret = ret.replace("window.BASE_PATH = '/'", "window.BASE_PATH = 'file:///home/sch/prj/pytigon/pytigon/'");
+        # ret = "Hello world!"
+        ret = (
+            """<base href="file:///home/sch/prj/pytigon/pytigon/" target="_blank">"""
+            + ret.str()
+        )
+        ret = ret.replace(
+            "window.BASE_PATH = '/'",
+            "window.BASE_PATH = 'file:///home/sch/prj/pytigon/pytigon/'",
+        )
         js_callback.Call(ret, py_callback)
 
     def py_callback(value):
         print("Value sent from Javascript: " + value)
 
-
-    browser, client_handler = create_browser(None, title, parent_win, x, y, width, height)
+    browser, client_handler = create_browser(
+        None, title, parent_win, x, y, width, height
+    )
 
     bindings = cef.JavascriptBindings()
     bindings.SetFunction("py_function", py_function)
     bindings.SetFunction("py_callback", py_callback)
     browser.SetJavascriptBindings(bindings)
 
-    for i in range(0,10):
+    for i in range(0, 10):
         cef.MessageLoopWork()
         await asyncio.sleep(0.01)
 
@@ -279,7 +299,6 @@ async def run_async(url, title="Pytigon", parent_win = None, x=200, y=200, width
             await asyncio.sleep(0.01)
 
     await loop()
-
 
     del browser
 
@@ -309,16 +328,20 @@ def initialize():
     switches = {
         # "disable-gpu": "1",
         "no-proxy-server": "1",
-        'disable-web-security': "1"
+        "disable-web-security": "1",
     }
 
     cef.Initialize(settings, switches=switches)
 
+
 def shutdown():
     cef.Shutdown()
 
-def run(url, app, title="Pytigon", parent_win = None, x=200, y=200, width=1024, height=768):
+
+def run(
+    url, app, title="Pytigon", parent_win=None, x=200, y=200, width=1024, height=768
+):
     initialize()
-    init(app, 'auto', 'anawa')
+    init(app, "auto", "anawa")
     asyncio.run(run_async(url, title, parent_win, x, y, width, height))
     shutdown()

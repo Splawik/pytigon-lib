@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 import django.apps.registry
@@ -25,68 +25,67 @@ from pytigon_lib.schtools import schjson
 
 
 __COLMAP__ = {
-    'AutoField': 'string',
-    'SOIntCol': 'long',
-    'CharField': 'string',
-    'TextField': 'string',
-    'BooleanField': 'bool',
-    'SOFloatCol': 'double',
-    'SOKeyCol': 'long',
-    'SOForeignKey': 'x',
-    'SOEnumCol': 'string',
-    'SODateTimeCol': 'date',
-    'DateField': 'date',
-    'SODecimalCol': 'double',
-    'SOCurrencyCol': 'double',
-    'SOBLOBCol': 'string',
-    'SOPickleCol': 'string',
-    'SOStringLikeCol': 'string',
-    }
+    "AutoField": "string",
+    "SOIntCol": "long",
+    "CharField": "string",
+    "TextField": "string",
+    "BooleanField": "bool",
+    "SOFloatCol": "double",
+    "SOKeyCol": "long",
+    "SOForeignKey": "x",
+    "SOEnumCol": "string",
+    "SODateTimeCol": "date",
+    "DateField": "date",
+    "SODecimalCol": "double",
+    "SOCurrencyCol": "double",
+    "SOBLOBCol": "string",
+    "SOPickleCol": "string",
+    "SOStringLikeCol": "string",
+}
 
 __COLINIT__ = {
-    'AutoField': None,
-    'SOIntCol': '0',
-    'CharField': '',
-    'TextField': '',
-    'BooleanField': True,
-    'SOFloatCol': 0.0,
-    'SOKeyCol': None,
-    'HiddenForeignKey': None,
-    'ForeignKey': None,
-    'SOEnumCol': '',
-    'SODateTimeCol': '2000-01-01',
-    'DateField': '2000-01-01',
-    'SODecimalCol': 0.0,
-    'SOCurrencyCol': 0.0,
-    'SOBLOBCol': '',
-    'SOPickleCol': '',
-    'SOStringLikeCol': '',
-    }
+    "AutoField": None,
+    "SOIntCol": "0",
+    "CharField": "",
+    "TextField": "",
+    "BooleanField": True,
+    "SOFloatCol": 0.0,
+    "SOKeyCol": None,
+    "HiddenForeignKey": None,
+    "ForeignKey": None,
+    "SOEnumCol": "",
+    "SODateTimeCol": "2000-01-01",
+    "DateField": "2000-01-01",
+    "SODecimalCol": 0.0,
+    "SOCurrencyCol": 0.0,
+    "SOBLOBCol": "",
+    "SOPickleCol": "",
+    "SOStringLikeCol": "",
+}
 
 __COLSIZE__ = {
-    'AutoField': 9,
-    'SOIntCol': 9,
-    'CharField': 0,
-    'TextField': 0,
-    'BooleanField': 1,
-    'SOFloatCol': 12,
-    'SOKeyCol': 25,
-    'ForeignKey': 25,
-    'HiddenForeignKey': 25,
-    'SOEnumCol': 25,
-    'SODateTimeCol': 18,
-    'SODateCol': 10,
-    'SODecimalCol': 12,
-    'SOCurrencyCol': 12,
-    'SOBLOBCol': 9,
-    'SOPickleCol': 10,
-    'SOStringLikeCol': 0,
-    'DateField': 10,
-    }
+    "AutoField": 9,
+    "SOIntCol": 9,
+    "CharField": 0,
+    "TextField": 0,
+    "BooleanField": 1,
+    "SOFloatCol": 12,
+    "SOKeyCol": 25,
+    "ForeignKey": 25,
+    "HiddenForeignKey": 25,
+    "SOEnumCol": 25,
+    "SODateTimeCol": 18,
+    "SODateCol": 10,
+    "SODecimalCol": 12,
+    "SOCurrencyCol": 12,
+    "SOBLOBCol": 9,
+    "SOPickleCol": 10,
+    "SOStringLikeCol": 0,
+    "DateField": 10,
+}
 
 
 class DbTable(table.Table):
-
     def __init__(self, app, tab):
         self.auto_cols = []
         self.foreign_key_parm = dict()
@@ -94,13 +93,13 @@ class DbTable(table.Table):
         self.tab = tab
 
         self.tab_conw = {
-            'long': self.conw_long,
-            'string': self.conw_none,
-            'double': self.conw_float,
-            'bool': self.conw_bool,
-            'choice': self.conw_none,
-            'x': self.conw_x,
-            }
+            "long": self.conw_long,
+            "string": self.conw_none,
+            "double": self.conw_float,
+            "bool": self.conw_bool,
+            "choice": self.conw_none,
+            "x": self.conw_x,
+        }
 
         self.model_class = django.apps.registry.apps.get_model(app, tab)
         self.col_length = self._get_col_length()
@@ -157,14 +156,14 @@ class DbTable(table.Table):
         n = []
         global __COLMAP__
         for col in self.model_class._meta.fields:
-            if type(col).__name__ in ('ForeignKey', 'HiddenForeignKey'):
-                pos = 'x:/%s/table/%s/%s/dict/' % (self.app, self.tab, col.name)
+            if type(col).__name__ in ("ForeignKey", "HiddenForeignKey"):
+                pos = "x:/%s/table/%s/%s/dict/" % (self.app, self.tab, col.name)
                 if col.name[:-2] in self.foreign_key_parm:
-                    pos = pos + '|' + self.foreign_key_parm
+                    pos = pos + "|" + self.foreign_key_parm
                 n.append(pos)
             else:
                 if col.choices:
-                    n.append('y:' + schjson.dumps(col.choices))
+                    n.append("y:" + schjson.dumps(col.choices))
                 else:
                     n.append(__COLMAP__[col.__class__.__name__])
         return n
@@ -191,10 +190,10 @@ class DbTable(table.Table):
 
     def _set_sort(self, objects, sort):
         sortobj = objects
-        items = sort.split(',')
+        items = sort.split(",")
         for item in items:
             znak = False
-            if item[0] == '-':
+            if item[0] == "-":
                 item = item[1:]
                 znak = True
             for col in self.model_class._meta.fields:
@@ -205,13 +204,13 @@ class DbTable(table.Table):
                 colname1 = col.name
                 if item == colname0:
                     if znak:
-                        colname1 = '-' + colname1
+                        colname1 = "-" + colname1
                     sortobj = sortobj.order_by(colname1)
         return sortobj
 
-    def page(self,nr,sort=None,value=None):
-        if value and value != '':
-            if hasattr(self.model_class, 'simple_query'):
+    def page(self, nr, sort=None, value=None):
+        if value and value != "":
+            if hasattr(self.model_class, "simple_query"):
                 data = self.model_class.simple_query(value)
             else:
                 data = self.model_class.objects.all()
@@ -220,30 +219,29 @@ class DbTable(table.Table):
         if sort:
             data = self._set_sort(data, sort)
         tab = []
-        data = data[nr * 256:(nr + 1) * 256]
+        data = data[nr * 256 : (nr + 1) * 256]
         for rec in data:
             row = []
             for field in self.model_class._meta.fields:
                 value = field.value_from_object(rec)
                 if field.choices:
                     if value in dict(field.choices):
-                        value = str(value) + ':' + dict(field.choices)[value]
+                        value = str(value) + ":" + dict(field.choices)[value]
                     else:
-                        value = ''
+                        value = ""
                 else:
-                    if type(field).__name__ in ('ForeignKey', 'HiddenForeignKey'):
+                    if type(field).__name__ in ("ForeignKey", "HiddenForeignKey"):
                         value2 = getattr(rec, field.name)
                         if value2:
-                            value2 = str(value2.id) + ':' + str(value2)
+                            value2 = str(value2.id) + ":" + str(value2)
                         if value == None:
-                            value = '0'
+                            value = "0"
                         if value2 == None:
-                            value2 = ''
+                            value2 = ""
                         value = str(value2)
                 row.append(value)
             tab.append(row)
         return tab
-
 
     def rec_as_str(self, nr):
         obj = self.model_class.objects.get(id=nr)
@@ -257,13 +255,15 @@ class DbTable(table.Table):
         obj = self.model_class()
         for field in self.model_class._meta.fields[1:]:
             if field.choices:
-                field.save_form_data(obj, rec[i].split(':')[0])
+                field.save_form_data(obj, rec[i].split(":")[0])
             else:
-                if type(field).__name__ in ('ForeignKey', 'HiddenForeignKey'):
-                    if rec[i] == '' or rec[i] == None:
+                if type(field).__name__ in ("ForeignKey", "HiddenForeignKey"):
+                    if rec[i] == "" or rec[i] == None:
                         field.save_form_data(obj, None)
                     else:
-                        field.save_form_data(obj, field.rel.to.objects.get(id=int(rec[i].split(':')[0])))
+                        field.save_form_data(
+                            obj, field.rel.to.objects.get(id=int(rec[i].split(":")[0]))
+                        )
                 else:
                     field.save_form_data(obj, rec[i])
             i = i + 1
@@ -275,14 +275,15 @@ class DbTable(table.Table):
         obj = self.model_class.objects.get(id=rec[0])
         for field in self.model_class._meta.fields[1:]:
             if field.choices:
-                field.save_form_data(obj, rec[i].split(':')[0])
+                field.save_form_data(obj, rec[i].split(":")[0])
             else:
-                if type(field).__name__ in ('ForeignKey', 'HiddenForeignKey'):
-                    if rec[i] == '':
+                if type(field).__name__ in ("ForeignKey", "HiddenForeignKey"):
+                    if rec[i] == "":
                         field.save_form_data(obj, None)
                     else:
-                        field.save_form_data(obj,
-                                field.rel.to.objects.get(id=int(rec[i].split(':')[0])))
+                        field.save_form_data(
+                            obj, field.rel.to.objects.get(id=int(rec[i].split(":")[0]))
+                        )
                 else:
                     field.save_form_data(obj, rec[i])
             i = i + 1
@@ -292,7 +293,5 @@ class DbTable(table.Table):
         obj = self.model_class.objects.get(id=nr)
         obj.delete()
 
-    def auto(self,col_name,col_names,rec):
+    def auto(self, col_name, col_names, rec):
         pass
-
-

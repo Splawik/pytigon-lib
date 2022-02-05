@@ -10,28 +10,33 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 from .htmltools import superstrip
 import re
 
+
 def comment_remover(text):
     def replacer(match):
         s = match.group(0)
-        if s.startswith('/'):
+        if s.startswith("/"):
             return ""
         else:
             return s
-    pattern = re.compile(r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE)
+
+    pattern = re.compile(
+        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        re.DOTALL | re.MULTILINE,
+    )
     return re.sub(pattern, replacer, text)
 
-class CssPos(object):
 
+class CssPos(object):
     def __init__(self, line, attrs):
         key_main = line[-1]
         self.tag = superstrip(key_main)
@@ -74,29 +79,30 @@ class CssPos(object):
         if obj:
             self._get_dict_from_parent(obj.get_tag(), ret_attrs, obj)
             if obj.get_cls():
-                self._get_dict_from_parent('.' + obj.get_cls(), ret_attrs, obj)
-                self._get_dict_from_parent(obj.get_tag() + '.' + obj.get_cls(),
-                        ret_attrs, obj)
+                self._get_dict_from_parent("." + obj.get_cls(), ret_attrs, obj)
+                self._get_dict_from_parent(
+                    obj.get_tag() + "." + obj.get_cls(), ret_attrs, obj
+                )
             if obj.get_id():
-                self._get_dict_from_parent('#' + obj.get_id(), ret_attrs, obj)
-                self._get_dict_from_parent(obj.get_tag() + '.' + obj.get_id(),
-                        ret_attrs, obj)
+                self._get_dict_from_parent("#" + obj.get_id(), ret_attrs, obj)
+                self._get_dict_from_parent(
+                    obj.get_tag() + "." + obj.get_id(), ret_attrs, obj
+                )
         return ret_attrs
 
     def test_print(self, indent):
-        tab = indent * ' '
-        print(tab, self.key(), ':')
-        print(tab, 'attrs:')
+        tab = indent * " "
+        print(tab, self.key(), ":")
+        print(tab, "attrs:")
         for key in self.attrs:
-            print(tab, 4 * ' ', key, ':', self.attrs[key])
-        print(tab, 'parents:')
+            print(tab, 4 * " ", key, ":", self.attrs[key])
+        print(tab, "parents:")
         for key in self.parents:
-            print(tab, 4 * ' ', 'key:')
+            print(tab, 4 * " ", "key:")
             self.parents[key].Print(indent + 8)
 
 
 class Css(object):
-
     def __init__(self):
         self.csspos_dict = {}
         self._act_dict = {}
@@ -116,30 +122,30 @@ class Css(object):
 
     def parse_indent_str(self, s):
         for l in s.splitlines():
-            if l == '':
+            if l == "":
                 continue
-            if l[0] == ' ':
+            if l[0] == " ":
                 indent = True
             else:
                 indent = False
             line = superstrip(l)
-            y = line.split('//')
+            y = line.split("//")
             if len(y) == 2:
                 line = y[0]  # delete comments
-            if line == '' or line == ' ':
+            if line == "" or line == " ":
                 continue
             if indent:
-                x = line.split(':')
+                x = line.split(":")
                 if len(x) == 2:
                     self._act_dict[x[0].strip()] = x[1].strip()
                 if len(x) == 1:
-                    self._act_dict[x[0].strip()] = '0'
+                    self._act_dict[x[0].strip()] = "0"
             else:
                 if len(self._act_keys) > 0:
                     self._append_keys()
-                x = line.split(',')
+                x = line.split(",")
                 for pos in x:
-                    self._act_keys.append(pos.strip().lower().split(' '))
+                    self._act_keys.append(pos.strip().lower().split(" "))
                 self._act_dict = {}
         if len(self._act_keys) > 0:
             self._append_keys()
@@ -151,38 +157,37 @@ class Css(object):
         return ret
 
     def _hadle_section(self, section):
-        x = section.split('{')
-        ret = ''
+        x = section.split("{")
+        ret = ""
         if len(x) == 2:
-            xx = superstrip(x[0]).split(',')
+            xx = superstrip(x[0]).split(",")
             for pos in xx:
-                self._act_keys.append(pos.strip().lower().split(' '))
+                self._act_keys.append(pos.strip().lower().split(" "))
                 self._act_dict = {}
-            y = x[1].split(';')
+            y = x[1].split(";")
             for pos in y:
-                z = self._strip_list(pos.split(':'))
-                if z[0] != '' and z[0] != ' ':
+                z = self._strip_list(pos.split(":"))
+                if z[0] != "" and z[0] != " ":
                     if len(z) == 2:
                         self._act_dict[z[0].strip()] = z[1].strip()
                     if len(z) == 1:
-                        self._act_dict[z[0].strip()] = '0'
+                        self._act_dict[z[0].strip()] = "0"
             if len(self._act_keys) > 0:
                 self._append_keys()
 
     def parse_str(self, s):
         s2 = comment_remover(s)
-        x = superstrip(s2).split('}')
+        x = superstrip(s2).split("}")
         for pos in x:
             self._hadle_section(pos)
 
     def test_print(self):
-        tmp = CssPos([''], {})
+        tmp = CssPos([""], {})
         tmp.parents = self.csspos_dict
         tmp.test_print(0)
 
     def get_dict(self, obj):
-        tmp = CssPos([''], {})
+        tmp = CssPos([""], {})
         tmp.parents = self.csspos_dict
         ret = tmp.get_dict(obj)
         return ret
-

@@ -10,18 +10,19 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 """"based on cefpython example: screenshot.py"""
 
-_IMPORTED = False 
+_IMPORTED = False
 
-def get_screenshot(url,  size, img_path):
+
+def get_screenshot(url, size, img_path):
     global _IMPORTED
     if not _IMPORTED:
         from cefpython3 import cefpython as cef
@@ -30,8 +31,7 @@ def get_screenshot(url,  size, img_path):
         import subprocess
         import sys
         from PIL import Image, PILLOW_VERSION
-        
-    
+
     def create_browser(url):
         parent_window_handle = 0
         window_info = cef.WindowInfo()
@@ -42,20 +42,19 @@ def get_screenshot(url,  size, img_path):
         browser.SendFocusEvent(True)
         browser.WasResized()
 
-
     def save_screenshot(browser, path):
         nonlocal size
         buffer_string = browser.GetUserData("OnPaint.buffer_string")
         if not buffer_string:
             raise Exception("buffer_string is empty, OnPaint never called?")
-        image = Image.frombytes("RGBA", (size[2], size[3]), buffer_string, "raw", "RGBA", 0, 1)
+        image = Image.frombytes(
+            "RGBA", (size[2], size[3]), buffer_string, "raw", "RGBA", 0, 1
+        )
         image.save(path, "PNG")
-
 
     def exit_app(browser):
         browser.CloseBrowser()
         cef.QuitMessageLoop()
-
 
     class LoadHandler(object):
         def OnLoadingStateChange(self, browser, is_loading, **_):
@@ -69,12 +68,11 @@ def get_screenshot(url,  size, img_path):
                 return
             cef.PostTask(cef.TID_UI, exit_app, browser)
 
-
     class RenderHandler(object):
         def __init__(self):
             self.OnPaint_called = False
 
-        def GetViewRect(self, rect_out, **_):            
+        def GetViewRect(self, rect_out, **_):
             nonlocal size
             rect_out.extend((size[0], size[1], size[2], size[3]))
             return True
@@ -88,12 +86,14 @@ def get_screenshot(url,  size, img_path):
             else:
                 raise Exception("Unsupported element_type in OnPaint")
 
-    sys.excepthook = cef.ExceptHook  
+    sys.excepthook = cef.ExceptHook
     cef.Initialize(settings={"windowless_rendering_enabled": True})
     create_browser(url)
     cef.MessageLoop()
     cef.Shutdown()
 
 
-if __name__ == '__main__':
-    get_screenshot("https://github.com/cztomczak/cefpython",  (0,0,800,600), "test.png")
+if __name__ == "__main__":
+    get_screenshot(
+        "https://github.com/cztomczak/cefpython", (0, 0, 800, 600), "test.png"
+    )

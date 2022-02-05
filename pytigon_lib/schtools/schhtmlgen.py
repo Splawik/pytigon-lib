@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 import collections
@@ -43,10 +43,10 @@ class Html(object):
         return helem
 
     def dump(self):
-        ret = '<' + self.name
+        ret = "<" + self.name
         if self.attr:
-            ret += ' ' + self.attr.replace("'", '"')
-        ret = ret + '>'
+            ret += " " + self.attr.replace("'", '"')
+        ret = ret + ">"
         for elem in self.children:
             ret += elem.dump()
         if self.value:
@@ -54,16 +54,16 @@ class Html(object):
                 ret += self.value()
             else:
                 ret += self.value
-        ret += '</' + self.name + '>'
+        ret += "</" + self.name + ">"
         return ret
 
 
 def make_start_tag(tag, attrs):
-    ret = '<' + tag
+    ret = "<" + tag
     for pos in attrs:
         if attrs[pos] != None:
-            ret += ' ' + pos + '="' + attrs[pos] + '"'
+            ret += " " + pos + '="' + attrs[pos] + '"'
         else:
-            ret += ' ' + pos
-    ret += '>'
+            ret += " " + pos
+    ret += ">"
     return ret

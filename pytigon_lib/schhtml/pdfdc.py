@@ -10,16 +10,17 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import os
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 import io
+
 try:
     import PIL
 except:
@@ -30,45 +31,59 @@ from pytigon_lib.schfs.vfstools import get_temp_filename
 from pytigon_lib.schtools.main_paths import get_main_paths
 
 _cfg = get_main_paths()
-#fpdf.fpdf.FPDF_FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../static/fonts")
-fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg['STATIC_PATH'], "fonts")
+# fpdf.fpdf.FPDF_FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../static/fonts")
+fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg["STATIC_PATH"], "fonts")
+
 
 class PDFSurface:
     def __init__(self, output_name, width, height):
         self.output_name = output_name
         self.width = width
         self.height = height
-        self.pdf = fpdf.FPDF(unit='pt', orientation='L' if width > height else 'P')
+        self.pdf = fpdf.FPDF(unit="pt", orientation="L" if width > height else "P")
 
+        self.pdf.add_font("sans-serif", "", "DejaVuSansCondensed.ttf", uni=True)
+        self.pdf.add_font("sans-serif", "B", "DejaVuSansCondensed-Bold.ttf", uni=True)
+        self.pdf.add_font(
+            "sans-serif", "I", "DejaVuSansCondensed-Oblique.ttf", uni=True
+        )
+        self.pdf.add_font(
+            "sans-serif", "BI", "DejaVuSansCondensed-BoldOblique.ttf", uni=True
+        )
 
-        self.pdf.add_font('sans-serif', '', 'DejaVuSansCondensed.ttf', uni=True)
-        self.pdf.add_font('sans-serif', 'B', 'DejaVuSansCondensed-Bold.ttf', uni=True)
-        self.pdf.add_font('sans-serif', 'I', 'DejaVuSansCondensed-Oblique.ttf', uni=True)
-        self.pdf.add_font('sans-serif', 'BI', 'DejaVuSansCondensed-BoldOblique.ttf', uni=True)
+        self.pdf.add_font("serif", "", "DejaVuSerifCondensed.ttf", uni=True)
+        self.pdf.add_font("serif", "B", "DejaVuSerifCondensed-Bold.ttf", uni=True)
+        self.pdf.add_font("serif", "I", "DejaVuSerifCondensed-Italic.ttf", uni=True)
+        self.pdf.add_font(
+            "serif", "BI", "DejaVuSerifCondensed-BoldItalic.ttf", uni=True
+        )
 
-        self.pdf.add_font('serif', '',  'DejaVuSerifCondensed.ttf', uni=True)
-        self.pdf.add_font('serif', 'B', 'DejaVuSerifCondensed-Bold.ttf', uni=True)
-        self.pdf.add_font('serif', 'I', 'DejaVuSerifCondensed-Italic.ttf', uni=True)
-        self.pdf.add_font('serif', 'BI','DejaVuSerifCondensed-BoldItalic.ttf', uni=True)
+        self.pdf.add_font("monospace", "", "DejaVuSansMono.ttf", uni=True)
+        self.pdf.add_font("monospace", "B", "DejaVuSansMono-Bold.ttf", uni=True)
+        self.pdf.add_font("monospace", "I", "DejaVuSansMono-Oblique.ttf", uni=True)
+        self.pdf.add_font("monospace", "BI", "DejaVuSansMono-BoldOblique.ttf", uni=True)
 
-        self.pdf.add_font('monospace', '',  'DejaVuSansMono.ttf', uni=True)
-        self.pdf.add_font('monospace', 'B', 'DejaVuSansMono-Bold.ttf', uni=True)
-        self.pdf.add_font('monospace', 'I', 'DejaVuSansMono-Oblique.ttf', uni=True)
-        self.pdf.add_font('monospace', 'BI','DejaVuSansMono-BoldOblique.ttf', uni=True)
+        self.fonts_map = {
+            "sans-serif": "sans-serif",
+            "serif": "serif",
+            "monospace": "monospace",
+            "cursive": "sans-serif",
+            "fantasy": "sans-serif",
+        }
 
-        self.fonts_map = { 'sans-serif': 'sans-serif', 'serif': 'serif', 'monospace': 'monospace', 'cursive': 'sans-serif', 'fantasy': 'sans-serif'}
-
-        self.pdf.set_font('sans-serif','', 11)
+        self.pdf.set_font("sans-serif", "", 11)
 
     def get_dc(self):
         return self.pdf
 
     def save(self):
-        self.pdf.output(self.output_name, 'F')
+        self.pdf.output(self.output_name, "F")
+
 
 class PdfDc(BaseDc):
-
-    def __init__(self, dc=None, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0):
+    def __init__(
+        self, dc=None, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0
+    ):
         BaseDc.__init__(self, calc_only, width, height, output_name, scale)
         if self.width >= 0:
             width2 = self.width
@@ -149,7 +164,10 @@ class PdfDc(BaseDc):
         self._draw = True
         self._fill = False
 
-        if self._last_pen_color != self._color or self._last_line_width != self._line_width:
+        if (
+            self._last_pen_color != self._color
+            or self._last_line_width != self._line_width
+        ):
             self.dc.set_draw_color(self._color[0], self._color[1], self._color[2])
             self.dc.set_text_color(self._color[0], self._color[1], self._color[2])
             self.dc.set_line_width(self._line_width)
@@ -184,36 +202,54 @@ class PdfDc(BaseDc):
     def set_style(self, style):
         if style == self.last_style:
             return self.last_style_tab
-        style_tab = self.dc_info.styles[style].split(';')
+        style_tab = self.dc_info.styles[style].split(";")
         self.last_style_tab = style_tab
 
         style = ""
 
-        if style_tab[3] == '1':
-            style +="I"
-        if style_tab[4] == '1':
-            style +="B"
+        if style_tab[3] == "1":
+            style += "I"
+        if style_tab[4] == "1":
+            style += "B"
 
         if style_tab[1] in self.surf.fonts_map:
             font_name = self.surf.fonts_map[style_tab[1]]
         else:
-            font_name = 'sans-serif'
-        self.dc.set_font(font_name,style,int((self.scale*self.base_font_size * int(style_tab[2])) / 100))
+            font_name = "sans-serif"
+        self.dc.set_font(
+            font_name,
+            style,
+            int((self.scale * self.base_font_size * int(style_tab[2])) / 100),
+        )
         (r, g, b) = self.rgbfromhex(style_tab[0])
         self.dc.set_text_color(r, g, b)
         BaseDc.set_style(self, style)
         return style_tab
 
     def add_line(self, x, y, dx, dy):
-        self._add(self.dc.line, (x*self.scale, y*self.scale, (x + dx)*self.scale, (y + dy)*self.scale))
+        self._add(
+            self.dc.line,
+            (
+                x * self.scale,
+                y * self.scale,
+                (x + dx) * self.scale,
+                (y + dy) * self.scale,
+            ),
+        )
         BaseDc.add_line(self, x, y, dx, dy)
 
     def add_rectangle(self, x, y, dx, dy):
-        self._add(self._rect, (x*self.scale, y*self.scale, dx*self.scale, dy*self.scale))
+        self._add(
+            self._rect,
+            (x * self.scale, y * self.scale, dx * self.scale, dy * self.scale),
+        )
         BaseDc.add_rectangle(self, x, y, dx, dy)
 
     def add_rounded_rectangle(self, x, y, dx, dy, radius):
-        self._add(self._rect_rounded, (x*self.scale, y*self.scale, dx*self.scale, dy*self.scale))
+        self._add(
+            self._rect_rounded,
+            (x * self.scale, y * self.scale, dx * self.scale, dy * self.scale),
+        )
         BaseDc.add_rounded_rectangle(self, x, y, dx, dy, radius)
 
     def add_arc(self, x, y, radius, angle1, angle2):
@@ -230,24 +266,32 @@ class PdfDc(BaseDc):
 
     def draw_text(self, x, y, txt):
         dx, dx_space, dy_up, dy_down = self.dc_info.get_extents(txt)
-        self.dc.text(x*self.scale, y*self.scale - dy_down - 2, txt)
+        self.dc.text(x * self.scale, y * self.scale - dy_down - 2, txt)
         BaseDc.draw_text(self, x, y, txt)
 
     def draw_rotated_text(self, x, y, txt, angle):
         (w, h, d, e) = self.dc_info.get_extents(txt)
         BaseDc.draw_rotated_text(self, x, y, txt)
 
-# scale: 0 - no scale, no repeat 1 - scale to dx, dy 2 - scale to dx or dy -
-# preserve img scale 3 - scale to dx or dy - preserve img scale, fit fool image
-# 4 - repeat x 5 - repeat y 6 - repeat x and y
+    # scale: 0 - no scale, no repeat 1 - scale to dx, dy 2 - scale to dx or dy -
+    # preserve img scale 3 - scale to dx or dy - preserve img scale, fit fool image
+    # 4 - repeat x 5 - repeat y 6 - repeat x and y
 
     def draw_image(self, x, y, dx, dy, scale, png_data):
         png_stream = io.BytesIO(png_data)
         image = PIL.Image.open(png_stream)
         w, h = image.size
-        (x_scale, y_scale) = self._scale_image(x, y, dx, dy, scale, w, h,)
+        (x_scale, y_scale) = self._scale_image(
+            x,
+            y,
+            dx,
+            dy,
+            scale,
+            w,
+            h,
+        )
         if scale < 4:
-            if scale!=0 and x_scale < 0.25 and y_scale < 0.25:
+            if scale != 0 and x_scale < 0.25 and y_scale < 0.25:
                 image.thumbnail((4 * w * x_scale, 4 * h * y_scale), PIL.Image.ANTIALIAS)
             file_name = get_temp_filename("temp.png")
             image.save(file_name, "PNG")
@@ -261,32 +305,46 @@ class PdfDc(BaseDc):
         old_point = None
         for point in points:
             if old_point:
-                self.dc.line(int(old_point[0]), int(old_point[1]), int(point[0]), int(point[1]))
+                self.dc.line(
+                    int(old_point[0]), int(old_point[1]), int(point[0]), int(point[1])
+                )
             old_point = point
 
     def _rect(self, x, y, dx, dy):
         if self._fill == True and self._draw == False:
-            return self.dc.rect(x, y, dx, dy, 'F')
+            return self.dc.rect(x, y, dx, dy, "F")
         elif self._fill == False and self._draw == True:
-            return self.dc.rect(x, y, dx, dy, 'D')
+            return self.dc.rect(x, y, dx, dy, "D")
         else:
-            return self.dc.rect(x, y, dx, dy, 'DF')
+            return self.dc.rect(x, y, dx, dy, "DF")
 
     def _rect_rounded(self, x, y, dx, dy):
         if self._fill == True and self._draw == False:
-            return self.dc.rect(x, y, dx, dy, 'F')
+            return self.dc.rect(x, y, dx, dy, "F")
         elif self._fill == False and self._draw == True:
             delta = 12
             points = [
-                (x+delta, y), (x+dx-delta, y), (x+dx-delta/2, y+delta/6), (x+dx-delta/6, y+delta/2),
-                (x+dx, y+delta), (x+dx, y+dy-delta), (x+dx-delta/6, y+dy-delta/2), (x+dx-delta/2, y+dy-delta/6),
-                (x+dx-delta, y+dy), (x+delta, y+dy), (x+delta/2, y+dy-delta/6),(x+delta/6, y+dy-delta/2),
-                (x, y+dy-delta), (x, y+delta), (x+delta/6, y+delta/2), (x+delta/2, y+delta/6),
-                (x+delta, y)
-                ]
+                (x + delta, y),
+                (x + dx - delta, y),
+                (x + dx - delta / 2, y + delta / 6),
+                (x + dx - delta / 6, y + delta / 2),
+                (x + dx, y + delta),
+                (x + dx, y + dy - delta),
+                (x + dx - delta / 6, y + dy - delta / 2),
+                (x + dx - delta / 2, y + dy - delta / 6),
+                (x + dx - delta, y + dy),
+                (x + delta, y + dy),
+                (x + delta / 2, y + dy - delta / 6),
+                (x + delta / 6, y + dy - delta / 2),
+                (x, y + dy - delta),
+                (x, y + delta),
+                (x + delta / 6, y + delta / 2),
+                (x + delta / 2, y + delta / 6),
+                (x + delta, y),
+            ]
             self._polygon(points)
         else:
-            return self.dc.rect(x, y, dx, dy, 'DF')
+            return self.dc.rect(x, y, dx, dy, "DF")
 
 
 class PdfDcInfo(BaseDcInfo):
@@ -304,8 +362,8 @@ class PdfDcInfo(BaseDcInfo):
         dx = w
         dy_up = self.dc.dc.font_size_pt
         dy_down = 0
-        dx_space = self.dc.dc.get_string_width(' ')
-        if word[-1] != ' ':
+        dx_space = self.dc.dc.get_string_width(" ")
+        if word[-1] != " ":
             dx_space = 0
         return (dx, dx_space, dy_up, dy_down)
 
@@ -330,4 +388,3 @@ class PdfDcInfo(BaseDcInfo):
             return (w, h)
         else:
             return (0, 0)
-

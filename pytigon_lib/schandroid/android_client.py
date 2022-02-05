@@ -1,7 +1,9 @@
 import os
 import sys
 
-BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..",".."))
+BASE_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+)
 if not BASE_PATH in sys.path:
     sys.path.insert(0, BASE_PATH)
 os.chdir(BASE_PATH)
@@ -37,8 +39,14 @@ import struct
 from android.permissions import request_permissions, check_permission, Permission
 
 PERMISSION = [
-    Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE, Permission.INTERNET, Permission.INSTALL_SHORTCUT,
-    Permission.VIBRATE, Permission.ACCESS_WIFI_STATE, Permission.CHANGE_WIFI_STATE, Permission.ACCESS_NETWORK_STATE,
+    Permission.WRITE_EXTERNAL_STORAGE,
+    Permission.READ_EXTERNAL_STORAGE,
+    Permission.INTERNET,
+    Permission.INSTALL_SHORTCUT,
+    Permission.VIBRATE,
+    Permission.ACCESS_WIFI_STATE,
+    Permission.CHANGE_WIFI_STATE,
+    Permission.ACCESS_NETWORK_STATE,
 ]
 
 try:
@@ -47,12 +55,16 @@ except:
     netifaces = None
 
 from os.path import expanduser
+
 home = expanduser("~")
+
 
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(
-        s.fileno(), 0x8915, struct.pack(b'256s', ifname[:15]))[20:24])
+    return socket.inet_ntoa(
+        fcntl.ioctl(s.fileno(), 0x8915, struct.pack(b"256s", ifname[:15]))[20:24]
+    )
+
 
 MAX_SEL_APP = 10
 
@@ -67,13 +79,13 @@ if not schserw_settings.PRJ_PATH in sys.path:
     sys.path.append(schserw_settings.PRJ_PATH)
 
 p1 = p2 = None
-if 'SECONDARY_STORAGE' in os.environ:
-    p1 = os.path.join(os.environ['SECONDARY_STORAGE'], "pytigon_data")
-if 'EXTERNAL_STORAGE' in os.environ:
-    p2 = os.path.join(os.environ['EXTERNAL_STORAGE'], "pytigon_data")
+if "SECONDARY_STORAGE" in os.environ:
+    p1 = os.path.join(os.environ["SECONDARY_STORAGE"], "pytigon_data")
+if "EXTERNAL_STORAGE" in os.environ:
+    p2 = os.path.join(os.environ["EXTERNAL_STORAGE"], "pytigon_data")
 
 if not p1 and not p2:
-    STORAGE = os.path.join(os.path.expanduser('~'), ".")
+    STORAGE = os.path.join(os.path.expanduser("~"), ".")
 else:
     if p1:
         if p2 and os.path.exists(p2):
@@ -83,7 +95,8 @@ else:
     else:
         STORAGE = p2[:-12]
 
-Builder.load_string(''' 
+Builder.load_string(
+    """ 
 <InterfaceManager>:
     canvas.before:
         Color:
@@ -99,7 +112,8 @@ Builder.load_string('''
 
     canvas.after:
         PopMatrix
-''')
+"""
+)
 
 
 class InterfaceManager(BoxLayout):
@@ -108,7 +122,7 @@ class InterfaceManager(BoxLayout):
     def __init__(self, **kwargs):
         global BASE_PATH
         super(InterfaceManager, self).__init__(**kwargs)
-        #base_path = os.path.dirname(os.path.abspath(__file__))
+        # base_path = os.path.dirname(os.path.abspath(__file__))
 
         self.base_path = BASE_PATH
 
@@ -124,46 +138,55 @@ class InterfaceManager(BoxLayout):
         if netifaces:
             interfaces = netifaces.interfaces()
             for interface in interfaces:
-                if interface[:2] in ('wl', 'en', 'et'):
+                if interface[:2] in ("wl", "en", "et"):
                     ifaddress = netifaces.ifaddresses(interface)
                     if netifaces.AF_INET in ifaddress:
                         inets = ifaddress[netifaces.AF_INET]
                         for inet in inets:
-                            if 'addr' in inet:
-                                addr = inet['addr']
-                                if len(addr.split('.')) == 4:
+                            if "addr" in inet:
+                                addr = inet["addr"]
+                                if len(addr.split(".")) == 4:
                                     ip_tab.append(addr)
         else:
             try:
-                ip_address = get_ip_address(b'wlan0')
+                ip_address = get_ip_address(b"wlan0")
                 ip_tab.append(ip_address)
             except:
                 pass
 
         if ip_tab:
-            ip_address = ', '.join(ip_tab)
+            ip_address = ", ".join(ip_tab)
         else:
-            ip_address = '-'
+            ip_address = "-"
 
-        label = Label(text=f"[size=18sp][color=88f][b]PYTIGON - select the application:[/b][/color][/size]\n[size=15sp][color=448](my ip addresses: {ip_address})[/b][/color][/size]",
-                      markup=True, halign = 'center')
+        label = Label(
+            text=f"[size=18sp][color=88f][b]PYTIGON - select the application:[/b][/color][/size]\n[size=15sp][color=448](my ip addresses: {ip_address})[/b][/color][/size]",
+            markup=True,
+            halign="center",
+        )
         self.add_widget(label)
 
         if not check_permission(Permission.WRITE_EXTERNAL_STORAGE):
             ret = request_permissions(PERMISSION)
             print("python::pytigon::request_permissions", ret)
 
-        init("_schall", schserw_settings.ROOT_PATH, schserw_settings.DATA_PATH, schserw_settings.PRJ_PATH,
-             schserw_settings.STATIC_ROOT, [schserw_settings.MEDIA_ROOT, schserw_settings.UPLOAD_PATH])
+        init(
+            "_schall",
+            schserw_settings.ROOT_PATH,
+            schserw_settings.DATA_PATH,
+            schserw_settings.PRJ_PATH,
+            schserw_settings.STATIC_ROOT,
+            [schserw_settings.MEDIA_ROOT, schserw_settings.UPLOAD_PATH],
+        )
 
         base_apps_path = os.path.join(os.path.join(STORAGE, "pytigon"), "prj")
-        l = [pos for pos in os.listdir(base_apps_path) if not pos.startswith('_')]
+        l = [pos for pos in os.listdir(base_apps_path) if not pos.startswith("_")]
         apps = []
         for prj in l:
             base_apps_path2 = os.path.join(base_apps_path, prj)
             try:
                 x = __import__(prj + ".apps")
-                if hasattr(x.apps, 'PUBLIC') and x.apps.PUBLIC:
+                if hasattr(x.apps, "PUBLIC") and x.apps.PUBLIC:
                     apps.append(prj)
             except:
                 print("Error importing module: ", prj + ".apps")
@@ -181,10 +204,12 @@ class InterfaceManager(BoxLayout):
 
             if len(apps) > MAX_SEL_APP:
                 spinner = Spinner(
-                    text='Other applications',
+                    text="Other applications",
                     values=apps[dy:],
-                    size_hint=(.5, 1),
-                    pos_hint={'center_x': 0.5, }
+                    size_hint=(0.5, 1),
+                    pos_hint={
+                        "center_x": 0.5,
+                    },
                 )
                 spinner.bind(text=self.spinner_callback)
                 self.add_widget(spinner)
@@ -196,7 +221,11 @@ class InterfaceManager(BoxLayout):
 
     def show_second_form(self):
         self.clear_widgets()
-        self.img = Image(size_hint=(0.5, 0.5), pos_hint={'center_x': 0.5, 'center_y': 0.5}, source='loader.png')
+        self.img = Image(
+            size_hint=(0.5, 0.5),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            source="loader.png",
+        )
         self.add_widget(self.img)
         anim = Animation(angle=-360, duration=2)
         anim += Animation(angle=-360, duration=2)
@@ -232,10 +261,11 @@ class InterfaceManager(BoxLayout):
 class PytigonApp(App):
     def build(self):
         self.bind(on_start=self.post_build_init)
-        return InterfaceManager(orientation='vertical', padding=(10), spacing=(20))
+        return InterfaceManager(orientation="vertical", padding=(10), spacing=(20))
 
     def post_build_init(self, ev):
         from kivy.base import EventLoop
+
         EventLoop.window.bind(on_keyboard=self.hook_keyboard)
 
     def hook_keyboard(self, window, key, *largs):
@@ -245,5 +275,5 @@ class PytigonApp(App):
         print("python:Pytigon:on_stop")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     PytigonApp().run()

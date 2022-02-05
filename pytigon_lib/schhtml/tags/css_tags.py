@@ -10,36 +10,34 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
 
 
 class Css(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
 
     def close(self):
-        self.parser.css.parse_str(''.join(self.data))
+        self.parser.css.parse_str("".join(self.data))
 
 
-register_tag_map('style', Css)
+register_tag_map("style", Css)
 
 
 class CssLink(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
 
     def close(self):
-        if 'href' in self.attrs:
-            href = self.attrs['href']
+        if "href" in self.attrs:
+            href = self.attrs["href"]
             http = self.parser.http
             try:
                 response = http.get(self, href)
@@ -56,4 +54,4 @@ class CssLink(BaseHtmlElemParser):
                 pass
 
 
-register_tag_map('link', CssLink)
+register_tag_map("link", CssLink)

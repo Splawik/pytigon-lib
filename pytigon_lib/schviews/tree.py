@@ -10,16 +10,17 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 class MakeTreeFromObject(object):
     """Define tree widget based on django model"""
+
     def __init__(self, model, callback, field_name=None):
         """Constructor
 
@@ -41,57 +42,67 @@ class MakeTreeFromObject(object):
         self.field_name = field_name
 
     def _tree_from_object_children(self, parent):
-        ret = ''
+        ret = ""
         l = self.model.objects.filter(parent=parent)
         for o in l:
             if self.callback(0, o):
-                ret += '<li>'
-                ret += "<span class='folder'>" + self.callback(1, o) + '</span>'
-                ret += '<ul>'
+                ret += "<li>"
+                ret += "<span class='folder'>" + self.callback(1, o) + "</span>"
+                ret += "<ul>"
                 tab_action = self.callback(2, o)
                 for pos in tab_action:
-                    ret += '<li>'
+                    ret += "<li>"
                     link = pos[0]
                     name = pos[1]
-                    ret += "<span class='file'><a href='" + link + "'>" + name\
-                         + '</a></span>'
-                    ret += '</li>'
+                    ret += (
+                        "<span class='file'><a href='"
+                        + link
+                        + "'>"
+                        + name
+                        + "</a></span>"
+                    )
+                    ret += "</li>"
                 ret += self._tree_from_object_children(o)
-                ret += '</ul>'
-                ret += '</li>'
-        return ret.replace('<ul></ul>', '')
+                ret += "</ul>"
+                ret += "</li>"
+        return ret.replace("<ul></ul>", "")
 
     def _tree_from_object(self):
-        ret = ''
+        ret = ""
         l = self.model.objects.filter(parent=None)
         for o in l:
             if self.callback(0, o):
-                ret += '<li>'
-                ret += "<span class='folder'>" + self.callback(1, o) + '</span>'
-                ret += '<ul>'
+                ret += "<li>"
+                ret += "<span class='folder'>" + self.callback(1, o) + "</span>"
+                ret += "<ul>"
                 tab_action = self.callback(2, o)
                 for pos in tab_action:
-                    ret += '<li>'
+                    ret += "<li>"
                     link = pos[0]
                     name = pos[1]
-                    ret += "<span class='file'><a href='" + link + "'>" + name\
-                         + '</a></span>'
-                    ret += '</li>'
+                    ret += (
+                        "<span class='file'><a href='"
+                        + link
+                        + "'>"
+                        + name
+                        + "</a></span>"
+                    )
+                    ret += "</li>"
                 ret += self._tree_from_object_children(o)
-                ret += '</ul>'
-                ret += '</li>'
+                ret += "</ul>"
+                ret += "</li>"
         return ret
 
     def _gen(self, head_ctrl, end_head_ctrl):
         try:
             if self.field_name:
                 ret = head_ctrl
-                ret += '<li>'
-                ret += "<span class='folder'>" + self.field_name + '</span>'
-                ret += '<ul>'
+                ret += "<li>"
+                ret += "<span class='folder'>" + self.field_name + "</span>"
+                ret += "<ul>"
                 ret += self._tree_from_object()
-                ret += '</ul>'
-                ret += '</li>'
+                ret += "</ul>"
+                ret += "</li>"
                 ret += end_head_ctrl
             else:
                 ret = head_ctrl
@@ -100,6 +111,7 @@ class MakeTreeFromObject(object):
         except:
             import sys
             import traceback
+
             print(sys.exc_info()[0])
             print(sys.exc_info())
             traceback.print_exc()
@@ -107,8 +119,8 @@ class MakeTreeFromObject(object):
 
     def gen_html(self):
         """Gen and return html for tree widget"""
-        return self._gen("<ul id='browser' class='filetree'>", '</ul>')
+        return self._gen("<ul id='browser' class='filetree'>", "</ul>")
 
     def gen_shtml(self):
         """Gen and return shtml for tree widget"""
-        return self._gen('', '')
+        return self._gen("", "")

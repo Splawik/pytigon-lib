@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 try:
@@ -33,9 +33,17 @@ from pytigon_gui.schhtml.basedc import BaseDc, BaseDcInfo
 #
 # A4 - 300dpi width, height = 2480, 3508
 
-class CairoDc(BaseDc):
 
-    def __init__(self, ctx=None, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0):
+class CairoDc(BaseDc):
+    def __init__(
+        self,
+        ctx=None,
+        calc_only=False,
+        width=-1,
+        height=-1,
+        output_name=None,
+        scale=1.0,
+    ):
         BaseDc.__init__(self, calc_only, width, height, output_name, scale)
         if self.width >= 0:
             width2 = self.width
@@ -61,24 +69,23 @@ class CairoDc(BaseDc):
             else:
                 if output_name:
                     name = output_name.lower()
-                    if '.pdf' in name:
-                        self.surf = cairo.PDFSurface(output_name, width2,
-                                height2)
-                        self.type = 'pdf'
-                    elif '.svg' in name:
-                        self.surf = cairo.SVGSurface(output_name, width2,
-                                height2)
-                        self.type = 'svg'
-                    elif '.png' in name:
-                        self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24,
-                                width2, height2)
-                        self.type = 'png'
+                    if ".pdf" in name:
+                        self.surf = cairo.PDFSurface(output_name, width2, height2)
+                        self.type = "pdf"
+                    elif ".svg" in name:
+                        self.surf = cairo.SVGSurface(output_name, width2, height2)
+                        self.type = "svg"
+                    elif ".png" in name:
+                        self.surf = cairo.ImageSurface(
+                            cairo.FORMAT_RGB24, width2, height2
+                        )
+                        self.type = "png"
                     else:
-                        self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24,
-                                width2, height2)
+                        self.surf = cairo.ImageSurface(
+                            cairo.FORMAT_RGB24, width2, height2
+                        )
                 else:
-                    self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24, width2,
-                            height2)
+                    self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24, width2, height2)
                 self.ctx = cairo.Context(self.surf)
         self.last_style_tab = None
         self.last_move_to = None
@@ -86,16 +93,16 @@ class CairoDc(BaseDc):
 
     def close(self):
         if not self.calc_only:
-            if self.type in ('svg', 'pdf'):
+            if self.type in ("svg", "pdf"):
                 self.ctx.show_page()
                 self.surf.finish()
-            if self.type in ('png', ):
+            if self.type in ("png",):
                 self.surf.write_to_png(self.output_name)
                 self.surf.finish()
 
     def _move_to(self, x, y):
-        self.ctx.move_to(x*self.scale, y*self.scale)
-        self.last_move_to = (x*self.scale, y*self.scale)
+        self.ctx.move_to(x * self.scale, y * self.scale)
+        self.last_move_to = (x * self.scale, y * self.scale)
 
     def start_page(self):
         self.ctx.show_page()
@@ -121,78 +128,107 @@ class CairoDc(BaseDc):
         g,
         b,
         a=255,
-        ):
+    ):
         self.ctx.set_source_rgb(r / 256.0, g / 256.0, b / 256.0)
         BaseDc.set_color(self, r, g, b, a)
 
     def set_line_width(self, width):
-        self.ctx.set_line_width(width*self.scale)
+        self.ctx.set_line_width(width * self.scale)
         BaseDc.set_line_width(self, width)
 
     def set_style(self, style):
         if style == self.last_style:
             return self.last_style_tab
-        style_tab = self.dc_info.styles[style].split(';')
+        style_tab = self.dc_info.styles[style].split(";")
         self.last_style_tab = style_tab
-        if style_tab[3] == '1':
+        if style_tab[3] == "1":
             slant = cairo.FONT_SLANT_ITALIC
         else:
             slant = cairo.FONT_SLANT_NORMAL
-        if style_tab[4] == '1':
+        if style_tab[4] == "1":
             weight = cairo.FONT_WEIGHT_BOLD
         else:
             weight = cairo.FONT_WEIGHT_NORMAL
         self.ctx.select_font_face(style_tab[1], slant, weight)
         (r, g, b) = self.rgbfromhex(style_tab[0])
-        self.ctx.set_font_size((self.scale*self.base_font_size * int(style_tab[2])) / 100)
+        self.ctx.set_font_size(
+            (self.scale * self.base_font_size * int(style_tab[2])) / 100
+        )
         self.ctx.set_source_rgb(r / 256.0, g / 256.0, b / 256.0)
         BaseDc.set_style(self, style)
         return style_tab
 
     def add_line(self, x, y, dx, dy):
         self._move_to(x, y)
-        self.ctx.line_to((x + dx)*self.scale, (y + dy)*self.scale)
-        self.last_move_to = ((x + dx)*self.scale, (y + dy)*self.scale)
+        self.ctx.line_to((x + dx) * self.scale, (y + dy) * self.scale)
+        self.last_move_to = ((x + dx) * self.scale, (y + dy) * self.scale)
         BaseDc.add_line(self, x, y, dx, dy)
 
     def add_rectangle(self, x, y, dx, dy):
-        self.ctx.rectangle(x*self.scale, y*self.scale, dx*self.scale, dy*self.scale)
+        self.ctx.rectangle(
+            x * self.scale, y * self.scale, dx * self.scale, dy * self.scale
+        )
         BaseDc.add_rectangle(self, x, y, dx, dy)
 
     def add_rounded_rectangle(self, x, y, dx, dy, radius):
         degrees = pi / 180.0
         self.ctx.new_sub_path()
-        self.ctx.arc(((x + dx) - radius)*self.scale, (y + radius)*self.scale, radius*self.scale, -90 * degrees, 0
-                      * degrees)
-        self.ctx.arc(((x + dx) - radius)*self.scale, ((y + dy) - radius)*self.scale, radius*self.scale, 0 * degrees,
-                     90 * degrees)
-        self.ctx.arc((x + radius)*self.scale, ((y + dy) - radius)*self.scale, radius*self.scale, 90 * degrees, 180
-                      * degrees)
-        self.ctx.arc((x + radius)*self.scale, (y + radius)*self.scale, radius*self.scale, 180 * degrees, 270
-                      * degrees)
+        self.ctx.arc(
+            ((x + dx) - radius) * self.scale,
+            (y + radius) * self.scale,
+            radius * self.scale,
+            -90 * degrees,
+            0 * degrees,
+        )
+        self.ctx.arc(
+            ((x + dx) - radius) * self.scale,
+            ((y + dy) - radius) * self.scale,
+            radius * self.scale,
+            0 * degrees,
+            90 * degrees,
+        )
+        self.ctx.arc(
+            (x + radius) * self.scale,
+            ((y + dy) - radius) * self.scale,
+            radius * self.scale,
+            90 * degrees,
+            180 * degrees,
+        )
+        self.ctx.arc(
+            (x + radius) * self.scale,
+            (y + radius) * self.scale,
+            radius * self.scale,
+            180 * degrees,
+            270 * degrees,
+        )
         self.ctx.close_path()
         BaseDc.add_rounded_rectangle(self, x, y, dx, dy, radius)
 
     def add_arc(self, x, y, radius, angle1, angle2):
-        self.ctx.arc(x*self.scale, y*self.scale, radius*self.scale, ((2 * pi) * angle1) / 360, ((2 * pi)
-                      * angle2) / 360)
+        self.ctx.arc(
+            x * self.scale,
+            y * self.scale,
+            radius * self.scale,
+            ((2 * pi) * angle1) / 360,
+            ((2 * pi) * angle2) / 360,
+        )
         BaseDc.add_arc(self, x, y, radius, angle1, angle2)
 
     def add_ellipse(self, x, y, dx, dy):
         self.ctx.save()
-        self.ctx.translate((x + dx / 2)*self.scale, (y + dy / 2)*self.scale)
-        self.ctx.scale(self.scale*dx / 2.0, self.scale*dy / 2.0)
+        self.ctx.translate((x + dx / 2) * self.scale, (y + dy / 2) * self.scale)
+        self.ctx.scale(self.scale * dx / 2.0, self.scale * dy / 2.0)
         self.ctx.arc(0.0, 0.0, 1.0, 0.0, 2.0 * pi)
         self.ctx.restore()
         BaseDc.add_ellipse(self, x, y, dx, dy)
 
     def add_polygon(self, xytab):
         pos0 = xytab[0]
-        self.ctx.move_to(pos0[0]*self.scale, pos0[1]*self.scale)
+        self.ctx.move_to(pos0[0] * self.scale, pos0[1] * self.scale)
         for pos in xytab[1:]:
-            self.ctx.line_to(pos[0]*self.scale, pos[1]*self.scale)
+            self.ctx.line_to(pos[0] * self.scale, pos[1] * self.scale)
         self.ctx.close_path()
-        self.last_move_to = [pos[0]*self.scale, pos[1]*self.scale]
+        self.last_move_to = [pos[0] * self.scale, pos[1] * self.scale]
         BaseDc.add_polygon(self, xytab)
 
     def add_spline(self, xytab, close):
@@ -208,28 +244,28 @@ class CairoDc(BaseDc):
 
     def draw_text(self, x, y, txt):
         sizes = self.ctx.text_extents(txt)[:4]
-        self.ctx.move_to((x - sizes[0] / 2)*self.scale, y*self.scale)
+        self.ctx.move_to((x - sizes[0] / 2) * self.scale, y * self.scale)
         self.ctx.show_text(txt)
         BaseDc.draw_text(self, x, y, txt)
 
     def draw_rotated_text(self, x, y, txt, angle):
         self.ctx.save()
-        self.ctx.move_to(x*self.scale, y*self.scale)
+        self.ctx.move_to(x * self.scale, y * self.scale)
         self.ctx.rotate(((2 * pi) * angle) / 360)
         self.ctx.show_text(txt)
         self.ctx.restore()
         BaseDc.draw_rotated_text(self, x, y, txt, angle)
 
-# scale: 0 - no scale, no repeat 1 - scale to dx, dy 2 - scale to dx or dy -
-# preserve img scale 3 - scale to dx or dy - preserve img scale, fit fool image
-# 4 - repeat x 5 - repeat y 6 - repeat x and y
+    # scale: 0 - no scale, no repeat 1 - scale to dx, dy 2 - scale to dx or dy -
+    # preserve img scale 3 - scale to dx or dy - preserve img scale, fit fool image
+    # 4 - repeat x 5 - repeat y 6 - repeat x and y
 
     def draw_image(self, x, y, dx, dy, scale, png_data):
         try:
             png_stream = io.StringIO(png_data)
             surface = cairo.ImageSurface.create_from_png(png_stream)
         except:
-            surface = cairo.ImageSurface.create_from_png('sleeptimer.png')
+            surface = cairo.ImageSurface.create_from_png("sleeptimer.png")
         w = surface.get_width()
         h = surface.get_height()
         self.ctx.save()
@@ -267,14 +303,14 @@ class CairoDcInfo(BaseDcInfo):
 
     def get_extents(self, word, style):
         self.dc.set_style(style)
-        sizes = self.dc.ctx.text_extents(word + '.')[:4]
+        sizes = self.dc.ctx.text_extents(word + ".")[:4]
         dx = sizes[2]
         dy_up = -1 * sizes[1]
         dy_down = sizes[3] - dy_up
-        sizes2 = self.dc.ctx.text_extents('.')[:4]
+        sizes2 = self.dc.ctx.text_extents(".")[:4]
         dx_space = sizes2[2]
         dx -= dx_space
-        if word[-1] != ' ':
+        if word[-1] != " ":
             dx_space = 0
         return (dx, dx_space, dy_up, dy_down)
 

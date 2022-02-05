@@ -2,6 +2,7 @@ import sys
 import pscript
 import traceback
 
+
 def prepare_python_code(code):
     exported_id = []
     for line in code.split("\n"):
@@ -17,6 +18,7 @@ def prepare_python_code(code):
         code += "\n\nRawJS('export {" + ", ".join(exported_id) + "}')\n"
 
     return code
+
 
 def compile(python_code):
     error = False

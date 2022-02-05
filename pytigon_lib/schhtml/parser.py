@@ -10,24 +10,27 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 try:
     from lxml import etree
+
     LXML = True
 except:
     import xml.etree.ElementTree as etree
     from naivehtmlparser import NaiveHTMLParser
+
     LXML = False
 
 
 import io
 import re
+
 
 class Parser:
     def __init__(self):
@@ -39,7 +42,7 @@ class Parser:
             ret = ""
             for key, value in self._cur_elem.items():
                 if value:
-                    ret = ret + "%s=\"%s\" " % (key, value)
+                    ret = ret + '%s="%s" ' % (key, value)
                 else:
                     ret = ret + key + " "
             return "<%s %s>" % (self._cur_elem.tag, ret[0:-1])
@@ -73,14 +76,15 @@ class Parser:
     def from_html(self, html_txt):
         global LXML
         if LXML:
-            parser = etree.HTMLParser(remove_blank_text=True, remove_comments=True, remove_pis=True)
+            parser = etree.HTMLParser(
+                remove_blank_text=True, remove_comments=True, remove_pis=True
+            )
             return etree.parse(io.StringIO(html_txt), parser).getroot()
         else:
             parser = NaiveHTMLParser()
             root = parser.feed(html_txt)
             parser.close()
             return root
-
 
     def init(self, html_txt):
         if type(html_txt) == Elem:
@@ -93,7 +97,7 @@ class Parser:
                 print(html_txt)
                 self._tree = None
 
-    def feed(self, html_txt):        
+    def feed(self, html_txt):
         self.init(html_txt)
         self._crawl_tree(self._tree)
 
@@ -101,14 +105,14 @@ class Parser:
         self._tree = None
 
 
-
-
 def tostring(elem):
     global LXML
     if LXML:
-        return etree.tostring(elem,encoding='unicode', method="html", pretty_print=True)
+        return etree.tostring(
+            elem, encoding="unicode", method="html", pretty_print=True
+        )
     else:
-        return etree.tostring(elem,encoding='unicode', method="html")
+        return etree.tostring(elem, encoding="unicode", method="html")
 
 
 def content_tostring(elem):
@@ -122,15 +126,15 @@ def content_tostring(elem):
     return "".join(tab)
 
 
-class Elem():
-    def __init__(self, elem, tostring_fun = tostring):
+class Elem:
+    def __init__(self, elem, tostring_fun=tostring):
         self.elem = elem
         self._elem_txt = None
         self._tostring_fun = tostring_fun
 
     def __str__(self):
         if self._elem_txt == None:
-            if self.elem!=None:
+            if self.elem != None:
                 self._elem_txt = self._tostring_fun(self.elem)
             else:
                 return ""
@@ -152,45 +156,45 @@ class Elem():
         return s.strip()
 
     def tostream(self, output=None, elem=None, tab=0):
-        if elem==None:
-            elem=self.elem
+        if elem == None:
+            elem = self.elem
         if output == None:
             output = io.StringIO()
         if type(elem.tag) is str:
-            output.write(' '*tab)
+            output.write(" " * tab)
             output.write(elem.tag.lower())
             first = True
             for key, value in elem.attrib.items():
                 if first:
-                    output.write(' ')
+                    output.write(" ")
                 else:
                     output.write(",,,")
                 output.write(key)
-                output.write('=')
-                if type(value)==str:
-                    output.write(value.replace('\n', '\\n'))
+                output.write("=")
+                if type(value) == str:
+                    output.write(value.replace("\n", "\\n"))
                 else:
-                    output.write(str(value).replace('\n', '\\n'))
+                    output.write(str(value).replace("\n", "\\n"))
 
-                first=False
+                first = False
             if elem.text:
-                x = self.super_strip(elem.text.replace('\n','\\n'))
+                x = self.super_strip(elem.text.replace("\n", "\\n"))
                 if x:
                     output.write("...")
                     output.write(x)
             output.write("\n")
             for node in elem:
-                self.tostream(output, node, tab+4)
+                self.tostream(output, node, tab + 4)
         if elem.tail:
-            x = self.super_strip(elem.tail.replace('\n', '\\n'))
+            x = self.super_strip(elem.tail.replace("\n", "\\n"))
             if x:
-                output.write(' '*tab)
-                output.write('.')
+                output.write(" " * tab)
+                output.write(".")
                 output.write(x)
-                output.write('\n')
+                output.write("\n")
         return output
 
 
 class Script(Elem):
-    def __init__(self, elem, tostring_fun = content_tostring):
+    def __init__(self, elem, tostring_fun=content_tostring):
         super().__init__(elem, tostring_fun)

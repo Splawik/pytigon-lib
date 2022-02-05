@@ -10,14 +10,15 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2020 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.103"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2020 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.103"
 
 from django.contrib.staticfiles.finders import AppDirectoriesFinder
 
+
 class AppPackDirectoriesFinder(AppDirectoriesFinder):
-    source_dir = '../static'
+    source_dir = "../static"

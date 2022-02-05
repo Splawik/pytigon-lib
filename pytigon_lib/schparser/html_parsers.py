@@ -10,24 +10,27 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 from pytigon_lib.schhtml.parser import Parser, content_tostring, Elem, Script, tostring
 from pytigon_lib.schhtml.htmltools import Td
 from pyquery import PyQuery as pq
 
+
 class ExtList(list):
     row_id = 0
     class_attr = ""
 
+
 class SimpleTabParserBase(Parser):
     """Parses html for tables. Found tables save to self.tables variable"""
+
     def __init__(self):
         Parser.__init__(self)
         self.tables = []
@@ -41,10 +44,10 @@ class SimpleTabParserBase(Parser):
             table = []
             for elem2 in elem.iterfind(".//tr"):
                 tr = ExtList()
-                if 'row-id' in elem2.attrib:
-                    tr.row_id = elem2.attrib['row-id']
-                if 'class' in elem2.attrib:
-                    tr.class_attr = elem2.attrib['class']
+                if "row-id" in elem2.attrib:
+                    tr.row_id = elem2.attrib["row-id"]
+                if "class" in elem2.attrib:
+                    tr.class_attr = elem2.attrib["class"]
 
                 for elem3 in elem2.iterfind(".//th"):
                     tr.append(self._preprocess(elem3))
@@ -56,14 +59,16 @@ class SimpleTabParserBase(Parser):
 
 class SimpleTabParser(SimpleTabParserBase):
     """Like SimpleTabParserBase but td saves as Td object. SimpleTabParserBase saves td as string"""
+
     def _preprocess(self, td):
         return Td(content_tostring(td).strip(), td.attrib)
 
 
 class TreeParser(Parser):
     """Parses html for ul. Found ul save to self.list variable"""
+
     def __init__(self):
-        self.tree_parent = [['TREE', []]]
+        self.tree_parent = [["TREE", []]]
         self.list = self.tree_parent
         self.stack = []
         self.attr_to_li = []
@@ -72,35 +77,37 @@ class TreeParser(Parser):
 
     def handle_starttag(self, tag, attrs):
         self.attr_to_li += attrs
-        if tag == 'ul':
+        if tag == "ul":
             self.stack.append(self.list)
             self.list = self.list[-1][1]
             self.enable_data_read = False
         else:
-            if tag == 'li':
+            if tag == "li":
                 self.enable_data_read = True
-                self.list.append(['', [], []])
+                self.list.append(["", [], []])
                 self.attr_to_li = []
 
     def handle_endtag(self, tag):
-        if tag == 'ul':
+        if tag == "ul":
             self.list = self.stack.pop()
-        if tag == 'li':
+        if tag == "li":
             self.list[-1][2] = self.attr_to_li
             self.attr_to_li = []
         self.enable_data_read = False
 
     def handle_data(self, data):
         if self.enable_data_read:
-            self.list[-1][0] = self.list[-1][0] + data.rstrip(' \n')
+            self.list[-1][0] = self.list[-1][0] + data.rstrip(" \n")
 
 
 def _remove(parent, elem):
     parent.remove(elem)
 
+
 class ShtmlParser(Parser):
     """Parser for SchPage window. Divides the page into parts: header, footer, panel, body and script. Reads variables
     from meta tag"""
+
     def __init__(self):
         super().__init__()
         self.address = None
@@ -140,18 +147,17 @@ class ShtmlParser(Parser):
                 d.remove(selector)
         return ret
 
-
     def process(self, html_txt, address=None):
         self.address = address
         self.init(html_txt)
         for elem in self._tree.iterfind(".//meta"):
-            if 'name' in elem.attrib:
-                name = elem.attrib['name'].lower()
-                if 'content' in elem.attrib:
-                    if name == 'schhtml':
-                        self.schhtml = int(elem.attrib['content'])
+            if "name" in elem.attrib:
+                name = elem.attrib["name"].lower()
+                if "content" in elem.attrib:
+                    if name == "schhtml":
+                        self.schhtml = int(elem.attrib["content"])
                     else:
-                        self.var[name] = elem.attrib['content']
+                        self.var[name] = elem.attrib["content"]
                 else:
                     self.var[name] = None
         self._data = self._reparent(("", "#header", "#footer", "#panel"))
@@ -160,7 +166,7 @@ class ShtmlParser(Parser):
     def title(self):
         if not self._title:
             try:
-                self._title = self._tree.findtext('.//title').strip()
+                self._title = self._tree.findtext(".//title").strip()
             except:
                 self._title = ""
         return self._title
@@ -183,22 +189,23 @@ class ShtmlParser(Parser):
 
     def get_body_attrs(self):
         """Get body attributes"""
-        b = self._tree.find('.//body')
+        b = self._tree.find(".//body")
         if b != None:
             return b.attrib
         else:
             return {}
 
-if __name__ == '__main__':
-    f = open('test.html', 'rt')
+
+if __name__ == "__main__":
+    f = open("test.html", "rt")
     data = f.read()
     f.close()
     mp = ShtmlParser()
     mp.Process(data)
-    if 'TARGET' in mp.Var:
-        print('HEJ:', mp.Var['TARGET'])
-        print('<title***>', mp.title, '</title***>')
-        print('<header***>', mp.header.getvalue(), '</header***>')
-        print('<BODY***>', mp.body.getvalue(), '</BODY***>')
-        print('<footer***>', mp.footer.getvalue(), '</footer***>')
-        print('<panel***>', mp.panel.getvalue(), '</panel***>')
+    if "TARGET" in mp.Var:
+        print("HEJ:", mp.Var["TARGET"])
+        print("<title***>", mp.title, "</title***>")
+        print("<header***>", mp.header.getvalue(), "</header***>")
+        print("<BODY***>", mp.body.getvalue(), "</BODY***>")
+        print("<footer***>", mp.footer.getvalue(), "</footer***>")
+        print("<panel***>", mp.panel.getvalue(), "</panel***>")

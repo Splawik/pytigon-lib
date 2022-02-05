@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
@@ -23,10 +23,9 @@ import io
 
 
 class Page(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ['header', 'footer']
+        self.child_tags = ["header", "footer"]
         self.body = parent
 
     def data_from_child(self, child, data):
@@ -40,7 +39,6 @@ class Page(BaseHtmlElemParser):
 
 
 class NewPage(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
         self.body = parent
@@ -53,19 +51,18 @@ class NewPage(BaseHtmlElemParser):
 
 
 class HeaderFooter(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
         self.data = io.StringIO()
 
     def handle_starttag(self, parser, tag, attrs):
-        self.data.write('<' + tag)
+        self.data.write("<" + tag)
         for pos in attrs:
             if attrs[pos] != None:
-                self.data.write(' ' + pos + '="' + attrs[pos] + '"')
+                self.data.write(" " + pos + '="' + attrs[pos] + '"')
             else:
-                self.data.write(' ' + pos)
-        self.data.write('>')
+                self.data.write(" " + pos)
+        self.data.write(">")
         return None
 
     def handle_endtag(self, tag):
@@ -73,7 +70,7 @@ class HeaderFooter(BaseHtmlElemParser):
             self.parent.data_from_child(self, self.data)
             return self.parent
         else:
-            self.data.write('</' + tag + '>')
+            self.data.write("</" + tag + ">")
             return self
 
     def handle_data(self, data):
@@ -83,7 +80,7 @@ class HeaderFooter(BaseHtmlElemParser):
         pass
 
 
-register_tag_map('page', Page)
-register_tag_map('header', HeaderFooter)
-register_tag_map('footer', HeaderFooter)
-register_tag_map('newpage', NewPage)
+register_tag_map("page", Page)
+register_tag_map("header", HeaderFooter)
+register_tag_map("footer", HeaderFooter)
+register_tag_map("newpage", NewPage)

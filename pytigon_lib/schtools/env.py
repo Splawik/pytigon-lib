@@ -10,17 +10,18 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import environ
 import os
 
 ENV = None
+
 
 def get_environ(path=None):
     global ENV
@@ -39,10 +40,10 @@ def get_environ(path=None):
         )
 
     if path:
-        env_path = os.path.join(path, '.env')
+        env_path = os.path.join(path, ".env")
         if os.path.exists(env_path):
             environ.Env.read_env(env_path)
-        env_path = os.path.join(path, 'env')
+        env_path = os.path.join(path, "env")
         if os.path.exists(env_path):
             environ.Env.read_env(env_path)
     return ENV

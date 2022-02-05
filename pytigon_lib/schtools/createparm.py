@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 try:
@@ -54,21 +54,21 @@ def dict_from_parm(parm, fields):
 
 
 def create_parm(address, dic, no_encode=False):
-    l = address.split('|')
+    l = address.split("|")
     if len(l) > 1:
-        p = l[1].split(',')
-        parm = ''
-        if '?' in address:
-            znak = '&'
+        p = l[1].split(",")
+        parm = ""
+        if "?" in address:
+            znak = "&"
         else:
-            znak = '?'
+            znak = "?"
         test = 0
         en = dict()
         for pos in p:
             if dic.has_parm(pos):
                 if dic.get_parm(pos) != None:
-                    if '__' in pos:
-                        pos2 = pos.split('__')[0]
+                    if "__" in pos:
+                        pos2 = pos.split("__")[0]
                         if pos2 in en:
                             if en[pos2].__class__ == list:
                                 en[pos2].append(conwert_parm(dic.get_parm(pos)))
@@ -88,11 +88,9 @@ def create_parm(address, dic, no_encode=False):
 
 
 def create_post_parm(address, dic):
-    l = address.split('|')
+    l = address.split("|")
     if len(l) > 1:
-        p = l[1].split(',')
+        p = l[1].split(",")
         return (l[0], dict_from_parm(p, dict))
     else:
         return (l, {})
-
-

@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 import zipfile
@@ -24,8 +24,9 @@ import json
 
 
 class BaseDc(object):
-
-    def __init__(self,calc_only=False,width=-1,height=-1,output_name=None,scale=1.0):
+    def __init__(
+        self, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0
+    ):
         self.x = 0
         self.y = 0
         self.gparent = None
@@ -45,14 +46,22 @@ class BaseDc(object):
         self.pages = []
         self._maxwidth = 0
         self._maxheight = 0
-        self.last_style = 'None'
+        self.last_style = "None"
         self.scale = scale
 
     def close(self):
         pass
 
     def state(self):
-        rec = [len(self.pages),self.width,self.height,self.base_font_size,self.paging,self._maxwidth,self._maxheight]
+        rec = [
+            len(self.pages),
+            self.width,
+            self.height,
+            self.base_font_size,
+            self.paging,
+            self._maxwidth,
+            self._maxheight,
+        ]
         if self.dc_info:
             rec.append(self.dc_info.styles)
         else:
@@ -71,7 +80,7 @@ class BaseDc(object):
         self._maxwidth = state[5]
         self._maxheight = state[6]
         if self.dc_info:
-            self.dc_info.styles=state[7]
+            self.dc_info.styles = state[7]
         self.last_style = state[8]
 
     def get_max_sizes(self):
@@ -111,8 +120,15 @@ class BaseDc(object):
             b = 0
         return (r, g, b)
 
-    def subdc(self,x,y,dx,dy,reg_max=True,):
-        return SubDc(self,x,y,dx,dy,reg_max)
+    def subdc(
+        self,
+        x,
+        y,
+        dx,
+        dy,
+        reg_max=True,
+    ):
+        return SubDc(self, x, y, dx, dy, reg_max)
 
     def get_dc_info(self):
         return self.dc_info
@@ -135,9 +151,9 @@ class BaseDc(object):
         self.rec = rec
 
     def play_str(self, str):
-        for buf in str.split('\n'):
+        for buf in str.split("\n"):
             buf = buf.strip()
-            if buf != '':
+            if buf != "":
                 pos = json.loads(buf)
                 fun = getattr(self, pos[0])
                 if pos[1]:
@@ -146,9 +162,8 @@ class BaseDc(object):
                     fun()
 
     def save(self, zip_name):
-        zf = zipfile.ZipFile(zip_name, mode='w',
-                             compression=zipfile.ZIP_DEFLATED)
-        zf.writestr('set.dat', json.dumps(self.state()))
+        zf = zipfile.ZipFile(zip_name, mode="w", compression=zipfile.ZIP_DEFLATED)
+        zf.writestr("set.dat", json.dumps(self.state()))
         i = 1
         for page in self.pages:
             buf = io.BytesIO()
@@ -156,15 +171,15 @@ class BaseDc(object):
                 try:
                     buf.write(json.dumps(rec))
                 except:
-                    print('basedc:', rec.__class__, rec)
-                buf.write(b'\n')
-            zf.writestr('page_%d' % i, buf.getvalue())
+                    print("basedc:", rec.__class__, rec)
+                buf.write(b"\n")
+            zf.writestr("page_%d" % i, buf.getvalue())
             i += 1
         zf.close()
 
     def load(self, zip_name):
-        zf = zipfile.ZipFile(zip_name, mode='r')
-        parm = json.loads(zf.read('set.dat').decode('utf-8'))
+        zf = zipfile.ZipFile(zip_name, mode="r")
+        parm = json.loads(zf.read("set.dat").decode("utf-8"))
         count = parm[0]
         self.pages = []
         self.width = parm[1]
@@ -177,8 +192,8 @@ class BaseDc(object):
             self.dc_info.styles = parm[7]
         for i in range(1, count + 1):
             rec = []
-            data = zf.read('page_%d' % i).decode('utf-8')
-            for line in data.split('\n'):
+            data = zf.read("page_%d" % i).decode("utf-8")
+            for line in data.split("\n"):
                 if len(line) > 1:
                     buf = json.loads(line)
                     rec.append(buf)
@@ -186,7 +201,7 @@ class BaseDc(object):
             self.rec = rec
         zf.close()
 
-    def _scale_image(self,x,y,dx,dy,scale,image_w,image_h):
+    def _scale_image(self, x, y, dx, dy, scale, image_w, image_h):
         if scale < 4:
             x_scale = 1
             y_scale = 1
@@ -227,62 +242,62 @@ class BaseDc(object):
         if len(self.store) > 0:
             self.pages.append(self.store)
             self.store = []
-        self.last_style = 'None'
+        self.last_style = "None"
 
     def end_page(self):
         if len(self.store) > 0:
             self.pages.append(self.store)
             self.store = []
-        self.last_style = 'None'
+        self.last_style = "None"
 
     def fill(self, *args):
-        self.record('fill', args)
+        self.record("fill", args)
 
     def draw(self, *args):
-        self.record('draw', args)
+        self.record("draw", args)
 
     def set_color(self, *args):
-        self.record('set_color', args)
+        self.record("set_color", args)
 
     def set_line_width(self, *args):
-        self.record('set_line_width', args)
+        self.record("set_line_width", args)
 
     def set_style(self, *args):
         self.last_style = args[0]
-        self.record('set_style', args)
+        self.record("set_style", args)
 
     def add_line(self, *args):
-        self.record('add_line', args)
+        self.record("add_line", args)
 
     def add_rectangle(self, *args):
-        self.record('add_rectangle', args)
+        self.record("add_rectangle", args)
 
     def add_rounded_rectangle(self, *args):
-        self.record('add_rounded_rectangle', args)
+        self.record("add_rounded_rectangle", args)
 
     def add_arc(self, *args):
-        self.record('add_arc', args)
+        self.record("add_arc", args)
 
     def add_ellipse(self, *args):
-        self.record('add_ellipse', args)
+        self.record("add_ellipse", args)
 
     def add_polygon(self, *args):
-        self.record('add_polygon', args)
+        self.record("add_polygon", args)
 
     def add_spline(self, *args):
-        self.record('add_spline', args)
+        self.record("add_spline", args)
 
     def draw_text(self, *args):
-        self.record('draw_text', args)
+        self.record("draw_text", args)
 
     def draw_rotated_text(self, *args):
-        self.record('draw_rotated_text', args)
+        self.record("draw_rotated_text", args)
 
     def draw_image(self, *args):
-        self.record('draw_image', args)
+        self.record("draw_image", args)
 
-    def draw_atom_line(self,x,y,line):
-        self.last_style = 'None'
+    def draw_atom_line(self, x, y, line):
+        self.last_style = "None"
         dx = 0
         test = 0
         for obj in line.objs:
@@ -290,13 +305,14 @@ class BaseDc(object):
                 style = self.set_style(obj.style)
             else:
                 style = self.set_style(0)
-            if style[5] == '1':
-                self.add_line((x + dx) - 1, y + line.dy_up + 2, obj.dx
-                               - obj.dx_space + 1, 0)
+            if style[5] == "1":
+                self.add_line(
+                    (x + dx) - 1, y + line.dy_up + 2, obj.dx - obj.dx_space + 1, 0
+                )
                 self.draw()
-            if type(obj.data)==str:
+            if type(obj.data) == str:
                 ret = False
-                if obj.parent and hasattr(obj.parent, 'draw_atom'):
+                if obj.parent and hasattr(obj.parent, "draw_atom"):
                     ret = obj.parent.draw_atom(
                         self,
                         obj.style,
@@ -304,9 +320,9 @@ class BaseDc(object):
                         (y + line.dy_up) - obj.dy_up,
                         obj.get_width(),
                         obj.get_height(),
-                        )
+                    )
                 if not ret:
-                    self.draw_text(x + dx, y + line.dy_up, obj.data.replace('»',' '))
+                    self.draw_text(x + dx, y + line.dy_up, obj.data.replace("»", " "))
             else:
                 obj.data.draw_atom(
                     self,
@@ -315,7 +331,7 @@ class BaseDc(object):
                     (y + line.dy_up) - obj.dy_up,
                     obj.get_width(),
                     obj.get_height(),
-                    )
+                )
             dx += obj.dx
 
 
@@ -333,8 +349,8 @@ class BaseDcInfo(object):
     def get_line_dy(self, height):
         return height * 12
 
-    def get_multiline_text_width(self, txt, style='default'):
-        txt_tab = txt.split(' ')
+    def get_multiline_text_width(self, txt, style="default"):
+        txt_tab = txt.split(" ")
         minsize = 0
         for word in txt_tab:
             size = self.get_text_width(word, style)
@@ -347,17 +363,17 @@ class BaseDcInfo(object):
             optsize = maxsize
         return (optsize, minsize, maxsize)
 
-    def get_multiline_text_height(self,txt,width,style='default'):
+    def get_multiline_text_height(self, txt, width, style="default"):
         lines = []
-        line = ''
-        line_ok = ''
+        line = ""
+        line_ok = ""
         dy = 0
-        txt_tab = txt.dc.split(' ')
+        txt_tab = txt.dc.split(" ")
         for pos in txt_tab:
-            if line == '':
+            if line == "":
                 line = pos
             else:
-                line = line + ' ' + pos
+                line = line + " " + pos
             if self.get_text_width(line, style) > width:
                 lines.append(line_ok)
                 dy += self.get_text_height(line_ok, style)
@@ -365,14 +381,14 @@ class BaseDcInfo(object):
                 line_ok = pos
             else:
                 line_ok = line
-        if line_ok != '':
+        if line_ok != "":
             lines.append(line_ok)
             dy += self.get_text_height(line_ok, style)
         return (dy, lines)
 
     def get_extents(self, word, style):
         dx = self.get_text_width(word, style)
-        dx_space = self.get_text_width(' ', style)
+        dx_space = self.get_text_width(" ", style)
         dy = self.get_test_height(word, style)
         dy_up = dy / 2
         dy_down = dy - dy_up
@@ -400,12 +416,12 @@ def convert_fun_arg(fn):
             arg2 = dy + self.y
             test = 1
         else:
-            if 'x' in kwargs:
-                dx = kwargs['x']
-                kwargs['x'] = dx + self.x
-            if 'y' in kwargs:
-                dy = kwargs['y']
-                kwargs['y'] = dy + self.y
+            if "x" in kwargs:
+                dx = kwargs["x"]
+                kwargs["x"] = dx + self.x
+            if "y" in kwargs:
+                dy = kwargs["y"]
+                kwargs["y"] = dy + self.y
         if len(args) > 3:
             if args[2] == -1:
                 arg3 = self.dx - dx
@@ -417,12 +433,12 @@ def convert_fun_arg(fn):
                 arg4 = args[3]
             test = 2
         else:
-            if 'dx' in kwargs:
-                if kwargs['dx'] == -1:
-                    kwargs['dx'] = self.dx - dx
-            if 'dy' in kwargs:
-                if kwargs['dx'] == -1:
-                    kwargs['dx'] = self.dy - dy
+            if "dx" in kwargs:
+                if kwargs["dx"] == -1:
+                    kwargs["dx"] = self.dx - dx
+            if "dy" in kwargs:
+                if kwargs["dx"] == -1:
+                    kwargs["dx"] = self.dy - dy
         if test == 0:
             return fn(self, *args, **kwargs)
         if test == 1:
@@ -434,8 +450,7 @@ def convert_fun_arg(fn):
 
 
 class SubDc(object):
-
-    def __init__(self,parent,x,y,dx,dy,reg_max=True):
+    def __init__(self, parent, x, y, dx, dy, reg_max=True):
         self.x = parent.x + x
         self.y = parent.y + y
         self.dx = dx
@@ -447,8 +462,15 @@ class SubDc(object):
         if reg_max:
             self._parent.test_point(self.x + self.dx, self.y + self.dy)
 
-    def subdc(self,x,y,dx,dy,reg_max=True,):
-        return SubDc(self,x,y,dx,dy,reg_max)
+    def subdc(
+        self,
+        x,
+        y,
+        dx,
+        dy,
+        reg_max=True,
+    ):
+        return SubDc(self, x, y, dx, dy, reg_max)
 
     def get_size(self):
         return [self.dx, self.dy]
@@ -461,22 +483,22 @@ class SubDc(object):
         return ret
 
     def play_str(self, str):
-        for buf in str.split('\n'):
+        for buf in str.split("\n"):
             buf = buf.strip()
-            if buf != '':
-                pos = buf.split('(')
+            if buf != "":
+                pos = buf.split("(")
                 if len(pos) > 2:
                     pos2 = []
                     pos2.append(pos[0])
-                    pos2.append(''.s.join(pos[1:]))
+                    pos2.append("".s.join(pos[1:]))
                     pos = pos2
                 if len(pos) == 2:
                     name = pos[0]
                     attr = (pos[1])[:-1]
-                    if attr == '':
+                    if attr == "":
                         attr = None
                     else:
-                        attr = json.loads('[' + attr + ']')
+                        attr = json.loads("[" + attr + "]")
                     fun = getattr(self, name)
                     if attr:
                         fun(*attr)
@@ -484,11 +506,11 @@ class SubDc(object):
                         fun()
 
     @convert_fun_arg
-    def add_line(self,x,y,dx,dy):
+    def add_line(self, x, y, dx, dy):
         return self._parent.add_line(x, y, dx, dy)
 
     @convert_fun_arg
-    def add_rectangle(self,x,y,dx,dy):
+    def add_rectangle(self, x, y, dx, dy):
         return self._parent.add_rectangle(x, y, dx, dy)
 
     @convert_fun_arg
@@ -539,7 +561,7 @@ class NullDc(object):
         self._maxheight = 0
 
     def __getattribute__(self, attr):
-        if attr.startswith('_'):
+        if attr.startswith("_"):
             ret = object.__getattribute__(self, attr)
         else:
             try:
@@ -621,10 +643,10 @@ class NullDcinfo(object):
     def get_line_dy(self, height):
         return height * 12
 
-    def get_multiline_text_width(self, txt, style='default'):
+    def get_multiline_text_width(self, txt, style="default"):
         return 100
 
-    def get_multiline_text_height(self, txt, width, style='default'):
+    def get_multiline_text_height(self, txt, width, style="default"):
         return (100, [])
 
     def get_extents(self, word, style):
@@ -632,5 +654,3 @@ class NullDcinfo(object):
 
     def get_style_id(self, style):
         return 0
-
-

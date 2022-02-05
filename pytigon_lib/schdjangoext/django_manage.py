@@ -10,33 +10,36 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import os
 import django
+
 
 def cmd(arg, from_main=False):
     if from_main:
         argv = arg
     else:
         if type(arg) == str:
-            argv=['manage.py', arg]
+            argv = ["manage.py", arg]
         else:
-            argv=['manage.py',] + arg
+            argv = [
+                "manage.py",
+            ] + arg
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.core.management import execute_from_command_line
+
     execute_from_command_line(argv)
 
 
 def syncdb():
-    cmd('syncdb')
+    cmd("syncdb")
 
 
 def help():
-    cmd('help')
-
+    cmd("help")

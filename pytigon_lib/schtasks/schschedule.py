@@ -17,14 +17,16 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-#import pendulum
+# import pendulum
 import datetime
 import asyncio
 import types
 
 from asyncio.events import get_event_loop
+
 loop = get_event_loop()
 import twisted.internet.asyncioreactor
+
 twisted.internet.asyncioreactor.install(loop)
 from twisted.internet import reactor
 from twisted.web import xmlrpc, server
@@ -32,15 +34,16 @@ import logging
 
 LOGGER = logging.getLogger("pytigon_task")
 
-#INIT_TIME = pendulum.now()
+# INIT_TIME = pendulum.now()
 INIT_TIME = datetime.datetime.now()
+
 
 def at_iterate(param):
     ret = []
 
     def tab_from_str(s):
         tab = [0, 0, 0]
-        x = s.split(':')
+        x = s.split(":")
         i = 0
         for ss in x[:3]:
             tab[i] = int(ss)
@@ -54,7 +57,7 @@ def at_iterate(param):
             else:
                 ret.append([pos, 0, 0])
     elif type(param) == str:
-        for pos in param.split(','):
+        for pos in param.split(","):
             if pos:
                 ret.append(tab_from_str(pos))
     else:
@@ -62,7 +65,7 @@ def at_iterate(param):
     return ret
 
 
-def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz='local'):
+def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz="local"):
     ret = []
     _day = day
 
@@ -74,8 +77,10 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz='local'):
             else:
                 x = INIT_TIME
                 try:
-                    #x2 = pendulum.datetime(x.year, x.month, _day, _hour, _minute, _second, tz=tz)
-                    x2 = datetime.datetime(x.year, x.month, _day, _hour, _minute, _second, tz=tz)
+                    # x2 = pendulum.datetime(x.year, x.month, _day, _hour, _minute, _second, tz=tz)
+                    x2 = datetime.datetime(
+                        x.year, x.month, _day, _hour, _minute, _second, tz=tz
+                    )
                     if x > x2:
                         x = x.add(months=1)
                 except:
@@ -114,7 +119,7 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz='local'):
     return ret
 
 
-def daily(at=0, in_weekdays=None, tz='local'):
+def daily(at=0, in_weekdays=None, tz="local"):
     ret = []
 
     def make_daily_fun(_hour, _minute, _second):
@@ -124,8 +129,10 @@ def daily(at=0, in_weekdays=None, tz='local'):
                 x = dt.add(days=1)
             else:
                 x = INIT_TIME
-                #x2 = pendulum.datetime(x.year, x.month, x.day, _hour, _minute, _second, tz=tz)
-                x2 = datetime.datetime(x.year, x.month, x.day, _hour, _minute, _second, tz=tz)
+                # x2 = pendulum.datetime(x.year, x.month, x.day, _hour, _minute, _second, tz=tz)
+                x2 = datetime.datetime(
+                    x.year, x.month, x.day, _hour, _minute, _second, tz=tz
+                )
                 if x > x2:
                     x = x.add(days=1)
             x = x.set(hour=_hour, minute=_minute, second=_second)
@@ -239,18 +246,19 @@ def _key(elem):
     return elem[4]
 
 
-class SChScheduler():
+class SChScheduler:
     def __init__(self, mail_conf=None, rpc_port=None):
         self.tasks = []
         self.fmap = {
-            'M': monthly,
-            'd': daily,
-            'h': hourly,
-            'm': in_minute_intervals,
-            's': in_second_intervals
+            "M": monthly,
+            "d": daily,
+            "h": hourly,
+            "m": in_minute_intervals,
+            "s": in_second_intervals,
         }
 
         if rpc_port:
+
             class RpcServer(xmlrpc.XMLRPC):
                 def __init__(self, scheduler):
                     self.scheduler = scheduler
@@ -273,8 +281,14 @@ class SChScheduler():
 
         if mail_conf:
             from pytigon_lib.schtools.imap4client import IMAPClient
-            self.imap4 = IMAPClient(mail_conf['server'], mail_conf['username'], mail_conf['password'],
-                                    mail_conf['inbox'], mail_conf['outbox'])
+
+            self.imap4 = IMAPClient(
+                mail_conf["server"],
+                mail_conf["username"],
+                mail_conf["password"],
+                mail_conf["inbox"],
+                mail_conf["outbox"],
+            )
         else:
             self.imap4 = None
 
@@ -286,12 +300,12 @@ class SChScheduler():
     def add_task(self, time_functions, task, *argi, **argv):
         functions = []
         if type(time_functions) == str:
-            x = time_functions.split(';')
+            x = time_functions.split(";")
             for pos in x:
                 if pos:
-                    if (len(pos) > 2 and pos[1] == '(') or len(pos) == 1:
+                    if (len(pos) > 2 and pos[1] == "(") or len(pos) == 1:
                         if pos[0] in self.fmap:
-                            x = pos.split('(')
+                            x = pos.split("(")
                             if len(x) > 1:
                                 pos = self.fmap[pos[0]].__name__ + "(" + x[1]
                             else:
@@ -306,13 +320,17 @@ class SChScheduler():
         elif type(time_functions) in (list, tuple):
             functions = time_functions
         else:
-            functions = [time_functions, ]
+            functions = [
+                time_functions,
+            ]
         for fun in functions:
             self.tasks.append([task, argi, argv, fun, fun(), task.__name__])
 
     def add_rpc_fun(self, name, fun):
         if self.rpcserver:
-            setattr(self.rpcserver, "xmlrpc_" + name, types.MethodType(fun, self.rpcserver))
+            setattr(
+                self.rpcserver, "xmlrpc_" + name, types.MethodType(fun, self.rpcserver)
+            )
             self.rpcserver_activated = True
 
     def get_tasks(self, name):
@@ -361,7 +379,7 @@ class SChScheduler():
         ret = []
         for task in asyncio.all_tasks():
             name = task._coro.__name__
-            if not name in ('_run', 'process'):
+            if not name in ("_run", "process"):
                 ret.append(task._coro.__name__)
         return ret
 
@@ -370,9 +388,13 @@ class SChScheduler():
             while True:
                 try:
                     loop = asyncio.get_event_loop()
-                    #loop.create_task(self.process(pendulum.now()))
+                    # loop.create_task(self.process(pendulum.now()))
                     loop.create_task(self.process(datetime.datetime.now()))
-                    if not self.tasks and not self.rpcserver_activated and not self.imap4:
+                    if (
+                        not self.tasks
+                        and not self.rpcserver_activated
+                        and not self.imap4
+                    ):
                         return
                 except:
                     LOGGER.exception("Problem with scheduler")
@@ -382,8 +404,9 @@ class SChScheduler():
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self._run())
 
-if __name__ == '__main__':
-    #INIT_TIME = pendulum.datetime(2016, 5, 1)
+
+if __name__ == "__main__":
+    # INIT_TIME = pendulum.datetime(2016, 5, 1)
     INIT_TIME = datetime.datetime(2016, 5, 1)
 
     scheduler = SChScheduler(rpc_port=7080)
@@ -393,7 +416,7 @@ if __name__ == '__main__':
 
     async def hello1(name="", scheduler=None):
         if scheduler:
-            tasks = scheduler.get_tasks('hello1')
+            tasks = scheduler.get_tasks("hello1")
             if len(tasks) > 0:
                 print(tasks[0][4])
                 return
@@ -401,8 +424,8 @@ if __name__ == '__main__':
 
     async def hello2(scheduler):
         print("Hello world 2")
-        x = p/10
-        #scheduler.remove_tasks('hello2')
+        x = p / 10
+        # scheduler.remove_tasks('hello2')
 
     async def exit(scheduler):
         scheduler.clear()
@@ -414,18 +437,39 @@ if __name__ == '__main__':
     scheduler.add_task(daily(at="22:07"), hello)
     scheduler.add_task(monthly(day=1, at="22:07"), hello)
 
-    scheduler.add_task(monthly(day=1, at="22:07"), hello1, name="monthly", scheduler=scheduler)
-    scheduler.add_task(daily(at="22:07", in_weekdays=(1, 2, 3, 4, 5)), hello1, name="monthly", scheduler=scheduler)
-    scheduler.add_task("hourly(at=7,in_weekdays=range(1,6), in_hours=range(3,5))", hello1, name="monthly",
-                       scheduler=scheduler)
-    scheduler.add_task("in_second_intervals(in_weekdays=range(1,2), in_hours=range(3,5))", hello1,
-                       name="in_second_intervals", scheduler=scheduler)
+    scheduler.add_task(
+        monthly(day=1, at="22:07"), hello1, name="monthly", scheduler=scheduler
+    )
+    scheduler.add_task(
+        daily(at="22:07", in_weekdays=(1, 2, 3, 4, 5)),
+        hello1,
+        name="monthly",
+        scheduler=scheduler,
+    )
+    scheduler.add_task(
+        "hourly(at=7,in_weekdays=range(1,6), in_hours=range(3,5))",
+        hello1,
+        name="monthly",
+        scheduler=scheduler,
+    )
+    scheduler.add_task(
+        "in_second_intervals(in_weekdays=range(1,2), in_hours=range(3,5))",
+        hello1,
+        name="in_second_intervals",
+        scheduler=scheduler,
+    )
 
-    scheduler.add_task("in_second_intervals(in_weekdays=range(1,2), in_hours=range(3,5))", hello2, scheduler)
+    scheduler.add_task(
+        "in_second_intervals(in_weekdays=range(1,2), in_hours=range(3,5))",
+        hello2,
+        scheduler,
+    )
 
     scheduler.add_task(in_minute_intervals(1), exit, scheduler=scheduler)
 
-    scheduler.add_task("M(day=31, at='22:07')", hello1, name="monthly", scheduler=scheduler)
+    scheduler.add_task(
+        "M(day=31, at='22:07')", hello1, name="monthly", scheduler=scheduler
+    )
     scheduler.add_task("M", hello1, name="monthly", scheduler=scheduler)
     scheduler.add_task(scheduler.s(), hello1, name="monthly", scheduler=scheduler)
 

@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 from pytigon_lib.schtools import schjson
@@ -31,32 +31,35 @@ CMD_EXEC = 7
 
 class Table:
     """Base class for server table interface"""
+
     def __init__(self):
         self.auto_cols = []
         self.col_length = [0]
-        self.col_names = ['ID']
-        self.col_types = ['int']
+        self.col_names = ["ID"]
+        self.col_types = ["int"]
         self.default_rec = [0]
 
     def _info(self):
-        return schjson.dumps({
-            'auto_cols': self.auto_cols,
-            'col_length': self.col_length,
-            'col_names': self.col_names,
-            'col_types': self.col_types,
-            'default_rec': self.default_rec,
-            })
+        return schjson.dumps(
+            {
+                "auto_cols": self.auto_cols,
+                "col_length": self.col_length,
+                "col_names": self.col_names,
+                "col_types": self.col_types,
+                "default_rec": self.default_rec,
+            }
+        )
 
-    def _page(self,nr,sort=None,value=None):
-        return schjson.dumps({'page': self.page(nr, sort, value)})
+    def _page(self, nr, sort=None, value=None):
+        return schjson.dumps({"page": self.page(nr, sort, value)})
 
     def _rec_as_str(self, nr):
-        return schjson.dumps({'recasstr': self.rec_as_str(nr)})
+        return schjson.dumps({"recasstr": self.rec_as_str(nr)})
 
     def _count(self, value=None):
-        return schjson.dumps({'count': self.count(value)})
+        return schjson.dumps({"count": self.count(value)})
 
-    def _sync(self,update,insert,delete):
+    def _sync(self, update, insert, delete):
         if len(update) > 0:
             for rec in update:
                 self.update_rec(rec)
@@ -66,10 +69,10 @@ class Table:
         if len(insert) > 0:
             for rec in insert:
                 self.insert_rec(rec)
-        return 'OK'
+        return "OK"
 
-    def _auto(self,col_name,col_names,rec):
-        return schjson.dumps({'rec': self.auto(col_name, col_names, rec)})
+    def _auto(self, col_name, col_names, rec):
+        return schjson.dumps({"rec": self.auto(col_name, col_names, rec)})
 
     def _exec(self, value=None):
         ret = self.exec_command(value)
@@ -78,7 +81,7 @@ class Table:
         else:
             return ret
 
-    def page(self,nr,sort=None,value=None):
+    def page(self, nr, sort=None, value=None):
         pass
 
     def count(self, value):
@@ -96,47 +99,51 @@ class Table:
     def delete_rec(self, nr):
         pass
 
-    def auto(self,col_name,col_names,rec):
+    def auto(self, col_name, col_names, rec):
         pass
 
     def exec_command(self, value):
         pass
 
     def command(self, cmd_dict):
-        if 'cmd' in cmd_dict:
-            cmd = cmd_dict['cmd']
+        if "cmd" in cmd_dict:
+            cmd = cmd_dict["cmd"]
         else:
             cmd = CMD_PAGE
             cmd_dict = {}
-            cmd_dict['nr'] = 0
+            cmd_dict["nr"] = 0
         if cmd == CMD_INFO:
             return self._info()
         if cmd == CMD_PAGE:
-            if 'value' in cmd_dict:
-                value = cmd_dict['value']
+            if "value" in cmd_dict:
+                value = cmd_dict["value"]
             else:
                 value = None
-            if 'sort' in cmd_dict:
-                return self._page(int(cmd_dict['nr']), cmd_dict['sort'], value=value)
+            if "sort" in cmd_dict:
+                return self._page(int(cmd_dict["nr"]), cmd_dict["sort"], value=value)
             else:
-                return self._page(int(cmd_dict['nr']), value=value)
+                return self._page(int(cmd_dict["nr"]), value=value)
         if cmd == CMD_COUNT:
-            if 'value' in cmd_dict:
-                value = cmd_dict['value']
+            if "value" in cmd_dict:
+                value = cmd_dict["value"]
             else:
                 value = None
             return self._count(value)
         if cmd == CMD_SYNC:
-            return self._sync(schjson.loads(cmd_dict['update']),
-                              schjson.loads(cmd_dict['insert']),
-                              schjson.loads(cmd_dict['delete']))
+            return self._sync(
+                schjson.loads(cmd_dict["update"]),
+                schjson.loads(cmd_dict["insert"]),
+                schjson.loads(cmd_dict["delete"]),
+            )
         if cmd == CMD_AUTO:
-            return self._auto(cmd_dict['col_name'], cmd_dict['col_names'], cmd_dict['rec'])
+            return self._auto(
+                cmd_dict["col_name"], cmd_dict["col_names"], cmd_dict["rec"]
+            )
         if cmd == CMD_RECASSTR:
-            return self._rec_as_str(int(cmd_dict['nr']))
+            return self._rec_as_str(int(cmd_dict["nr"]))
         if cmd == CMD_EXEC:
-            if 'value' in cmd_dict:
-                value = cmd_dict['value']
+            if "value" in cmd_dict:
+                value = cmd_dict["value"]
             else:
                 value = None
             return self._exec(value)
@@ -156,30 +163,29 @@ def str_cmp(x, y, ts):
 
 
 class TablePy(Table):
-
-    def __init__(self,table,col_names,col_typ,col_length,default_rec):
+    def __init__(self, table, col_names, col_typ, col_length, default_rec):
         self.tab = table
         self.auto_cols = []
         self.col_length = col_length
-        self.col_names = ['ID'] + col_names
-        self.col_types = ['int'] + col_typ
+        self.col_names = ["ID"] + col_names
+        self.col_types = ["int"] + col_typ
         self.default_rec = [0] + default_rec
 
-    def page(self,nr,sort=None,value=None):
+    def page(self, nr, sort=None, value=None):
         tab = []
         i = 0
-        tab2 = self.tab[nr * 256:(nr + 1) * 256]
+        tab2 = self.tab[nr * 256 : (nr + 1) * 256]
         for rec in tab2:
             tab.append([nr * 256 + i] + rec)
             i += 1
         if sort != None:
-            s = sort.split(',')
+            s = sort.split(",")
             ts = []
             for pos in s:
-                if pos != '':
+                if pos != "":
                     id = 0
                     ss = 0
-                    if pos[0] == '-':
+                    if pos[0] == "-":
                         id = self.col_names.index(pos[1:])
                         ss = -1
                     else:
@@ -201,7 +207,5 @@ class TablePy(Table):
     def delete_rec(self, nr):
         self.tab.pop(nr)
 
-    def auto(self,col_name,col_names,rec):
+    def auto(self, col_name, col_names, rec):
         pass
-
-

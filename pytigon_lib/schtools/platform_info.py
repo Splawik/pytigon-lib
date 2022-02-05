@@ -10,21 +10,22 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 from os import environ
 import platform
 
+
 def platform_name():
-    if platform.system()=='Linux':
-        if 'ANDROID_ARGUMENT' in environ:
-            return 'Android'
+    if platform.system() == "Linux":
+        if "ANDROID_ARGUMENT" in environ:
+            return "Android"
         else:
-            return 'Linux'
+            return "Linux"
     else:
         return platform.system()

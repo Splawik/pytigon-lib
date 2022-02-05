@@ -200,7 +200,7 @@ class HtmlViewerParser(HtmlModParser):
         return self._handle_starttag(tag, attrs)
 
     def _handle_starttag(self, tag, attrs):
-        #if tag == "div":
+        # if tag == "div":
         #    breakpoint()
         try:
             if "style" in attrs:
@@ -245,7 +245,7 @@ class HtmlViewerParser(HtmlModParser):
         self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
-        #if tag == "div":
+        # if tag == "div":
         #    breakpoint()
         try:
             if self.tag_parser:

@@ -10,24 +10,32 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, BaseHtmlAtomParser, register_tag_map
-from pytigon_lib.schhtml.atom import  Atom
-from pytigon_lib.schhtml.render_helpers import RenderBackground, RenderBorder, get_size, sizes_from_attr
+from pytigon_lib.schhtml.basehtmltags import (
+    BaseHtmlElemParser,
+    BaseHtmlAtomParser,
+    register_tag_map,
+)
+from pytigon_lib.schhtml.atom import Atom
+from pytigon_lib.schhtml.render_helpers import (
+    RenderBackground,
+    RenderBorder,
+    get_size,
+    sizes_from_attr,
+)
 from collections import deque
 from .p_tags import Par
 from .block_tags import BodyTag
 
 
 class TdRef(object):
-
     def __init__(self, tdref, parent, col, col_to_parent, row_to_parent, rowspan=0):
         self.parent = parent
         self.col = col
@@ -50,7 +58,6 @@ class TdRef(object):
 
 
 class TdEmptyTag(object):
-
     def __init__(self):
         self.colspan = 1
         self.rowspan = 1
@@ -77,13 +84,12 @@ class TdEmptyTag(object):
 
     def to_txt(self):
         return ""
-    
+
     def to_obj_tab(self):
         return {}
 
 
 class TrRef(object):
-
     def __init__(self, row, attrs):
         self.row = row
         self.height = -1
@@ -100,10 +106,9 @@ class TrRef(object):
 
 
 class TableTag(BaseHtmlAtomParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ['tr', 'caption', 'li', 'ctr*']
+        self.child_tags = ["tr", "caption", "li", "ctr*"]
         self.caption = None
         if self.parent.__class__ in (BodyTag,):
             self.subtab = False
@@ -111,16 +116,16 @@ class TableTag(BaseHtmlAtomParser):
             self.subtab = True
         rb = RenderBorder(self)
         self.border = rb.get_size()
-        if 'cellspacing' in attrs:
-            self.cellspacing = sizes_from_attr(attrs['cellspacing'])
+        if "cellspacing" in attrs:
+            self.cellspacing = sizes_from_attr(attrs["cellspacing"])
         else:
             self.cellspacing = [0, 0, 0, 0]
-        if 'cellpadding' in attrs:
-            self.cellpadding = sizes_from_attr(attrs['cellpadding'])
+        if "cellpadding" in attrs:
+            self.cellpadding = sizes_from_attr(attrs["cellpadding"])
         else:
             self.cellpadding = [0, 0, 0, 0]
-        if 'padding' in attrs:
-            self.padding = sizes_from_attr(attrs['padding'])
+        if "padding" in attrs:
+            self.padding = sizes_from_attr(attrs["padding"])
         else:
             self.padding = [0, 0, 0, 0]
         self.tr_list = []
@@ -137,20 +142,22 @@ class TableTag(BaseHtmlAtomParser):
         self.lp = 0
 
     def _get_pseudo_margins(self):
-        return [self.border[0] + self.padding[0], self.border[1]
-                 + self.padding[1], self.border[2] + self.padding[2],
-                self.border[3] + self.padding[3]]
+        return [
+            self.border[0] + self.padding[0],
+            self.border[1] + self.padding[1],
+            self.border[2] + self.padding[2],
+            self.border[3] + self.padding[3],
+        ]
 
     def get_width(self):
         if self.width >= 0:
             return [self.width, self.width, self.width]
         else:
-            if 'width' in self.attrs:
-                (parent_width, parent_min, parent_max) = \
-                    self.parent.get_client_width()
-                width = self._norm_sizes([self.attrs['width']], parent_width)[0]
-                min = self._norm_sizes([self.attrs['width']], parent_min)[0]
-                max = self._norm_sizes([self.attrs['width']], parent_max)[0]
+            if "width" in self.attrs:
+                (parent_width, parent_min, parent_max) = self.parent.get_client_width()
+                width = self._norm_sizes([self.attrs["width"]], parent_width)[0]
+                min = self._norm_sizes([self.attrs["width"]], parent_min)[0]
+                max = self._norm_sizes([self.attrs["width"]], parent_max)[0]
                 return [width, min, max]
             return self.parent.get_client_width()
 
@@ -214,14 +221,25 @@ class TableTag(BaseHtmlAtomParser):
                     if opt > parent_width or max > parent_width:
                         self.width = parent_width
                     else:
-                        self.width = opt + self.border[0] + self.border[1]\
-                             + self.padding[0] + self.padding[1]
+                        self.width = (
+                            opt
+                            + self.border[0]
+                            + self.border[1]
+                            + self.padding[0]
+                            + self.padding[1]
+                        )
                 else:
-                    self.width = opt + self.border[0] + self.border[1]\
-                         + self.padding[0] + self.padding[1]
+                    self.width = (
+                        opt
+                        + self.border[0]
+                        + self.border[1]
+                        + self.padding[0]
+                        + self.padding[1]
+                    )
             if self.width > 0:
-                width2 = (((self.width - self.border[0]) - self.border[1])
-                           - self.padding[0]) - self.padding[1]
+                width2 = (
+                    ((self.width - self.border[0]) - self.border[1]) - self.padding[0]
+                ) - self.padding[1]
                 if width2 < min:
                     for pos in self.sizes:
                         pos[0] = pos[1]
@@ -319,7 +337,9 @@ class TableTag(BaseHtmlAtomParser):
                             col_to_parent = tr[i].col_to_parent
                         else:
                             col_to_parent = 0
-                        self.tr_queue[j][i] = TdRef(tr[i], self, i, col_to_parent, j + 1, 0)
+                        self.tr_queue[j][i] = TdRef(
+                            tr[i], self, i, col_to_parent, j + 1, 0
+                        )
         if self.width >= 0 and len(self.tr_queue) == 0:
             if not self.sizes_ok and self.col_count > 0:
                 if not self.sizes:
@@ -337,9 +357,10 @@ class TableTag(BaseHtmlAtomParser):
                     else:
                         width_tab += self.sizes[i][0]
                 if no_size_count == 1:
-                    self.sizes[no_size_id][0] = ((((self.width - width_tab)
-                             - self.border[0]) - self.border[1])
-                             - self.padding[0]) - self.padding[1]
+                    self.sizes[no_size_id][0] = (
+                        (((self.width - width_tab) - self.border[0]) - self.border[1])
+                        - self.padding[0]
+                    ) - self.padding[1]
                     self.sizes[no_size_id][1] = self.sizes[no_size_id][0]
                     self.sizes[no_size_id][2] = self.sizes[no_size_id][0]
                     self.tr_list[-1][i].set_width(self.width - width_tab)
@@ -404,7 +425,10 @@ class TableTag(BaseHtmlAtomParser):
                         max_row_span = td.rowspan
                 stack += max_row_span - 2
                 rows += 1
-                if stack == 0 and not ('page-break-inside' in row.attrs and row.attrs['page-break-inside'] == 'avoid'):
+                if stack == 0 and not (
+                    "page-break-inside" in row.attrs
+                    and row.attrs["page-break-inside"] == "avoid"
+                ):
                     if self.in_close and len(self.tr_list) == rows:
                         self.end = True
                     return rows
@@ -415,16 +439,20 @@ class TableTag(BaseHtmlAtomParser):
     def render(self, dc_parm):
         self.reg_id(dc_parm)
         self.reg_end()
-        if 'border-color' in self.attrs:
-            rgb = dc_parm.rgbfromhex(self.attrs['border-color'])
+        if "border-color" in self.attrs:
+            rgb = dc_parm.rgbfromhex(self.attrs["border-color"])
         else:
             rgb = (0, 0, 0)
         if not self.sizes:
             if self.border[2] > 0:
                 dc_parm.set_color(rgb[0], rgb[1], rgb[2], 255)
                 dc_parm.set_line_width(self.border[0])
-                dc_parm.add_line(self.padding[0], self.padding[2], (self.width
-                                  - self.padding[0]) - self.padding[1], 0)
+                dc_parm.add_line(
+                    self.padding[0],
+                    self.padding[2],
+                    (self.width - self.padding[0]) - self.padding[1],
+                    0,
+                )
                 dc_parm.draw()
             return (self.padding[2] + self.padding[3], False)
         self._calculate_rows_height()
@@ -447,37 +475,72 @@ class TableTag(BaseHtmlAtomParser):
                 dc_parm.set_color(rgb[0], rgb[1], rgb[2], 255)
                 dc_parm.set_line_width(self.border[0])
                 if self.subtab:
-                    dc_parm.add_line(self.padding[0] + brd1, self.padding[2] + brd1, 0,
-                            ((dc_parm.dy - self.padding[2]) - self.padding[3]) - brd)
-                    dc_parm.add_line((dc_parm.dx - 1 * self.padding[1]) - brd2, self.padding[2] + brd1, 0,
-                            ((dc_parm.dy - self.padding[2]) - self.padding[3]) - brd)
+                    dc_parm.add_line(
+                        self.padding[0] + brd1,
+                        self.padding[2] + brd1,
+                        0,
+                        ((dc_parm.dy - self.padding[2]) - self.padding[3]) - brd,
+                    )
+                    dc_parm.add_line(
+                        (dc_parm.dx - 1 * self.padding[1]) - brd2,
+                        self.padding[2] + brd1,
+                        0,
+                        ((dc_parm.dy - self.padding[2]) - self.padding[3]) - brd,
+                    )
                 else:
                     if not self.start:
                         if self.end:
-                            dc_parm.add_line(self.padding[0] + brd1, -1 * brd2, 0, dc_parm.dy - self.padding[3])
-                            dc_parm.add_line((self.width - 1 * self.padding[1]) - brd2, -1 * brd2, 0,
-                                    dc_parm.dy - self.padding[3])
+                            dc_parm.add_line(
+                                self.padding[0] + brd1,
+                                -1 * brd2,
+                                0,
+                                dc_parm.dy - self.padding[3],
+                            )
+                            dc_parm.add_line(
+                                (self.width - 1 * self.padding[1]) - brd2,
+                                -1 * brd2,
+                                0,
+                                dc_parm.dy - self.padding[3],
+                            )
                         else:
-                            dc_parm.add_line(self.padding[0] + brd1, -1 * brd2, 0, dc_parm.dy)
-                            dc_parm.add_line((self.width - 1 * self.padding[1]) - brd2, -1 * brd2, 0, dc_parm.dy)
+                            dc_parm.add_line(
+                                self.padding[0] + brd1, -1 * brd2, 0, dc_parm.dy
+                            )
+                            dc_parm.add_line(
+                                (self.width - 1 * self.padding[1]) - brd2,
+                                -1 * brd2,
+                                0,
+                                dc_parm.dy,
+                            )
                 dc_parm.draw()
-            dc = dc_parm.subdc(self.border[0] + self.padding[0], 0, (((dc_parm.dx - self.border[0]) - self.border[1]) -
-                    self.padding[0]) - self.padding[1], dc_parm.dy)
+            dc = dc_parm.subdc(
+                self.border[0] + self.padding[0],
+                0,
+                (((dc_parm.dx - self.border[0]) - self.border[1]) - self.padding[0])
+                - self.padding[1],
+                dc_parm.dy,
+            )
         else:
             dc = dc_parm
         if self.start:
             if self.border[2] > 0:
                 dc_parm.set_color(rgb[0], rgb[1], rgb[2], 255)
                 dc.set_line_width(self.border[0])
-                dc.add_line(-1 * brd2, self.padding[2] + brd1, ((self.width - self.padding[0]) -
-                        self.padding[1]) - brd, 0)
+                dc.add_line(
+                    -1 * brd2,
+                    self.padding[2] + brd1,
+                    ((self.width - self.padding[0]) - self.padding[1]) - brd,
+                    0,
+                )
                 dc.draw()
             self.start = False
             if not self.subtab:
                 self.height = -1
                 return (self.border[2] + self.padding[2], True)
             else:
-                dc = dc.subdc(0, self.padding[2] + self.border[2], dc.dx, dc.dy - self.padding[2])
+                dc = dc.subdc(
+                    0, self.padding[2] + self.border[2], dc.dx, dc.dy - self.padding[2]
+                )
         size = self._iter()
         y = 0
         for row_id in range(0, size):
@@ -512,8 +575,12 @@ class TableTag(BaseHtmlAtomParser):
             if self.border[0] > 0:
                 dc_parm.set_color(rgb[0], rgb[1], rgb[2], 255)
                 dc.set_line_width(self.border[0])
-                dc_parm.add_line(self.padding[0] + brd1, (dc_parm.dy - self.padding[3]) - brd2,
-                        ((self.width - self.padding[0]) - self.padding[1]) - brd, 0)
+                dc_parm.add_line(
+                    self.padding[0] + brd1,
+                    (dc_parm.dy - self.padding[3]) - brd2,
+                    ((self.width - self.padding[0]) - self.padding[1]) - brd,
+                    0,
+                )
                 dc_parm.draw()
             y += self.border[3] + self.padding[3]
         self.height = -1
@@ -534,10 +601,9 @@ class TableTag(BaseHtmlAtomParser):
 
 
 class TrTag(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ['td', 'th']
+        self.child_tags = ["td", "th"]
         self.td_list = []
 
     def close(self):
@@ -563,32 +629,31 @@ class TrTag(BaseHtmlElemParser):
 
 
 class TdTag(Par):
-
     def __init__(self, parent, parser, tag, attrs):
         Par.__init__(self, parent, parser, tag, attrs)
         self.border = [0, 0, 0, 0]
         self.padding = [0, 0, 0, 0]
-        if 'colspan' in attrs:
-            self.colspan = int(attrs['colspan'])
+        if "colspan" in attrs:
+            self.colspan = int(attrs["colspan"])
         else:
             self.colspan = 1
-        if 'rowspan' in attrs:
-            self.rowspan = int(attrs['rowspan'])
+        if "rowspan" in attrs:
+            self.rowspan = int(attrs["rowspan"])
         else:
             self.rowspan = 1
         try:
-            if not 'border' in attrs:
-                self.attrs['border'] = self.parent.parent.border
-            if not 'cellspacing' in attrs:
-                self.attrs['cellspacing'] = self.parent.parent.cellspacing
-            if not 'cellpadding' in attrs:
-                self.attrs['cellpadding'] = self.parent.parent.cellpadding
+            if not "border" in attrs:
+                self.attrs["border"] = self.parent.parent.border
+            if not "cellspacing" in attrs:
+                self.attrs["cellspacing"] = self.parent.parent.cellspacing
+            if not "cellpadding" in attrs:
+                self.attrs["cellpadding"] = self.parent.parent.cellpadding
         except:
             pass
-        if 'width' in attrs:
+        if "width" in attrs:
             parent_width = parent.get_client_width()[0]
             if parent_width > 0:
-                self.width = self._norm_sizes([attrs['width']], parent_width)[0]
+                self.width = self._norm_sizes([attrs["width"]], parent_width)[0]
         self.extra_space = get_size(self.render_helpers)
 
     def close(self):
@@ -597,32 +662,33 @@ class TdTag(Par):
     def get_client_width(self):
         (opt, min, max) = self.get_width()
         if opt > 0:
-            opt -= self.border[0] + self.border[1] + self.padding[0]\
-                 + self.padding[1]
+            opt -= self.border[0] + self.border[1] + self.padding[0] + self.padding[1]
         if min > 0:
-            min -= self.border[0] + self.border[1] + self.padding[0]\
-                 + self.padding[1]
+            min -= self.border[0] + self.border[1] + self.padding[0] + self.padding[1]
         if max > 0:
-            max -= self.border[0] + self.border[1] + self.padding[0]\
-                 + self.padding[1]
+            max -= self.border[0] + self.border[1] + self.padding[0] + self.padding[1]
         return [opt, min, max]
 
 
 class CaptionTag(BaseHtmlElemParser):
-
-    def __init__(self, parent, parser, tag, attrs,):
+    def __init__(
+        self,
+        parent,
+        parser,
+        tag,
+        attrs,
+    ):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
         self.td_list = []
 
     def close(self):
-        self.parent.caption = ''.join(self.data)
+        self.parent.caption = "".join(self.data)
         BaseHtmlElemParser.close(self)
 
 
-register_tag_map('table', TableTag)
-register_tag_map('caption', CaptionTag)
-register_tag_map('tr', TrTag)
-register_tag_map('td', TdTag)
-register_tag_map('th', TdTag)
-register_tag_map('hr', TableTag)
-
+register_tag_map("table", TableTag)
+register_tag_map("caption", CaptionTag)
+register_tag_map("tr", TrTag)
+register_tag_map("td", TdTag)
+register_tag_map("th", TdTag)
+register_tag_map("hr", TableTag)

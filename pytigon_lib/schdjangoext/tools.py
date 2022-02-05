@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import traceback
 import sys
@@ -23,10 +23,11 @@ import os
 
 from django.conf import settings
 
+
 def import_model(app, tab):
     """import model module for specified application and return module instance."""
     try:
-        m = '%s.models' % str(app)
+        m = "%s.models" % str(app)
         module = None
         models = None
         for tmp in sys.modules:
@@ -35,28 +36,30 @@ def import_model(app, tab):
                 models = module
                 break
         if not module:
-            module = __import__('%s.models' % str(app))
+            module = __import__("%s.models" % str(app))
         if module:
             if not models:
-                models = getattr(module, 'models')
+                models = getattr(module, "models")
             model = getattr(models, tab)
             return model
         return None
     except:
         traceback.print_exc()
 
+
 def gettempdir():
     return settings.TEMP_PATH
 
+
 def make_href(href, base_url=None):
-    if settings.URL_ROOT_FOLDER and href.startswith('/'):
-        href2 =  "/" + settings.URL_ROOT_FOLDER + href
+    if settings.URL_ROOT_FOLDER and href.startswith("/"):
+        href2 = "/" + settings.URL_ROOT_FOLDER + href
     else:
         href2 = href
-    if base_url and '?' in base_url:
-        x = base_url.split('?', 1)[1]
-        if '?' in href2:
-            href2 += '&' + x
+    if base_url and "?" in base_url:
+        x = base_url.split("?", 1)[1]
+        if "?" in href2:
+            href2 += "&" + x
         else:
-            href2 += '?' + x
+            href2 += "?" + x
     return href2

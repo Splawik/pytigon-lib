@@ -10,18 +10,23 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import asyncio
-from autobahn.twisted.websocket import WebSocketClientFactory, WebSocketClientProtocol, connectWS
+from autobahn.twisted.websocket import (
+    WebSocketClientFactory,
+    WebSocketClientProtocol,
+    connectWS,
+)
 from pytigon_lib.schtools.schjson import json_dumps, json_loads
 
-class PytigonClientProtocolBase():
+
+class PytigonClientProtocolBase:
     def onConnect(self, response):
         print("OnConnect")
         return self.app.on_websocket_connect(self, self.websocket_id, response)
@@ -35,11 +40,12 @@ class PytigonClientProtocolBase():
         pass
 
     def onMessage(self, msg, binary):
-        return self.app.on_websocket_message(self, self.websocket_id, { "msg": msg })
+        return self.app.on_websocket_message(self, self.websocket_id, {"msg": msg})
 
 
 def create_websocket_client(app, websocket_id, local=False, callback=False):
     if local:
+
         class PytigonClientProtocol(PytigonClientProtocolBase):
             def __init__(self, app):
                 self.app = app
@@ -54,6 +60,7 @@ def create_websocket_client(app, websocket_id, local=False, callback=False):
         app.websockets[websocket_id] = PytigonClientProtocol(app)
 
     else:
+
         class PytigonClientProtocol(PytigonClientProtocolBase, WebSocketClientProtocol):
             def __init__(self):
                 nonlocal app, websocket_id
@@ -65,9 +72,9 @@ def create_websocket_client(app, websocket_id, local=False, callback=False):
                 self.status = 0
 
             def send_message(self, msg):
-                super().sendMessage(json_dumps(msg).encode('utf-8'))
+                super().sendMessage(json_dumps(msg).encode("utf-8"))
 
-        ws_address = app.base_address.replace('http', 'ws').replace('https', 'wss')
+        ws_address = app.base_address.replace("http", "ws").replace("https", "wss")
         ws_address += websocket_id
         factory = WebSocketClientFactory(ws_address)
         factory.protocol = PytigonClientProtocol

@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 """
 Form example in string format
@@ -36,35 +36,35 @@ from pytigon_lib.schdjangoext import fields as ext_fields
 
 
 def _scan_lines(input_str):
-    l = input_str.replace('\r','').split('\n')
+    l = input_str.replace("\r", "").split("\n")
     ret = []
     append_to_last = False
     for pos in l:
         if append_to_last:
-            ret[-1]=ret[-1]+";"+pos
-            if ']' in pos:
-                append_to_last=False
+            ret[-1] = ret[-1] + ";" + pos
+            if "]" in pos:
+                append_to_last = False
         else:
             ret.append(pos)
-            if ':[' in pos and not ']' in pos:
+            if ":[" in pos and not "]" in pos:
                 append_to_last = True
     return ret
 
 
 def _get_name_and_title(s):
     required = False
-    if s.endswith('!'):
+    if s.endswith("!"):
         required = True
         s = s[:-1]
 
-    if '//' in s:
-        name, title = s.split('//', 1)
+    if "//" in s:
+        name, title = s.split("//", 1)
     else:
         title = s
-        x = s.encode('ascii', 'replace').decode('utf-8').replace('?','_').lower()
+        x = s.encode("ascii", "replace").decode("utf-8").replace("?", "_").lower()
         name = ""
         for z in x:
-            if (z>='a' and z<='z') or (z>='0' and z<='9') or z=='_':
+            if (z >= "a" and z <= "z") or (z >= "0" and z <= "9") or z == "_":
                 name += z
         name = name[:16]
     return name, title, required
@@ -73,54 +73,67 @@ def _get_name_and_title(s):
 def _read_form_line(line):
     kwargs = {}
     field_type = None
-    title=""
-    name=""
-    required=False
-    frm=""
+    title = ""
+    name = ""
+    required = False
+    frm = ""
     if "::" in line:
         x = line.rsplit("::", 1)
         line2 = x[0].strip()
         frm = x[1].strip()
-        if frm.startswith('0'):
-            field_type=forms.IntegerField
-            if len(frm)>1:
-               kwargs = { 'min_value': 0, 'max_value': 10**len(frm) }
-        elif frm.startswith('9'):
-            field_type=forms.FloatField
-            if len(frm)>1:
-               kwargs = { 'min_value': 0, 'max_value': 10**len(frm) }
-        elif frm.startswith('#'):
-            field_type=forms.DateField
-        elif frm.startswith('*'):
-            field_type=forms.CharField
-            if len(frm)>0:
-               kwargs = { 'max_length': len(frm) }
-        elif frm.startswith('_'):
-            field_type=forms.CharField
-            kwargs = { 'widget': forms.Textarea }
-        elif frm.startswith('['):
-            field_type=forms.ChoiceField
-            choices = list([ (pos,pos,) for pos in frm[1:-1].split(';') if pos])
-            kwargs = { 'choices': choices }
+        if frm.startswith("0"):
+            field_type = forms.IntegerField
+            if len(frm) > 1:
+                kwargs = {"min_value": 0, "max_value": 10 ** len(frm)}
+        elif frm.startswith("9"):
+            field_type = forms.FloatField
+            if len(frm) > 1:
+                kwargs = {"min_value": 0, "max_value": 10 ** len(frm)}
+        elif frm.startswith("#"):
+            field_type = forms.DateField
+        elif frm.startswith("*"):
+            field_type = forms.CharField
+            if len(frm) > 0:
+                kwargs = {"max_length": len(frm)}
+        elif frm.startswith("_"):
+            field_type = forms.CharField
+            kwargs = {"widget": forms.Textarea}
+        elif frm.startswith("["):
+            field_type = forms.ChoiceField
+            choices = list(
+                [
+                    (
+                        pos,
+                        pos,
+                    )
+                    for pos in frm[1:-1].split(";")
+                    if pos
+                ]
+            )
+            kwargs = {"choices": choices}
     else:
-        if line.endswith('?'):
-            field_type=forms.BooleanField
+        if line.endswith("?"):
+            field_type = forms.BooleanField
             line2 = line[:-1].strip()
         else:
-            field_type=forms.CharField
+            field_type = forms.CharField
             line2 = line
     name, title, required = _get_name_and_title(line2)
     return name, field_type, title, required, kwargs
 
 
-def form_from_str(input_str, init_data = {}, base_form_class = forms.Form, prefix=""):
-    if 'base_form' in input_str:
-        make_form_str = "def make_form_class(base_form, init_data):\n" + "\n".join(
-            ['    ' + pos for pos in input_str.split('\n')]) + "\n"
+def form_from_str(input_str, init_data={}, base_form_class=forms.Form, prefix=""):
+    if "base_form" in input_str:
+        make_form_str = (
+            "def make_form_class(base_form, init_data):\n"
+            + "\n".join(["    " + pos for pos in input_str.split("\n")])
+            + "\n"
+        )
         exec(make_form_str)
-        _Form = locals()['make_form_class'](base_form_class, init_data)
+        _Form = locals()["make_form_class"](base_form_class, init_data)
         return _Form
     else:
+
         class _Form(base_form_class):
             def __init__(self, *args, **kwargs):
                 super(_Form, self).__init__(*args, **kwargs)
@@ -128,9 +141,23 @@ def form_from_str(input_str, init_data = {}, base_form_class = forms.Form, prefi
                 tab = _scan_lines(input_str)
                 for pos in tab:
                     if pos:
-                        name, field_type, title, required, form_kwargs = _read_form_line(pos.strip())
+                        (
+                            name,
+                            field_type,
+                            title,
+                            required,
+                            form_kwargs,
+                        ) = _read_form_line(pos.strip())
                         if name in init_data:
-                            self.fields[prefix+name] = field_type(label=title, required=required, initial=init_data[name], **form_kwargs)
+                            self.fields[prefix + name] = field_type(
+                                label=title,
+                                required=required,
+                                initial=init_data[name],
+                                **form_kwargs
+                            )
                         else:
-                            self.fields[prefix+name] = field_type(label=title, required=required, **form_kwargs)
+                            self.fields[prefix + name] = field_type(
+                                label=title, required=required, **form_kwargs
+                            )
+
         return _Form

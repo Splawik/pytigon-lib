@@ -10,66 +10,78 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
-#try:
+# try:
 #    from html.parser import HTMLParser
 #    HTMLParseError = None
-#except:
+# except:
 #    from HTMLParser import HTMLParser, HTMLParseError
 
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
-from pytigon_lib.schhtml.render_helpers import RenderBackground, RenderBorder, \
-    RenderPadding, RenderMargin, get_size
+from pytigon_lib.schhtml.render_helpers import (
+    RenderBackground,
+    RenderBorder,
+    RenderPadding,
+    RenderMargin,
+    get_size,
+)
 from .p_tags import ParBase
 from pytigon_lib.schhtml.htmltools import HtmlProxyParser
 
 
 class BodyTag(ParBase):
-
     def __init__(self, parent, parser, tag, attrs):
         ParBase.__init__(self, parent, parser, tag, attrs)
         self.child_tags += [
-            'p',
-            'table',
-            'h1',
-            'h2',
-            'h3',
-            'h4',
-            'h5',
-            'h6',
-            'calc',
-            'ul',
-            'ol',
-            'newpage',
-            'page',
-            'ctr*',
-            'dl',
-            'dt',
-            'dd',
-            'form',
-            'hr',
-            'pre',
-            'div',
-            'label'
-            ]
+            "p",
+            "table",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "calc",
+            "ul",
+            "ol",
+            "newpage",
+            "page",
+            "ctr*",
+            "dl",
+            "dt",
+            "dd",
+            "form",
+            "hr",
+            "pre",
+            "div",
+            "label",
+        ]
         self.page = 1
         self.y = 0
         self.border = 0
         self.cellspacing = 0
         self.dc_page = None
         (width, height) = parent.dc.get_size()
-        self.render_helpers = [RenderMargin(self), RenderBorder(self),
-                               RenderBackground(self), RenderPadding(self)]
+        self.render_helpers = [
+            RenderMargin(self),
+            RenderBorder(self),
+            RenderBackground(self),
+            RenderPadding(self),
+        ]
         self.extra_space = get_size(self.render_helpers)
-        self.margins = [self.extra_space[0], self.extra_space[1],
-                        self.extra_space[2], self.extra_space[3]]
+        self.margins = [
+            self.extra_space[0],
+            self.extra_space[1],
+            self.extra_space[2],
+            self.extra_space[3],
+        ]
         self.dc = parent.dc.subdc(0, 0, width, height, False)
         (self.width, self.height) = self.dc.get_size()
         if self.width >= 0:
@@ -94,14 +106,14 @@ class BodyTag(ParBase):
         self.get_style_id()
 
     def data_from_child(self, child, data):
-        if child.tag == 'header':
+        if child.tag == "header":
             self.header = data.getvalue()
-            if 'height' in child.attrs:
-                self.header_height = int(child.attrs['height'])
+            if "height" in child.attrs:
+                self.header_height = int(child.attrs["height"])
         else:
             self.footer = data.getvalue()
-            if 'height' in child.attrs:
-                self.footer_height = int(child.attrs['height'])
+            if "height" in child.attrs:
+                self.footer_height = int(child.attrs["height"])
             if self.footer_height == 0:
                 self.footer_height = self.height / 10
 
@@ -136,9 +148,14 @@ class BodyTag(ParBase):
             self.dc.paging = True
 
     def _get_pseudo_margins(self):
-        #return [self.extra_space[0], self.extra_space[1], self.extra_space[2]
+        # return [self.extra_space[0], self.extra_space[1], self.extra_space[2]
         #         + self.y, self.extra_space[3]]
-        return [self.extra_space[0], self.extra_space[1], self.extra_space[2] , self.extra_space[3]]
+        return [
+            self.extra_space[0],
+            self.extra_space[1],
+            self.extra_space[2],
+            self.extra_space[3],
+        ]
 
     def get_client_height(self):
         if not self.dc_page:
@@ -218,10 +235,14 @@ class BodyTag(ParBase):
                         self._maxwidth = w + self.extra_space[0] + self.extra_space[1]
                     dy = child.get_height()
                     child.set_height(dy)
-                    if not self.dc.paging or dy <= self.height - self.footer_height - self.y\
-                            or self.new_page != 2:
-                        (dy, cont) = child.render(self.dc_page.subdc(0, self.y,
-                                self.width, dy))
+                    if (
+                        not self.dc.paging
+                        or dy <= self.height - self.footer_height - self.y
+                        or self.new_page != 2
+                    ):
+                        (dy, cont) = child.render(
+                            self.dc_page.subdc(0, self.y, self.width, dy)
+                        )
                         self.new_page = 2
                         if dy > 0:
                             self.y += dy
@@ -231,15 +252,17 @@ class BodyTag(ParBase):
                     if self.y > self._maxheight:
                         self._maxheight = self.y
 
-register_tag_map('body', BodyTag)
+
+register_tag_map("body", BodyTag)
 
 
 class FormTag(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
         self.child_tags = parent.child_tags
-        self.child_tags += [ 'table', ]
+        self.child_tags += [
+            "table",
+        ]
         self.fields = None
         self.field_names = {}
         self.upload = None
@@ -248,10 +271,10 @@ class FormTag(BaseHtmlElemParser):
         self.parent.gethref = self.gethref
         self.parent.set_upload = self.set_upload
         self.parent.get_upload = self.get_upload
-        self.parent.form_obj=self
+        self.parent.form_obj = self
 
     def close(self):
-        self.parent.form_obj=None
+        self.parent.form_obj = None
 
     def handle_data(self, data):
         pass
@@ -265,28 +288,28 @@ class FormTag(BaseHtmlElemParser):
     def reg_field(self, field):
         if field in self.field_names:
             self.field_names[field] = self.field_names[field] + 1
-            field2 = field + '__' + str(self.field_names[field])
+            field2 = field + "__" + str(self.field_names[field])
         else:
             self.field_names[field] = 1
             field2 = field
-        if not field.startswith('_'):
+        if not field.startswith("_"):
             if self.fields:
-                self.fields = self.fields + ',' + field2
+                self.fields = self.fields + "," + field2
             else:
                 self.fields = field2
         return field2
 
     def get_fields(self):
-        method = 'GET'
-        if 'method' in self.attrs:
-            method = self.attrs['method']
+        method = "GET"
+        if "method" in self.attrs:
+            method = self.attrs["method"]
         if self.fields:
-            return method + ':' + self.fields
+            return method + ":" + self.fields
         else:
             return None
 
     def gethref(self):
-        return self.attrs['action']
+        return self.attrs["action"]
 
     def set_upload(self, upload):
         self.upload = upload
@@ -295,5 +318,4 @@ class FormTag(BaseHtmlElemParser):
         return self.upload
 
 
-register_tag_map('form', FormTag)
-
+register_tag_map("form", FormTag)

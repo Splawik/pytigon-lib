@@ -20,6 +20,7 @@
 import logging
 from html.parser import HTMLParser
 
+
 class OnlyTxtParser(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
@@ -31,6 +32,7 @@ class OnlyTxtParser(HTMLParser):
     def to_txt(self):
         return " ".join(self.txt)
 
+
 def to_txt(html_txt):
     try:
         parser = OnlyTxtParser()
@@ -40,8 +42,8 @@ def to_txt(html_txt):
         return ""
 
 
-class RemoteScreen():
-    def __init__(self, cproxy, direction='down'):
+class RemoteScreen:
+    def __init__(self, cproxy, direction="down"):
         self.cproxy = cproxy
         self.direction = direction
 
@@ -71,7 +73,7 @@ class RemoteScreen():
                 fun(to_txt(html_txt))
 
     def log(self, html_txt):
-        return self._log(html_txt, "log-line", logging.info, "===>>.log" )
+        return self._log(html_txt, "log-line", logging.info, "===>>.log")
 
     def info(self, html_txt):
         return self._log(html_txt, "text-info", logging.info, "===>>.log")
@@ -81,4 +83,3 @@ class RemoteScreen():
 
     def error(self, html_txt):
         return self._log(html_txt, "text-white bg-danger", logging.error, "===>>.log")
-

@@ -10,32 +10,44 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
 from pytigon_lib.schhtml.atom import Atom
-from pytigon_lib.schhtml.render_helpers import RenderBackground, RenderBorder, \
-    RenderCellSpacing, RenderCellPadding, get_size
+from pytigon_lib.schhtml.render_helpers import (
+    RenderBackground,
+    RenderBorder,
+    RenderCellSpacing,
+    RenderCellPadding,
+    get_size,
+)
 
 
 class VectorImg(BaseHtmlAtomParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
         self.gparent = parent.gparent
-        self.render_helpers = [RenderCellSpacing(self), RenderBorder(self),
-                               RenderBackground(self), RenderCellPadding(self)]
+        self.render_helpers = [
+            RenderCellSpacing(self),
+            RenderBorder(self),
+            RenderBackground(self),
+            RenderCellPadding(self),
+        ]
         self.extra_space = get_size(self.render_helpers)
-        self.draw_txt = ''
+        self.draw_txt = ""
 
     def _get_pseudo_margins(self):
-        return [self.extra_space[0], self.extra_space[1], self.extra_space[2],
-                self.extra_space[3]]
+        return [
+            self.extra_space[0],
+            self.extra_space[1],
+            self.extra_space[2],
+            self.extra_space[3],
+        ]
 
     def close(self):
         if self.width > 0 and self.height > 0:
@@ -63,4 +75,4 @@ class VectorImg(BaseHtmlAtomParser):
         return True
 
 
-register_tag_map('vimg', VectorImg)
+register_tag_map("vimg", VectorImg)
