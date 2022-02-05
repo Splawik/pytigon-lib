@@ -10,28 +10,36 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 
 from pytigon_lib.schhtml.htmltools import superstrip
 
-decode_sym = (('&gt;','>'), ('&lt;','<'), ('&amp;', '&'), ('&quot;','\"'),)
+decode_sym = (
+    ("&gt;", ">"),
+    ("&lt;", "<"),
+    ("&amp;", "&"),
+    ("&quot;", '"'),
+)
+
 
 def unescape(txt):
     ret = txt
     for pos in decode_sym:
         if pos[0] in txt:
-            ret = ret.replace(pos[0],pos[1])
+            ret = ret.replace(pos[0], pos[1])
     return ret
+
 
 class Atom(object):
     """Base rendered element"""
-    def __init__(self,data,dx,dx_space,dy_up,dy_down,style=-1,is_txt=False):
+
+    def __init__(self, data, dx, dx_space, dy_up, dy_down, style=-1, is_txt=False):
         self.data = data
         self.dx = dx
         self.dx_space = dx_space
@@ -56,7 +64,7 @@ class Atom(object):
 
 class NullAtom(Atom):
     def __init__(self):
-        self.data = ''
+        self.data = ""
         self.dx = 0
         self.dx_space = 0
         self.dy_up = 0
@@ -65,7 +73,7 @@ class NullAtom(Atom):
         self.parent = None
         self.is_txt = None
 
-    def draw_atom(self,dc,style,x,y):
+    def draw_atom(self, dc, style, x, y):
         return True
 
 
@@ -74,8 +82,10 @@ class BrAtom(NullAtom):
         NullAtom.__init__(self)
         self.cr_count = cr_count
 
+
 class AtomLine(object):
     """Class represent full line in rendered html"""
+
     def __init__(self, maxwidth):
         self.maxwidth = maxwidth
         self.dx = 0
@@ -106,7 +116,10 @@ class AtomLine(object):
 
     def append(self, atom, force_append=False):
         if len(self.objs) > 0:
-            if force_append or (self.dx + atom.get_width()) - atom.dx_space <= self.maxwidth:
+            if (
+                force_append
+                or (self.dx + atom.get_width()) - atom.dx_space <= self.maxwidth
+            ):
                 self._append(atom)
                 return True
             return False
@@ -133,18 +146,18 @@ class AtomList(object):
     def set_line_dy(self, dy):
         self.line_dy = self.dc_info.get_line_dy(dy)
 
-    def append_text(self,txt,style,parent=None):
+    def append_text(self, txt, style, parent=None):
         if txt and len(txt) > 0:
             if not self.pre:
-                txt2 = unescape(txt.replace('\n', ' '))
+                txt2 = unescape(txt.replace("\n", " "))
             else:
-                if '\n' in txt:
+                if "\n" in txt:
                     txt2 = unescape(txt)
-                    x = txt2.split('\n')
+                    x = txt2.split("\n")
                     self.append_text(x[0], style, parent)
                     last_br = None
                     for pos in x[1:]:
-                        if pos!='':
+                        if pos != "":
                             if last_br:
                                 last_br.cr_count += 1
                             else:
@@ -161,27 +174,43 @@ class AtomList(object):
                     return
                 else:
                     txt2 = unescape(txt)
-            words = superstrip(txt2).split(' ')
-            if txt2[0] == ' ':
-                words[0] = ' ' + words[0]
+            words = superstrip(txt2).split(" ")
+            if txt2[0] == " ":
+                words[0] = " " + words[0]
             for i in range(0, len(words) - 1):
-                words[i] = words[i] + ' '
-            if txt2[-1] == ' ':
-                words[-1] = words[-1] + ' '
-                if words[-1] == '  ':
-                    words[-1] = ' '
+                words[i] = words[i] + " "
+            if txt2[-1] == " ":
+                words[-1] = words[-1] + " "
+                if words[-1] == "  ":
+                    words[-1] = " "
             if self.pre or (parent and parent.no_wrap):
-                if txt2 != '':
+                if txt2 != "":
                     extents = self.dc_info.get_extents(txt2, style)
-                    atom = Atom(superstrip(txt2),extents[0],extents[1],extents[2],extents[3],style,True)
+                    atom = Atom(
+                        superstrip(txt2),
+                        extents[0],
+                        extents[1],
+                        extents[2],
+                        extents[3],
+                        style,
+                        True,
+                    )
                     atom.set_parent(parent)
                     self.atom_list.append(atom)
             else:
                 for word in words:
-                    if word == '':
+                    if word == "":
                         continue
                     extents = self.dc_info.get_extents(word, style)
-                    atom = Atom(word,extents[0],extents[1],extents[2],extents[3],style,True)
+                    atom = Atom(
+                        word,
+                        extents[0],
+                        extents[1],
+                        extents[2],
+                        extents[3],
+                        style,
+                        True,
+                    )
                     if parent:
                         atom.set_parent(parent)
                     self.atom_list.append(atom)
@@ -217,16 +246,22 @@ class AtomList(object):
         line = AtomLine(width)
         for atom in self.atom_list:
             if atom.__class__ == BrAtom:
-                if atom.cr_count>1:
-                    line.dy_down = line.dy_down + line.get_height()*(atom.cr_count-1)
+                if atom.cr_count > 1:
+                    line.dy_down = line.dy_down + line.get_height() * (
+                        atom.cr_count - 1
+                    )
                 l.append(line)
                 line = AtomLine(width)
                 continue
             test_append = True
-            if atom.is_txt and atom.data == ' ':
-                if last_atom == None or last_atom and last_atom.is_txt\
-                        and last_atom.data[-1] == ' ' or 'CtrlTag'\
-                        in last_atom.data.__class__.__name__:
+            if atom.is_txt and atom.data == " ":
+                if (
+                    last_atom == None
+                    or last_atom
+                    and last_atom.is_txt
+                    and last_atom.data[-1] == " "
+                    or "CtrlTag" in last_atom.data.__class__.__name__
+                ):
                     test_append = False
             if test_append:
                 if not line.append(atom):
@@ -251,7 +286,7 @@ class AtomList(object):
         else:
             return -1
 
-    def draw_atom_list(self,dc,align=0,valign=1):
+    def draw_atom_list(self, dc, align=0, valign=1):
         size = dc.get_size()
         if size[0] == -1:
             size[0] = self.width
@@ -278,9 +313,9 @@ class AtomList(object):
         return y - self.line_dy
 
     def to_txt(self):
-        ret = ''
+        ret = ""
         for atom in self.atom_list:
-            if type(atom.data)==str:
+            if type(atom.data) == str:
                 ret += atom.data
         return ret
 
@@ -291,7 +326,7 @@ class AtomList(object):
                 for attr in atom.parent.attrs:
                     if not attr in attrs:
                         attrs[attr] = atom.parent.attrs[attr]
-                attrs['data'] = atom.data
+                attrs["data"] = atom.data
         return attrs
 
     def to_obj_tab(self):
@@ -300,5 +335,3 @@ class AtomList(object):
             if atom.parent and not atom.parent.sys_id in objs:
                 objs[atom.parent.sys_id] = atom.parent
         return objs
-
-

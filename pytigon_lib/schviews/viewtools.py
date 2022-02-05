@@ -178,7 +178,6 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             if hasattr(o, "template_for_object"):
                 t = o.template_for_object(v, context, doc_type)
                 if t:
-                    print("B1: ", t)
                     return t
 
         elif context and "view" in context and "object_list" in context:
@@ -188,7 +187,6 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 if hasattr(ol.model, "template_for_list"):
                     t = ol.model.template_for_list(v, ol.model, context, doc_type)
                     if t:
-                        print("B2: ", t)
                         return t
         return None
 

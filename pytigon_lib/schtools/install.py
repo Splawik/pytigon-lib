@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import datetime
 import zipfile
@@ -27,6 +27,7 @@ from pytigon_lib.schtools.process import py_run
 from pytigon_lib.schtools.cc import make
 from pytigon_lib.schtools.main_paths import get_prj_name
 
+
 def install():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
@@ -35,84 +36,139 @@ def install():
     data_path = settings.DATA_PATH
     prj_path = settings.PRJ_PATH
     app_data_path = os.path.join(data_path, prj_name)
-    db_path = os.path.join(app_data_path, prj_name+".db")
+    db_path = os.path.join(app_data_path, prj_name + ".db")
 
     upgrade = False
 
     if os.path.exists(db_path):
         upgrade = True
-    if 'local' in settings.DATABASES:
-        db_profile = 'local'
+    if "local" in settings.DATABASES:
+        db_profile = "local"
     else:
-        db_profile = 'default'
+        db_profile = "default"
 
     db_path_new = os.path.join(app_data_path, prj_name + ".new")
 
     if upgrade:
         try:
-            cmd(['migrate', '--database', db_profile])
+            cmd(["migrate", "--database", db_profile])
         except:
             print("Migration for database: " + db_profile + " - fails")
     else:
         os.rename(db_path_new, db_path)
 
-    if db_profile != 'default':
+    if db_profile != "default":
         try:
-            cmd(['migrate', '--database', 'default'])
+            cmd(["migrate", "--database", "default"])
         except:
             print("Migration for database: defautl - fails")
 
     if not upgrade:
-        if db_profile != 'default':
-            temp_path = os.path.join(data_path, 'temp')
+        if db_profile != "default":
+            temp_path = os.path.join(data_path, "temp")
             if not os.path.exists(temp_path):
                 os.mkdir(temp_path)
-            json_path = os.path.join(temp_path, prj_name + '.json')
+            json_path = os.path.join(temp_path, prj_name + ".json")
             print(json_path)
-            cmd(['dumpdata', '--database', db_profile, '--format', 'json', '--indent', '4',
-                 '-e', 'auth', '-e', 'contenttypes', '-e', 'sessions', '-e', 'sites', '-e', 'admin',
-                 '--output', json_path])
-            cmd(['loaddata', '--database', 'default', json_path])
+            cmd(
+                [
+                    "dumpdata",
+                    "--database",
+                    db_profile,
+                    "--format",
+                    "json",
+                    "--indent",
+                    "4",
+                    "-e",
+                    "auth",
+                    "-e",
+                    "contenttypes",
+                    "-e",
+                    "sessions",
+                    "-e",
+                    "sites",
+                    "-e",
+                    "admin",
+                    "--output",
+                    json_path,
+                ]
+            )
+            cmd(["loaddata", "--database", "default", json_path])
             from django.contrib.auth.models import User
-            User.objects.db_manager('default').create_superuser('auto', 'auto@pytigon.com', 'anawa')
+
+            User.objects.db_manager("default").create_superuser(
+                "auto", "auto@pytigon.com", "anawa"
+            )
 
     ret = make(data_path, prj_path)
     if ret:
         for pos in ret:
             print(pos)
 
+
 def export_to_local_db():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
-    if 'local' in settings.DATABASES:
-        db_profile = 'local'
-    else:
-        db_profile = 'default'
 
-    if db_profile != 'default':
+    if "local" in settings.DATABASES:
+        db_profile = "local"
+    else:
+        db_profile = "default"
+
+    if db_profile != "default":
         prj_name = settings.PRJ_NAME
         data_path = settings.DATA_PATH
         app_data_path = os.path.join(data_path, prj_name)
-        db_path = os.path.join(app_data_path, prj_name+".db")
+        db_path = os.path.join(app_data_path, prj_name + ".db")
 
         if os.path.exists(db_path):
-            os.rename(db_path, db_path + "." + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ".bak")
+            os.rename(
+                db_path,
+                db_path
+                + "."
+                + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                + ".bak",
+            )
 
-        cmd(['migrate', '--database', db_profile])
+        cmd(["migrate", "--database", db_profile])
 
-        temp_path = os.path.join(data_path, 'temp')
+        temp_path = os.path.join(data_path, "temp")
         if not os.path.exists(temp_path):
             os.mkdir(temp_path)
-        json_path = os.path.join(temp_path, prj_name + '.json')
-        cmd(['dumpdata', '--database', 'default', '--format', 'json', '--indent', '4',
-             '-e', 'auth', '-e', 'contenttypes', '-e', 'sessions', '-e', 'sites', '-e', 'admin', '-e', 'schprofile'
-             '--output', json_path])
-        cmd(['loaddata', '--database', db_profile, json_path])
+        json_path = os.path.join(temp_path, prj_name + ".json")
+        cmd(
+            [
+                "dumpdata",
+                "--database",
+                "default",
+                "--format",
+                "json",
+                "--indent",
+                "4",
+                "-e",
+                "auth",
+                "-e",
+                "contenttypes",
+                "-e",
+                "sessions",
+                "-e",
+                "sites",
+                "-e",
+                "admin",
+                "-e",
+                "schprofile" "--output",
+                json_path,
+            ]
+        )
+        cmd(["loaddata", "--database", db_profile, json_path])
         from django.contrib.auth.models import User
-        User.objects.db_manager(db_profile).create_superuser('auto', 'auto@pytigon.com', 'anawa')
+
+        User.objects.db_manager(db_profile).create_superuser(
+            "auto", "auto@pytigon.com", "anawa"
+        )
 
 
-class Ptig():
+class Ptig:
     def __init__(self, ptig_path_or_file):
         if type(ptig_path_or_file) == str:
             self.archive = zipfile.ZipFile(ptig_path_or_file, "r")
@@ -124,13 +180,13 @@ class Ptig():
         self.meta_path = None
         for name in namelist:
             if ".dist-info" in name:
-                self.meta_path = name.split('/')[0]
+                self.meta_path = name.split("/")[0]
                 x = self.meta_path.split(".")[0]
-                x2 = x.split('-', 1)
-                if len(x2)>1:
+                x2 = x.split("-", 1)
+                if len(x2) > 1:
                     self.version = x2[1]
                 else:
-                    self.version = 'latest'
+                    self.version = "latest"
                 self.prj_name = x2[0]
                 break
         self.extract_to = None
@@ -142,13 +198,13 @@ class Ptig():
             return False
 
     def get_license(self):
-        ret = self.archive.read(self.prj_name + "/LICENSE").decode('utf-8')
+        ret = self.archive.read(self.prj_name + "/LICENSE").decode("utf-8")
         if ret:
             return ret
         return ""
 
     def get_readme(self):
-        ret = self.archive.read(self.prj_name + "/README.md").decode('utf-8')
+        ret = self.archive.read(self.prj_name + "/README.md").decode("utf-8")
         if ret:
             return ret
         return ""
@@ -161,7 +217,9 @@ class Ptig():
         from django.conf import settings
 
         if hasattr(pytigon.schserw.settings, "_PRJ_PATH_ALT"):
-            base_path = os.path.join(pytigon.schserw.settings._PRJ_PATH_ALT, self.prj_name)
+            base_path = os.path.join(
+                pytigon.schserw.settings._PRJ_PATH_ALT, self.prj_name
+            )
         else:
             base_path = os.path.join(settings.PRJ_PATH_ALT, self.prj_name)
 
@@ -180,17 +238,40 @@ class Ptig():
 
         self.extract_to = extract_to
 
-        zipname = datetime.datetime.now().isoformat('_')[:19].replace(':', '').replace('-', '')
+        zipname = (
+            datetime.datetime.now()
+            .isoformat("_")[:19]
+            .replace(":", "")
+            .replace("-", "")
+        )
         zipname2 = os.path.join(extract_to, zipname + ".zip")
         if test_update:
-            backup_zip = zipfile.ZipFile(zipname2, 'a')
-            exclude = ['.*settings_local.py.*',]
+            backup_zip = zipfile.ZipFile(zipname2, "a")
+            exclude = [
+                ".*settings_local.py.*",
+            ]
         else:
             backup_zip = None
             exclude = None
 
-        extractall(self.archive, base_path, backup_zip=backup_zip, exclude=exclude, only_path=self.prj_name+'/',
-                   backup_exts=['py', 'txt', 'wsgi', 'asgi', 'ihtml', 'htlm', 'css', 'js', 'prj', ])
+        extractall(
+            self.archive,
+            base_path,
+            backup_zip=backup_zip,
+            exclude=exclude,
+            only_path=self.prj_name + "/",
+            backup_exts=[
+                "py",
+                "txt",
+                "wsgi",
+                "asgi",
+                "ihtml",
+                "htlm",
+                "css",
+                "js",
+                "prj",
+            ],
+        )
 
         if backup_zip:
             backup_zip.close()
@@ -209,7 +290,9 @@ class Ptig():
                 with open(dest_path_db, "wb") as f:
                     f.write(src_db)
 
-            (ret_code, output, err) = py_run([os.path.join(extract_to, 'manage.py'), 'post_installation'])
+            (ret_code, output, err) = py_run(
+                [os.path.join(extract_to, "manage.py"), "postinstallation"]
+            )
 
             if output:
                 for pos in output:

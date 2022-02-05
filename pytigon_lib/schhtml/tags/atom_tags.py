@@ -10,29 +10,47 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import io
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
 from pytigon_lib.schhtml.atom import Atom, NullAtom, BrAtom
+from pytigon_lib.schhtml.render_helpers import (
+    RenderBackground,
+    RenderBorder,
+    RenderCellSpacing,
+    RenderCellPadding,
+    RenderPadding,
+    RenderMargin,
+    get_size,
+)
 
 
 class AtomTag(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = parent.child_tags + ['a', 'p', 'calc', 'big', 'strong', 'span', 'font', 'div']
+        self.child_tags = parent.child_tags + [
+            "a",
+            "p",
+            "calc",
+            "big",
+            "strong",
+            "span",
+            "font",
+            "div",
+        ]
         self.gparent = parent.gparent
 
     def draw_atom(self, dc, style, x, y, dx, dy):
         parent = self.parent
         while parent:
-            if type(parent)==Atag:
+            if type(parent) == Atag:
                 return parent.draw_atom(dc, style, x, y, dx, dy)
             parent = parent.parent
         return False
@@ -43,7 +61,6 @@ class AtomTag(BaseHtmlAtomParser):
 
 
 class BrTag(AtomTag):
-
     def __init__(self, parent, parser, tag, attrs):
         AtomTag.__init__(self, parent, parser, tag, attrs)
 
@@ -54,7 +71,6 @@ class BrTag(AtomTag):
 
 
 class Atag(AtomTag):
-
     def __init__(self, parent, parser, tag, attrs):
         AtomTag.__init__(self, parent, parser, tag, attrs)
         self.no_wrap = True
@@ -65,7 +81,7 @@ class Atag(AtomTag):
         return ret
 
     def draw_atom(self, dc, style, x, y, dx, dy):
-        self.reg_action('href', dc.subdc(x, y, dx, dy))
+        self.reg_action("href", dc.subdc(x, y, dx, dy))
         return False
 
     def close(self):
@@ -77,10 +93,10 @@ class Atag(AtomTag):
         self.parent.append_atom_list(self.atom_list)
 
     def __repr__(self):
-        return "ATag(" + self.tag +";" + str(self.attrs)+")"
+        return "ATag(" + self.tag + ";" + str(self.attrs) + ")"
+
 
 class ImgDraw(object):
-
     def __init__(self, img_tag, image, width, height):
         self.img_tag = img_tag
         self.image = image
@@ -90,18 +106,24 @@ class ImgDraw(object):
     def draw_atom(self, dc, style, x, y, dx, dy):
         http = self.img_tag.parser.http
         if self.image:
-            dc.draw_image(x, y, self.width, self.height, 3, self.image,)
+            dc.draw_image(
+                x,
+                y,
+                self.width,
+                self.height,
+                3,
+                self.image,
+            )
         else:
-            print('null_img')
+            print("null_img")
 
 
 class ImgTag(AtomTag):
-
     def __init__(self, parent, parser, tag, attrs):
         AtomTag.__init__(self, parent, parser, tag, attrs)
 
-        if 'src' in attrs:
-            self.src = attrs['src']
+        if "src" in attrs:
+            self.src = attrs["src"]
         else:
             self.src = None
         self.img = None
@@ -119,11 +141,12 @@ class ImgTag(AtomTag):
                 img = None
             if img:
                 img_name = self.src.lower()
-                if '.png' in img_name:
+                if ".png" in img_name:
                     self.img = img
                 else:
                     stream = io.BytesIO(img)
                     import PIL
+
                     image = PIL.Image.open(stream)
                     output = io.BytesIO()
                     image.save(output, "PNG")
@@ -138,43 +161,44 @@ class ImgTag(AtomTag):
                 self.dy = self.height
             else:
                 (self.dx, self.dy) = self.dc_info.get_img_size(self.img)
-            img_atom = Atom(ImgDraw(self, self.img, self.dx, self.dy), self.dx,
-                            0, self.dy, 0)
+            img_atom = Atom(
+                ImgDraw(self, self.img, self.dx, self.dy), self.dx, 0, self.dy, 0
+            )
             img_atom.set_parent(self)
             self.make_atom_list()
             self.atom_list.append_atom(img_atom)
             self.parent.append_atom_list(self.atom_list)
 
+
 class ParCalc(AtomTag):
     def handle_data(self, data):
-        parent=self.parent
+        parent = self.parent
         while parent:
-            if parent.tag=='table':
-                table=parent
-            if parent.tag=='body':
-                body=parent
-            if parent.tag=='html':
-                html=parent
+            if parent.tag == "table":
+                table = parent
+            if parent.tag == "body":
+                body = parent
+            if parent.tag == "html":
+                html = parent
             parent = parent.parent
         data2 = str(eval(data))
         return AtomTag.handle_data(self, data2)
 
 
-register_tag_map('br', BrTag)
-register_tag_map('a', Atag)
-register_tag_map('i', AtomTag)
-register_tag_map('b', AtomTag)
-register_tag_map('em', AtomTag)
-register_tag_map('strong', AtomTag)
-register_tag_map('s', AtomTag)
-register_tag_map('small', AtomTag)
-register_tag_map('big', AtomTag)
-register_tag_map('sub', AtomTag)
-register_tag_map('sup', AtomTag)
-register_tag_map('tt', AtomTag)
-register_tag_map('span', AtomTag)
-register_tag_map('font', AtomTag)
-register_tag_map('img', ImgTag)
-register_tag_map('image', ImgTag)
-register_tag_map('calc', ParCalc)
-
+register_tag_map("br", BrTag)
+register_tag_map("a", Atag)
+register_tag_map("i", AtomTag)
+register_tag_map("b", AtomTag)
+register_tag_map("em", AtomTag)
+register_tag_map("strong", AtomTag)
+register_tag_map("s", AtomTag)
+register_tag_map("small", AtomTag)
+register_tag_map("big", AtomTag)
+register_tag_map("sub", AtomTag)
+register_tag_map("sup", AtomTag)
+register_tag_map("tt", AtomTag)
+register_tag_map("span", AtomTag)
+register_tag_map("font", AtomTag)
+register_tag_map("img", ImgTag)
+register_tag_map("image", ImgTag)
+register_tag_map("calc", ParCalc)

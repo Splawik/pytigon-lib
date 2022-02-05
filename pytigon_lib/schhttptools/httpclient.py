@@ -162,10 +162,9 @@ def emscripten_asgi_or_wsgi_get_or_post(
             else user_agent
         )
 
-    if user_agent and CLIENT.defaults['HTTP_USER_AGENT'] != user_agent:
-        _user_agent = CLIENT.defaults['HTTP_USER_AGENT']
-        CLIENT.defaults['HTTP_USER_AGENT'] = user_agent
-        
+    if user_agent and CLIENT.defaults["HTTP_USER_AGENT"] != user_agent:
+        _user_agent = CLIENT.defaults["HTTP_USER_AGENT"]
+        CLIENT.defaults["HTTP_USER_AGENT"] = user_agent
 
     url2 = url.replace("http://127.0.0.2", "")
     if post:
@@ -199,7 +198,7 @@ def emscripten_asgi_or_wsgi_get_or_post(
     ret.append(result)
 
     if _user_agent:
-        CLIENT.defaults['HTTP_USER_AGENT'] = _user_agent
+        CLIENT.defaults["HTTP_USER_AGENT"] = _user_agent
 
 
 def asgi_or_wsgi_get_or_post(
@@ -338,7 +337,7 @@ class HttpResponse:
         self.content = content
         self.ret_content_type = ret_content_type
         self.new_url = url
-        print("==> ", self.url, self.ret_code)
+        # print("==> ", self.url, self.ret_code)
 
     def process_response(self, http_client, parent, post_request):
         global COOKIES

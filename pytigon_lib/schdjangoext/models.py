@@ -61,7 +61,10 @@ class JSONModel(models.Model):
         return super().__setattr__(name, value)
 
     def get_json_data(self):
-        return self.jsondata
+        if self.jsondata:
+            return self.jsondata
+        else:
+            return {}
 
     def get_form(self, view, request, form_class, adding=False):
         data = self.get_json_data()
@@ -175,7 +178,7 @@ def extend_class(main, base):
 if (
     "makemigrations" in sys.argv
     or "makeallmigrations" in sys.argv
-    or "export_to_local_db" in sys.argv
+    or "exporttolocaldb" in sys.argv
 ):
 
     def OverwritableCallable(func):

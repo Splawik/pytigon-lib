@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 """Module contains classes for render html content"""
 
@@ -35,8 +35,7 @@ from pytigon_lib.schhttptools.httpclient import HttpClient
 from pytigon_lib.schhtml.pdfdc import PdfDc
 
 
-INIT_CSS_STR_BASE = \
-    """
+INIT_CSS_STR_BASE = """
     body {font-family:sans-serif;font-size:100%; padding:2;}
     table {border:5;vertical-align:top; padding:2;}
     td table { padding: 2; }
@@ -58,14 +57,24 @@ INIT_CSS_STR_BASE = \
     calc { cellpadding:5; border:1; width:100%; }
 """
 
+
 class HtmlViewerParser(HtmlModParser):
     """Html renderer"""
 
     CSS_TYPE_STANDARD = 0
     CSS_TYPE_INDENT = 1
 
-    def __init__(self, dc=None, dc_info=None, base_url=None, url=None, calc_only=False,
-                 parse_only=False, init_css_str=None,css_type=CSS_TYPE_STANDARD):
+    def __init__(
+        self,
+        dc=None,
+        dc_info=None,
+        base_url=None,
+        url=None,
+        calc_only=False,
+        parse_only=False,
+        init_css_str=None,
+        css_type=CSS_TYPE_STANDARD,
+    ):
         """Constructor
 
         Args:
@@ -124,7 +133,7 @@ class HtmlViewerParser(HtmlModParser):
 
         HtmlModParser.__init__(self, url)
 
-    def register_tdata(self,tdata,tag,attrs):
+    def register_tdata(self, tdata, tag, attrs):
         """Function used to collect table rows by child tags
 
         Args:
@@ -179,7 +188,7 @@ class HtmlViewerParser(HtmlModParser):
         obj.last_rendered_dc = dc
         obj.rendered_rects.append((dc.x, dc.y, dc.dx, dc.dy))
 
-    def reg_action_obj(self,action,dc,obj):
+    def reg_action_obj(self, action, dc, obj):
         if action in self.obj_action_dict:
             self.obj_action_dict[action].append(obj)
         else:
@@ -191,29 +200,31 @@ class HtmlViewerParser(HtmlModParser):
         return self._handle_starttag(tag, attrs)
 
     def _handle_starttag(self, tag, attrs):
+        #if tag == "div":
+        #    breakpoint()
         try:
-            if 'style' in attrs:
-                for s in attrs['style'].split(';'):
-                    s2 = s.split(':')
+            if "style" in attrs:
+                for s in attrs["style"].split(";"):
+                    s2 = s.split(":")
                     if len(s2) == 2:
                         attrs[s2[0].lower()] = s2[1]
-            if 'class' in attrs:
-                attrs['class'] = attrs['class'].split(' ')[0]
+            if "class" in attrs:
+                attrs["class"] = attrs["class"].split(" ")[0]
 
             tmap = get_tag_preprocess_map()
             tag2 = tag.lower()
-            #if tag2 in tmap:
+            # if tag2 in tmap:
             #    (tag2, attrs) = tmap[tag2](self.tag_parser, attrs)
 
             handler = tmap.get_handler(tag)
             if handler:
-                attrs['_tag'] = tag
+                attrs["_tag"] = tag
                 (tag2, attrs) = handler(self.tag_parser, attrs)
 
             if self.tag_parser:
                 obj = self.tag_parser.handle_starttag(self, tag2, attrs)
                 if self.debug:
-                    self.print_obj(obj,True)
+                    self.print_obj(obj, True)
                 if obj:
                     obj.close_tag = tag
                     if obj.sys_id < 0:
@@ -222,7 +233,7 @@ class HtmlViewerParser(HtmlModParser):
                     self.tag_parser = obj
                     self.tag_parser.set_dc_info(self.dc_info)
             else:
-                if tag.lower() == 'html':
+                if tag.lower() == "html":
                     self.tag_parser = HtmlTag(None, self, tag.lower(), attrs)
                     self.tag_parser.set_dc(self.dc)
         except:
@@ -234,18 +245,20 @@ class HtmlViewerParser(HtmlModParser):
         self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
+        #if tag == "div":
+        #    breakpoint()
         try:
             if self.tag_parser:
                 tag_parser = self.tag_parser
                 obj = self.tag_parser.handle_endtag(tag.lower())
-                if self.debug and obj!=tag_parser:
+                if self.debug and obj != tag_parser:
                     self.print_obj(tag_parser, False)
                 self.tag_parser = obj
                 tag_parser.finish()
         except:
             (exc_type, exc_value, exc_tb) = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_tb)
-        if tag.lower() in ('table', 'tdata'):
+        if tag.lower() in ("table", "tdata"):
             self.table_lp += 1
 
     def handle_data(self, data):
@@ -276,19 +289,27 @@ class HtmlViewerParser(HtmlModParser):
                 tab = -1
                 parent = obj
                 while parent:
-                    tab = tab+1
+                    tab = tab + 1
                     parent = parent.parent
-                print('|   '*tab, obj.tag, obj.attrs)
+                print("|   " * tab, obj.tag, obj.attrs)
             else:
                 tab = -1
                 parent = obj
                 while parent:
-                    tab = tab+1
+                    tab = tab + 1
                     parent = parent.parent
-                print('|   '*tab, "/", obj.tag, "(", obj.height, ")")
+                print("|   " * tab, "/", obj.tag, "(", obj.height, ")")
 
-def stream_from_html(html, output_stream=None, css=None, width=int(210*72/25.4), height=int(297*72/25.4),
-        stream_type='pdf', base_url=None):
+
+def stream_from_html(
+    html,
+    output_stream=None,
+    css=None,
+    width=int(210 * 72 / 25.4),
+    height=int(297 * 72 / 25.4),
+    stream_type="pdf",
+    base_url=None,
+):
     """Render html string
 
     Args:
@@ -299,15 +320,15 @@ def stream_from_html(html, output_stream=None, css=None, width=int(210*72/25.4),
         height - default value 297*72/25.4
         stream_type - 'zip' or 'pdf', default pdf.
     """
-    
+
     if not type(html) == str:
-        html = html.decode('utf-8')
-    if '<html' in html:
+        html = html.decode("utf-8")
+    if "<html" in html:
         html2 = html
     else:
-        html2 = '<html><body>' + html +"</body></html>"
+        html2 = "<html><body>" + html + "</body></html>"
 
-    if 'orientation:landscape' in html2 or 'orientation: landscape' in html2:
+    if "orientation:landscape" in html2 or "orientation: landscape" in html2:
         width2 = height
         height2 = width
     else:
@@ -319,21 +340,22 @@ def stream_from_html(html, output_stream=None, css=None, width=int(210*72/25.4),
     else:
         result = io.BytesIO()
 
-    if stream_type=='pdf':
+    if stream_type == "pdf":
         result_buf = NamedTemporaryFile(delete=False)
         pdf_name = result_buf.name
         result_buf.close()
         dc = PdfDc(calc_only=False, width=width2, height=height2, output_name=pdf_name)
     else:
         from pytigon_lib.schhtml.cairodc import CairoDc
+
         dc = CairoDc(calc_only=False, width=width2, height=height2)
 
     dc.set_paging(True)
     p = HtmlViewerParser(dc=dc, calc_only=False, base_url=base_url)
-    p.feed(html2.replace('&nbsp;','»'))
+    p.feed(html2.replace("&nbsp;", "»"))
     p.close()
-    if stream_type=='pdf':
-        with open(pdf_name,"rb") as f:
+    if stream_type == "pdf":
+        with open(pdf_name, "rb") as f:
             result.write(f.read())
         os.unlink(pdf_name)
     else:
@@ -342,8 +364,8 @@ def stream_from_html(html, output_stream=None, css=None, width=int(210*72/25.4),
 
         dc.end_page()
         dc.save(name)
-        
-        with open(name,"rb") as f:
+
+        with open(name, "rb") as f:
             buf = f.read()
             result.write(buf)
 
@@ -360,12 +382,10 @@ def tdata_from_html(html, http):
     p.close()
     tab = None
     for pos in ctrls:
-        if pos[1] == 'ctrl-table':
+        if pos[1] == "ctrl-table":
             tab = pos[0]
             break
     if tab and len(tab) > 0:
         return tab
     else:
         return None
-
-

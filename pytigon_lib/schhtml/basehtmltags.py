@@ -10,12 +10,12 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 import fnmatch
 
@@ -24,17 +24,19 @@ from pytigon_lib.schhtml.atom import AtomList
 
 def rgb_to_hex(color):
     try:
+
         def _to_2hex(s):
             x = hex(int(s))[2:]
-            if len(x)==1:
-                return '0'+x
+            if len(x) == 1:
+                return "0" + x
             else:
                 return x
-        tab = color.split('(')[1].split(')')[0].split(',')
-        ret = '#' + _to_2hex(tab[0])+ _to_2hex(tab[1])+ _to_2hex(tab[2])
+
+        tab = color.split("(")[1].split(")")[0].split(",")
+        ret = "#" + _to_2hex(tab[0]) + _to_2hex(tab[1]) + _to_2hex(tab[2])
         return ret
     except:
-        return '#000'
+        return "#000"
 
 
 class BaseHtmlElemParser(object):
@@ -46,7 +48,7 @@ class BaseHtmlElemParser(object):
     def height(self, x):
         self._height = x
 
-    def __init__(self,parent,parser,tag,attrs):
+    def __init__(self, parent, parser, tag, attrs):
         self._height = -1
         self.parent = parent
         self.parser = parser
@@ -62,21 +64,20 @@ class BaseHtmlElemParser(object):
         self.width = -1
         self.height = -1
         self.dy = 0
-        if 'width' in attrs:
-            if '%' in attrs['width']:
+        if "width" in attrs:
+            if "%" in attrs["width"]:
                 parent_width = self.get_parent_width()
             else:
                 parent_width = 0
             if parent_width >= 0:
-                self.width = self._norm_sizes([attrs['width']], parent_width)[0]
-        if 'height' in attrs:
-            if '%' in attrs['height']:
+                self.width = self._norm_sizes([attrs["width"]], parent_width)[0]
+        if "height" in attrs:
+            if "%" in attrs["height"]:
                 parent_height = self.get_parent_height()
             else:
                 parent_height = 0
             if parent_height >= 0:
-                self.height = self._norm_sizes([attrs['height']],
-                        parent_height)[0]
+                self.height = self._norm_sizes([attrs["height"]], parent_height)[0]
         self.rendered_children = []
 
         self.dc_info = None
@@ -141,54 +142,66 @@ class BaseHtmlElemParser(object):
             obj = obj.get_parent()
         return None
 
-
     def get_style_id(self):
-        color = self.get_atrr('color')
-        font_family = self.get_atrr('font-family')
-        font_size = self.get_atrr('font-size')
-        font_style = self.get_atrr('font-style')
-        font_weight = self.get_atrr('font-weight')
-        text_decoration = self.get_atrr('text-decoration')
+        color = self.get_atrr("color")
+        font_family = self.get_atrr("font-family")
+        font_size = self.get_atrr("font-size")
+        font_style = self.get_atrr("font-style")
+        font_weight = self.get_atrr("font-weight")
+        text_decoration = self.get_atrr("text-decoration")
 
-        if not color[0] == '#':
-            if color.strip().startswith('rgb'):
+        if not color[0] == "#":
+            if color.strip().startswith("rgb"):
                 color = rgb_to_hex(color)
             else:
-                color = '#000'
-        if not font_family in ('serif', 'sans-serif', 'monospace', 'cursive', 'fantasy'):
-            font_family = 'sans-serif'
-        if not '%' in font_size:
+                color = "#000"
+        if not font_family in (
+            "serif",
+            "sans-serif",
+            "monospace",
+            "cursive",
+            "fantasy",
+        ):
+            font_family = "sans-serif"
+        if not "%" in font_size:
             font_size = 100
         else:
             try:
-                font_size = int(font_size.replace('%', ''))
+                font_size = int(font_size.replace("%", ""))
             except:
                 font_size = 100
-        if 'italic' in font_style:
+        if "italic" in font_style:
             font_style = 1
         else:
             font_style = 0
-        if 'bold' in font_weight:
+        if "bold" in font_weight:
             font_weight = 1
         else:
             font_weight = 0
-        if 'underline' in text_decoration or 'oblique' in text_decoration:
+        if "underline" in text_decoration or "oblique" in text_decoration:
             text_decoration = 1
         else:
             text_decoration = 0
-        p = '%s;%s;%d;%d;%d;%d' % (color,font_family,font_size,font_style,font_weight,text_decoration,)
+        p = "%s;%s;%d;%d;%d;%d" % (
+            color,
+            font_family,
+            font_size,
+            font_style,
+            font_weight,
+            text_decoration,
+        )
         id = self.dc_info.get_style_id(p)
         return id
 
     def get_id(self):
-        if 'id' in self.attrs:
-            return self.attrs['id'].lower()
+        if "id" in self.attrs:
+            return self.attrs["id"].lower()
         else:
             return None
 
     def get_cls(self):
-        if 'class' in self.attrs:
-            return self.attrs['class'].lower()
+        if "class" in self.attrs:
+            return self.attrs["class"].lower()
         else:
             return None
 
@@ -201,24 +214,22 @@ class BaseHtmlElemParser(object):
     def class_from_tag_name(self, tag):
         if tag in tag_class_map:
             return tag_class_map[tag]
-        elif tag[:3] + '*' in tag_class_map:
-            return tag_class_map[tag[:3] + '*']
+        elif tag[:3] + "*" in tag_class_map:
+            return tag_class_map[tag[:3] + "*"]
         else:
             return None
 
-    def handle_starttag(self,parser,tag,attrs):
-        if tag in self.child_tags or tag=='comment':
-            if tag=='script':
-                print("tag:", tag)
+    def handle_starttag(self, parser, tag, attrs):
+        if tag in self.child_tags or tag == "comment":
             handler = self.class_from_tag_name(tag)
             if handler:
                 return handler(self, parser, tag, attrs)
             else:
                 return None
-        elif tag[:3] + '*' in self.child_tags:
-            return self.class_from_tag_name(tag[:3] + '*')(self, parser, tag, attrs)
+        elif tag[:3] + "*" in self.child_tags:
+            return self.class_from_tag_name(tag[:3] + "*")(self, parser, tag, attrs)
         else:
-            if tag.startswith('_') and tag in tag_class_map:
+            if tag.startswith("_") and tag in tag_class_map:
                 return self.class_from_tag_name(tag)(self, parser, tag, attrs)
             else:
                 return None
@@ -242,14 +253,18 @@ class BaseHtmlElemParser(object):
 
     def child_ready_to_render(self, child):
         self.rendered_children.append(child)
-        if not ('page-break-inside' in child.attrs and child.attrs['page-break-inside'] == 'avoid'):
+        if not (
+            "page-break-inside" in child.attrs
+            and child.attrs["page-break-inside"] == "avoid"
+        ):
             self.parent.child_ready_to_render(self)
 
     def render(self, dc):
         if len(self.rendered_children):
             for child in self.rendered_children:
-                ret = self.rendered_child.render(dc.subdc(0, 0, self.child_dx,
-                        self.child_dy))
+                ret = self.rendered_child.render(
+                    dc.subdc(0, 0, self.child_dx, self.child_dy)
+                )
                 self.dy += self.child_dy
                 self.rendered_child = None
             return ret
@@ -260,8 +275,8 @@ class BaseHtmlElemParser(object):
             self.render(self.last_rendered_dc)
 
     def reg_id(self, dc):
-        if self.reg_flag and 'id' in self.attrs:
-            self.parser.reg_id_obj(self.attrs['id'], dc, self)
+        if self.reg_flag and "id" in self.attrs:
+            self.parser.reg_id_obj(self.attrs["id"], dc, self)
 
     def reg_action(self, action, dc):
         if self.reg_flag:
@@ -274,18 +289,18 @@ class BaseHtmlElemParser(object):
         ret = []
         for pos in sizes:
             test = True
-            if not 'calc' in pos:
+            if not "calc" in pos:
                 try:
-                    pos2 = pos.replace('px', '').strip()
-                    if pos2.endswith('%'):
+                    pos2 = pos.replace("px", "").strip()
+                    if pos2.endswith("%"):
                         if dxy >= 0:
-                            x = int(int(pos2.replace('%', '')) * dxy / 100)
+                            x = int(int(pos2.replace("%", "")) * dxy / 100)
                         else:
                             x = -1
-                    elif pos2.endswith('em'):
-                        x = int(pos2.replace('em', '')) * 1
-                    elif pos2.endswith('rem'):
-                        x = int(pos2.replace('rem','')) * 1
+                    elif pos2.endswith("em"):
+                        x = int(pos2.replace("em", "")) * 1
+                    elif pos2.endswith("rem"):
+                        x = int(pos2.replace("rem", "")) * 1
                     else:
                         x = int(pos2)
                     test = False
@@ -293,22 +308,29 @@ class BaseHtmlElemParser(object):
                     pass
 
             if test:
-                #try:
-                    if 'calc' in pos:
-                        e = pos.split('(', 1)[1].rsplit(')', 1)[0].strip() #.replace('[[', '{').replace(']]','}')
-                    else:
-                        e = pos
-                    e = e.replace('px','').replace('em','*em').replace('rem','*rem').replace('%','*height/100')
-                    c = { 'top': self.dy, 'height': dxy, 'em': 1, 'rem': 1 }
-                    if hasattr(self, "get_context"):
-                        context = self.get_context()
-                        c.update(context)
-                    x = int(eval(e, c))
-                #except:
-                #    x = 10
+                # try:
+                if "calc" in pos:
+                    e = (
+                        pos.split("(", 1)[1].rsplit(")", 1)[0].strip()
+                    )  # .replace('[[', '{').replace(']]','}')
+                else:
+                    e = pos
+                e = (
+                    e.replace("px", "")
+                    .replace("em", "*em")
+                    .replace("rem", "*rem")
+                    .replace("%", "*height/100")
+                )
+                c = {"top": self.dy, "height": dxy, "em": 1, "rem": 1}
+                if hasattr(self, "get_context"):
+                    context = self.get_context()
+                    c.update(context)
+                x = int(eval(e, c))
+            # except:
+            #    x = 10
 
             if False:
-                t = str(pos).split('%')
+                t = str(pos).split("%")
                 if len(t) == 2:
                     if dxy >= 0:
                         x = int((float(t[0]) * dxy) / 100)
@@ -317,7 +339,7 @@ class BaseHtmlElemParser(object):
                     if x >= 0 and len(t[1]) > 0:
                         x += int(t[1])
                 else:
-                    x = int(float(t[0].replace('px', '').replace('em', '')))
+                    x = int(float(t[0].replace("px", "").replace("em", "")))
             ret.append(x)
         return ret
 
@@ -328,11 +350,11 @@ class BaseHtmlElemParser(object):
         if self.width >= 0:
             return [self.width, self.width, self.width]
         else:
-            if 'width' in self.attrs:
+            if "width" in self.attrs:
                 (parent_width, parent_min, parent_max) = self.parent.get_client_width()
-                width = self._norm_sizes([self.attrs['width']], parent_width)[0]
-                min = self._norm_sizes([self.attrs['width']], parent_min)[0]
-                max = self._norm_sizes([self.attrs['width']], parent_max)[0]
+                width = self._norm_sizes([self.attrs["width"]], parent_width)[0]
+                min = self._norm_sizes([self.attrs["width"]], parent_min)[0]
+                max = self._norm_sizes([self.attrs["width"]], parent_max)[0]
                 return [width, min, max]
             return self.calc_width()
 
@@ -349,10 +371,9 @@ class BaseHtmlElemParser(object):
         if self.height >= 0:
             return self.height
         else:
-            if 'height' in self.attrs:
+            if "height" in self.attrs:
                 parent_height = self.parent.get_height()
-                height = self._norm_sizes([self.attrs['height']],
-                        parent_height)[0]
+                height = self._norm_sizes([self.attrs["height"]], parent_height)[0]
                 return height
             return self.calc_height()
 
@@ -369,13 +390,13 @@ class BaseHtmlElemParser(object):
 
 
 class BaseHtmlAtomParser(BaseHtmlElemParser):
-    def __init__(self,parent,parser,tag,attrs):
+    def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
         self.atom_list = None
         self.atom_dy = 0.5
         self.style = -1
         self.no_wrap = False
-        if 'white-space' in self.attrs and self.attrs['white-space'] == 'pre':
+        if "white-space" in self.attrs and self.attrs["white-space"] == "pre":
             self.pre = True
         else:
             self.pre = False
@@ -390,11 +411,11 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
         else:
             data2 = data
         if data2 and len(data2) > 0:
-            if not self.pre and data[-1]==' ':
-                data2 += ' '
+            if not self.pre and data[-1] == " ":
+                data2 += " "
             if self.style < 0:
                 self.style = self.get_style_id()
-            if data2 and data2 != '':
+            if data2 and data2 != "":
                 self.make_atom_list()
                 if len(self.attrs) > 0:
                     self.atom_list.append_text(data2, self.style, self)
@@ -413,10 +434,9 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
 
 
 class AnyTag(BaseHtmlElemParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ['a', 'p', 'pre','div']
+        self.child_tags = ["a", "p", "pre", "div"]
 
     def close(self):
         pass
@@ -429,14 +449,16 @@ def register_tag_map(tag, cls):
     tag_class_map[tag] = cls
 
 
-class TagPreprocesor():
+class TagPreprocesor:
     def __init__(self):
         self.tag_preprocess_map = {}
         self.tag_wildcards_preprocess_map = []
 
     def register(self, tag, fun, not_tag=""):
-        if '?' in tag or '*' in tag:
-            self.tag_wildcards_preprocess_map.append([tag.lower(), fun, not_tag.lower()])
+        if "?" in tag or "*" in tag:
+            self.tag_wildcards_preprocess_map.append(
+                [tag.lower(), fun, not_tag.lower()]
+            )
         else:
             self.tag_preprocess_map[tag.lower()] = fun
 
@@ -454,17 +476,16 @@ class TagPreprocesor():
         return None
 
 
-#tag_preprocess_map = {}
+# tag_preprocess_map = {}
 TAG_PREPROCESS_MAP = TagPreprocesor()
+
 
 def register_tag_preprocess_map(tag, fun, not_tag=""):
     global TAG_PREPROCESS_MAP
     TAG_PREPROCESS_MAP.register(tag, fun, not_tag)
-    #tag_preprocess_map[tag] = fun
+    # tag_preprocess_map[tag] = fun
 
 
 def get_tag_preprocess_map():
     global TAG_PREPROCESS_MAP
     return TAG_PREPROCESS_MAP
-
-

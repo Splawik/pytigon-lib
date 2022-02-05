@@ -10,51 +10,57 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-#Pytigon - wxpython and django application framework
+# Pytigon - wxpython and django application framework
 
-#author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-#copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-#license: "LGPL 3.0"
-#version: "0.1a"
+# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
+# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
+# license: "LGPL 3.0"
+# version: "0.1a"
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
-from pytigon_lib.schhtml.render_helpers import RenderBackground, RenderBorder, \
-    RenderCellSpacing, RenderCellPadding, RenderPadding, RenderMargin, get_size
+from pytigon_lib.schhtml.render_helpers import (
+    RenderBackground,
+    RenderBorder,
+    RenderCellSpacing,
+    RenderCellPadding,
+    RenderPadding,
+    RenderMargin,
+    get_size,
+)
 
 
 class ParBase(BaseHtmlAtomParser):
-
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
         self.child_tags = [
-            'br',
-            'i',
-            'b',
-            'em',
-            'strong',
-            's',
-            'small',
-            'big',
-            'sub',
-            'sup',
-            'tt',
-            'span',
-            'font',
-            'table',
-            'ul',
-            'ol',
-            'img',
-            'vimg',
-            'a',
-            'li',
-            'ctr*',
-            'form',
-            'hr',
-            'calc',
-            'pre',
-            'div',
-            'ctr*',
-            ]
+            "br",
+            "i",
+            "b",
+            "em",
+            "strong",
+            "s",
+            "small",
+            "big",
+            "sub",
+            "sup",
+            "tt",
+            "span",
+            "font",
+            "table",
+            "ul",
+            "ol",
+            "img",
+            "vimg",
+            "a",
+            "li",
+            "ctr*",
+            "form",
+            "hr",
+            "calc",
+            "pre",
+            "div",
+            "ctr*",
+        ]
         self.gparent = self
         self.float_width = True
         self.float_height = True
@@ -65,10 +71,10 @@ class ParBase(BaseHtmlAtomParser):
             RenderBackground(self),
             RenderCellPadding(self),
             RenderPadding(self),
-            ]
+        ]
         self.extra_space = get_size(self.render_helpers)
         tag = self.tag
-        self.tag += ':hover'
+        self.tag += ":hover"
         hover_css_attrs = self.parser.css.get_dict(self)
         self.hover_css_attrs = {}
         if hover_css_attrs:
@@ -78,29 +84,36 @@ class ParBase(BaseHtmlAtomParser):
         self.tag = tag
 
     def _get_pseudo_margins(self):
-        return [self.extra_space[0], self.extra_space[1], self.extra_space[2],
-                self.extra_space[3]]
+        return [
+            self.extra_space[0],
+            self.extra_space[1],
+            self.extra_space[2],
+            self.extra_space[3],
+        ]
 
     def calc_width(self):
         if self.atom_list:
             x = self.atom_list.get_width_tab()
         else:
             x = [0, 0, 0]
-        ret = [x[0] + self.extra_space[0] + self.extra_space[1], x[1]
-                + self.extra_space[0] + self.extra_space[1], x[2]
-                + self.extra_space[0] + self.extra_space[1]]
+        ret = [
+            x[0] + self.extra_space[0] + self.extra_space[1],
+            x[1] + self.extra_space[0] + self.extra_space[1],
+            x[2] + self.extra_space[0] + self.extra_space[1],
+        ]
         return ret
 
     def calc_height(self):
         if self.atom_list:
             if not self.atom_list.list_for_draw:
-                self.atom_list.gen_list_for_draw((self.width
-                         - self.extra_space[0]) - self.extra_space[1])
+                self.atom_list.gen_list_for_draw(
+                    (self.width - self.extra_space[0]) - self.extra_space[1]
+                )
             y = self.atom_list.get_height()
         else:
             y = 0
 
-        if y>= 0:
+        if y >= 0:
             ret = y + self.extra_space[2] + self.extra_space[3]
         else:
             ret = y
@@ -111,8 +124,8 @@ class ParBase(BaseHtmlAtomParser):
         self.rendered_rects
 
         self.reg_id(dc)
-        if 'class' in self.attrs:
-            self.reg_action('class', dc)
+        if "class" in self.attrs:
+            self.reg_action("class", dc)
         self.reg_end()
         if dc.dx == -1:
             dc2 = dc
@@ -122,37 +135,38 @@ class ParBase(BaseHtmlAtomParser):
         for r in self.render_helpers:
             dc2 = r.render(dc2)
         if self.atom_list:
-            if 'align' in self.attrs:
-                attr = self.attrs['align']
+            if "align" in self.attrs:
+                attr = self.attrs["align"]
             else:
-                if 'text-align' in self.attrs:
-                    attr = self.attrs['text-align']
+                if "text-align" in self.attrs:
+                    attr = self.attrs["text-align"]
                 else:
-                    attr = ''
-            if attr == 'center':
+                    attr = ""
+            if attr == "center":
                 align = 1
             else:
-                if attr == 'right':
+                if attr == "right":
                     align = 2
                 else:
                     align = 0
-            if 'valign' in self.attrs:
-                attr = self.attrs['valign']
+            if "valign" in self.attrs:
+                attr = self.attrs["valign"]
             else:
-                if 'vertical-align' in self.attrs:
-                    attr = self.attrs['vertical-align']
+                if "vertical-align" in self.attrs:
+                    attr = self.attrs["vertical-align"]
                 else:
-                    attr = ''
-            if 'top' in attr:
+                    attr = ""
+            if "top" in attr:
                 valign = 0
             else:
-                if 'bottom' in attr:
+                if "bottom" in attr:
                     valign = 2
                 else:
                     valign = 1
             if not self.atom_list.list_for_draw:
-                self.atom_list.gen_list_for_draw((self.width
-                         - self.extra_space[0]) - self.extra_space[1])
+                self.atom_list.gen_list_for_draw(
+                    (self.width - self.extra_space[0]) - self.extra_space[1]
+                )
 
             dy = self.atom_list.draw_atom_list(dc2, align, valign)
         else:
@@ -163,7 +177,7 @@ class ParBase(BaseHtmlAtomParser):
         if self.atom_list:
             return self.atom_list.to_txt()
         else:
-            return ''
+            return ""
 
     def to_attrs(self):
         if self.atom_list:
@@ -186,7 +200,6 @@ class ParBase(BaseHtmlAtomParser):
 
 
 class Par(ParBase):
-
     def close(self):
         if issubclass(type(self.parent), Par):
             if self.atom_list:
@@ -196,7 +209,6 @@ class Par(ParBase):
 
 
 class ParArray(ParBase):
-
     def __init__(self, parent, parser, tag, attrs):
         self.lp = 1
         ParBase.__init__(self, parent, parser, tag, attrs)
@@ -216,12 +228,14 @@ class ParArray(ParBase):
         return dy
 
     def render(self, dc_parm):
-        if len(self.rendered_children)>0:
+        if len(self.rendered_children) > 0:
             child = self.rendered_children[0]
-            dc = dc_parm.subdc(child.level*20, 0, dc_parm.dx-child.level*20, child.height)
+            dc = dc_parm.subdc(
+                child.level * 20, 0, dc_parm.dx - child.level * 20, child.height
+            )
             dyy, cont2 = child.render(dc)
             self.rendered_children = self.rendered_children[1:]
-            if len(self.rendered_children)>0:
+            if len(self.rendered_children) > 0:
                 cont = True
             else:
                 cont = False
@@ -237,10 +251,9 @@ class ParArray(ParBase):
 
 
 class Li(ParBase):
-
     def __init__(self, parent, parser, tag, attrs):
         ParBase.__init__(self, parent, parser, tag, attrs)
-        if type(parent)==Ul:
+        if type(parent) == Ul:
             self.level = parent.level
         else:
             self.level = 0
@@ -248,14 +261,13 @@ class Li(ParBase):
 
 
 class Ul(ParArray):
-
     def __init__(self, parent, parser, tag, attrs):
         ParArray.__init__(self, parent, parser, tag, attrs)
-        self.children=[]
+        self.children = []
         self.level = 1
         p = parent
         while p:
-            if type(p)==Ul:
+            if type(p) == Ul:
                 self.level += 1
             p = p.parent
 
@@ -273,7 +285,7 @@ class Ul(ParArray):
             del child.atom_list.atom_list[-1]
             child.atom_list.atom_list.insert(0, atom)
 
-            if self.parent.tag=='li' and type(self.parent.parent)==Ul:
+            if self.parent.tag == "li" and type(self.parent.parent) == Ul:
                 self.parent.parent.child_ready_to_render(self.parent)
                 for child in self.rendered_children:
                     self.parent.parent.rendered_children.append(child)
@@ -283,27 +295,27 @@ class Ul(ParArray):
                 self.parent.child_ready_to_render(self)
 
     def _get_sym(self, child):
-        if self.tag=='ol':
+        if self.tag == "ol":
             t = "1"
-            if 'type' in self.attrs:
-                t = self.attrs['type']
-            if t=="1":
+            if "type" in self.attrs:
+                t = self.attrs["type"]
+            if t == "1":
                 return "%3d. " % child.lp
-            elif t=="a":
-                return "  " + chr(ord("a")+child.lp-1) + ". "
-            elif t=="A":
-                return "  " + chr(ord("A")+child.lp-1) + ". "
+            elif t == "a":
+                return "  " + chr(ord("a") + child.lp - 1) + ". "
+            elif t == "A":
+                return "  " + chr(ord("A") + child.lp - 1) + ". "
             else:
                 return "%3d. " % child.lp
         else:
             t = "disc"
-            if 'type' in self.attrs:
-                t = self.attrs['type']
-            if t=="circle":
-                z = '●'
-            elif t=="square":
+            if "type" in self.attrs:
+                t = self.attrs["type"]
+            if t == "circle":
+                z = "●"
+            elif t == "square":
                 z = "■"
-            elif t=='none':
+            elif t == "none":
                 z = " "
             else:
                 z = "•"
@@ -312,21 +324,20 @@ class Ul(ParArray):
             return "  " + z + " "
 
 
-register_tag_map('p', Par)
-register_tag_map('h1', Par)
-register_tag_map('h2', Par)
-register_tag_map('h3', Par)
-register_tag_map('h4', Par)
-register_tag_map('h5', Par)
-register_tag_map('h6', Par)
+register_tag_map("p", Par)
+register_tag_map("h1", Par)
+register_tag_map("h2", Par)
+register_tag_map("h3", Par)
+register_tag_map("h4", Par)
+register_tag_map("h5", Par)
+register_tag_map("h6", Par)
 
-register_tag_map('dt', Par)
-register_tag_map('dd', Par)
+register_tag_map("dt", Par)
+register_tag_map("dd", Par)
 
-register_tag_map('pre', Par)
-register_tag_map('div', Par)
+register_tag_map("pre", Par)
+register_tag_map("div", Par)
 
-register_tag_map('ol', Ul)
-register_tag_map('ul', Ul)
-register_tag_map('li', Li)
-
+register_tag_map("ol", Ul)
+register_tag_map("ul", Ul)
+register_tag_map("li", Li)
