@@ -241,7 +241,10 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 else:
                     self["Content-Type"] = "application/pdf"
                     pdf_stream = stream_from_html(
-                        self.content, stream_type="pdf", base_url="file://"
+                        self.content,
+                        stream_type="pdf",
+                        base_url="file://",
+                        info={"template_name": self.template_name},
                     )
                     self.content = pdf_stream.getvalue()
             elif self.context_data["view"].doc_type() == "json":
@@ -339,7 +342,6 @@ def render_to_response(
 
 
 def render_to_response_ext(request, template_name, context, doc_type="html"):
-    print("render_to_response: ", template_name)
     context["target"] = doc_type
     if "request" in context:
         del context["request"]

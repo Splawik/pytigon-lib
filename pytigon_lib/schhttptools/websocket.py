@@ -28,15 +28,12 @@ from pytigon_lib.schtools.schjson import json_dumps, json_loads
 
 class PytigonClientProtocolBase:
     def onConnect(self, response):
-        print("OnConnect")
         return self.app.on_websocket_connect(self, self.websocket_id, response)
 
     def onOpen(self):
-        print("OnOpen")
         return self.app.on_websocket_open(self, self.websocket_id)
 
     def onClose(self, wasClean, code, reason):
-        print("OnClose")
         pass
 
     def onMessage(self, msg, binary):

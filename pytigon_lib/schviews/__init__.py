@@ -638,7 +638,18 @@ class GenericRows(object):
                     if hasattr(model, "table_action"):
                         data = request.POST
                         if request.content_type == "application/json":
-                            data = json_loads(request.body)
+                            try:
+                                if type(request.body) == str:
+                                    data = json_loads(request.body.strip())
+                                else:
+                                    data = json_loads(
+                                        request.body.decode("utf-8").strip()
+                                    )
+                            except:
+                                print("+++++++++++++++++++++++++++++++++++++++++")
+                                print(request.body)
+                                print("-----------------------------------------")
+                                raise Http404("Invalid data format")
                         ret = getattr(model, "table_action")(self, request, data)
                         if ret == None:
                             raise Http404("Action doesn't exists")

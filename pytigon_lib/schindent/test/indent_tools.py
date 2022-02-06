@@ -24,13 +24,9 @@ import io
 def _convert_strings(lines):
     line_buf = None
     in_string = False
-    #for line in lines.getvalue().split('\n'):
     lines.seek(0)
-    #lines.newlines = '\n'
-    #print "X1", lines.readlines()
     for line2 in lines: #.getvalue().split('\n'):        
         line = line2.replace('\n','')
-        #print "X2:", line
         id = line.find('"""')
         if in_string:
             if id >= 0:
@@ -146,24 +142,14 @@ def reformat_js(tabkod):
     oldpos = None
     oldpoziom = 0
     tabkod3 = []
-    #postfixs = [(0, '', ';')]
-    #print tabkod2
-    print("-----------------------------------")
-    for pos in tabkod2:
-        print(pos)
     for pos in tabkod2:
         if pos[0] <= oldpoziom:
             for i in range(oldpoziom - pos[0] + 1):
-                #tabkod3.append((postfixs[-1][0], postfixs[-1][1],
-                #               postfixs[-1][2]))
                 tabkod3.append((postfixs[-1][0], postfixs[-1][1],''))
-                #print ">1>>", tabkod3[-1]
                 del postfixs[-1]
         if len(pos[2]) > 0:
-            #print ">2>>", tabkod3[-1]
             tabkod3.append((pos[0], pos[1], ''))
         else:
-            #print ">3>>", tabkod3[-1]
             tabkod3.append((pos[0], pos[1], postfixs[-1][2]))
         postfixs.append((pos[0], pos[2], pos[3]))
         oldpos = pos
@@ -175,9 +161,7 @@ def reformat_js(tabkod):
         else:
             tabkod3.append((postfixs[id - 1][0], postfixs[id - 1][1], ''))
     tmp = []
-    print("-----------------------------------")
     for pos in tabkod3:
-        print(pos)
         if len(pos[1]) > 0:
             tmp.append(pos)
     tabkod3 = tmp
@@ -193,9 +177,6 @@ def reformat_js(tabkod):
                     tabkod4.append((pos[0], pos[1] + pos[2]))
             else:
                 tabkod4.append((pos[0], pos[1] + pos[2]))
-    print("-----------------------------------")
-    for pos in tabkod4:
-        print(pos)
     return tabkod4
 
 
@@ -211,9 +192,7 @@ def file_norm_tab(file_in, file_out):
 def convert_js(stream_in, stream_out):
     if stream_in and stream_out:
         tabkod = norm_tab(stream_in)
-        #print tabkod
         tabkod = reformat_js(tabkod)
-        #print tabkod
         for pos in tabkod:
             stream_out.write((' ' * 4) * pos[0] + pos[1].replace('\n', ''
                              ).replace('};', '}').replace(';;', ';') + '\n')

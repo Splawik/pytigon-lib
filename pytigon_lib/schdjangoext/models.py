@@ -146,7 +146,6 @@ def standard_table_action(cls, list_view, request, data, operations):
                 x2 = [int(pos) for pos in x]
                 if x2:
                     list_view.get_queryset().filter(pk__in=x2).delete()
-                    print("DELETE: ", x2)
                 return []
     return None
 

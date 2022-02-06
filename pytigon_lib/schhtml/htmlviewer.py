@@ -35,6 +35,31 @@ from pytigon_lib.schhttptools.httpclient import HttpClient
 from pytigon_lib.schhtml.pdfdc import PdfDc
 
 
+class BaseRenderingLib:
+    def accept(html, stream_type="pdf", base_url=None, info=None):
+        return False
+
+    def render(
+        html,
+        output_stream=None,
+        css=None,
+        width=int(210 * 72 / 25.4),
+        height=int(297 * 72 / 25.4),
+        stream_type="pdf",
+        base_url=None,
+        info=None
+    ):
+        pass
+
+
+RENDERING_LIB = None
+
+
+def set_endering_lib(rendering_lib):
+    global RENDERING_LIB
+    RENDERING_LIB = rendering_lib
+
+
 INIT_CSS_STR_BASE = """
     body {font-family:sans-serif;font-size:100%; padding:2;}
     table {border:5;vertical-align:top; padding:2;}
@@ -309,6 +334,7 @@ def stream_from_html(
     height=int(297 * 72 / 25.4),
     stream_type="pdf",
     base_url=None,
+    info=None,
 ):
     """Render html string
 
@@ -321,6 +347,12 @@ def stream_from_html(
         stream_type - 'zip' or 'pdf', default pdf.
     """
 
+    if RENDERING_LIB:
+        if RENDERING_LIB.accept(html, stream_type, base_url, info):
+            return RENDERING_LIB.render(
+                html, output_stream, css, width, height, stream_type, base_url, info
+            )
+            
     if not type(html) == str:
         html = html.decode("utf-8")
     if "<html" in html:

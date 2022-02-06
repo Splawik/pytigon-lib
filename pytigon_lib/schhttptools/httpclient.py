@@ -337,7 +337,6 @@ class HttpResponse:
         self.content = content
         self.ret_content_type = ret_content_type
         self.new_url = url
-        # print("==> ", self.url, self.ret_code)
 
     def process_response(self, http_client, parent, post_request):
         global COOKIES
