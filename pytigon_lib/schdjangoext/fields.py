@@ -69,6 +69,16 @@ class ForeignKey(models.ForeignKey):
             del kwargs["query"]
         else:
             self.query = None
+        if "show_form" in kwargs:
+            self.show_form = kwargs["show_form"]
+            del kwargs["show_form"]
+        else:
+            self.show_form = True
+        if "can_add" in kwargs:
+            self.can_add = kwargs["can_add"]
+            del kwargs["can_add"]
+        else:
+            self.can_add = False
 
         super().__init__(*args, **kwargs)
         if len(args) > 0:
@@ -81,14 +91,20 @@ class ForeignKey(models.ForeignKey):
         else:
             to = self.to
 
-        href1 = make_href(
-            "/%s/table/%s/%s/form/get/?schtml=1"
-            % (to._meta.app_label, to._meta.object_name, self.filter)
-        )
-        href2 = make_href(
-            "/%s/table/%s/%s/add/?schtml=1"
-            % (to._meta.app_label, to._meta.object_name, self.filter)
-        )
+        if self.show_form:
+            href1 = make_href(
+                "/%s/table/%s/%s/form/get/?schtml=1"
+                % (to._meta.app_label, to._meta.object_name, self.filter)
+            )
+        else:
+            href1 = None
+        if self.can_add:
+            href2 = make_href(
+                "/%s/table/%s/%s/add/?schtml=1"
+                % (to._meta.app_label, to._meta.object_name, self.filter)
+            )
+        else:
+            href2 = False
         field = self
 
         if self.search_fields:
