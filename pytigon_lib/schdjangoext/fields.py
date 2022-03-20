@@ -204,7 +204,7 @@ class ManyToManyField(models.ManyToManyField):
                             queryset = queryset[: _query["limit"]]
 
                     widget = ModelSelect2MultipleWidgetExt(
-                        field.verbose_name,
+                        label=field.verbose_name,
                         queryset=queryset,
                         search_fields=_search_fields,
                     )
