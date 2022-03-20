@@ -26,7 +26,7 @@
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django import forms
-from django_select2.forms import ModelSelect2Widget
+from django_select2.forms import ModelSelect2Widget, ModelSelect2MultipleWidget
 from django.forms.widgets import HiddenInput
 
 from pytigon_lib.schdjangoext.tools import make_href
@@ -51,6 +51,10 @@ class ModelSelect2WidgetExt(ModelSelect2Widget):
             else:
                 argv["attrs"] = {"href2": href2}
         ModelSelect2Widget.__init__(self, *argi, label=label, **argv)
+
+
+class ModelSelect2MultipleWidgetExt(ModelSelect2MultipleWidget):
+    input_type = "select2"
 
 
 class ForeignKey(models.ForeignKey):
@@ -105,6 +109,7 @@ class ForeignKey(models.ForeignKey):
             )
         else:
             href2 = False
+
         field = self
 
         if self.search_fields:
@@ -142,6 +147,82 @@ class ForeignKey(models.ForeignKey):
         return super().formfield(**defaults)
 
 
+class ManyToManyField(models.ManyToManyField):
+    """Extended version of django models.ForeignKey class. Class allows you to add new objects and
+    selecting existing objects in better way.
+    """
+
+    def __init__(self, *args, **kwargs):
+        if "search_fields" in kwargs:
+            self.search_fields = kwargs["search_fields"]
+            del kwargs["search_fields"]
+        else:
+            self.search_fields = None
+        if "query" in kwargs:
+            self.query = kwargs["query"]
+            del kwargs["query"]
+        else:
+            self.query = None
+        if False:
+            if "show_form" in kwargs:
+                self.show_form = kwargs["show_form"]
+                del kwargs["show_form"]
+            else:
+                self.show_form = True
+            if "can_add" in kwargs:
+                self.can_add = kwargs["can_add"]
+                del kwargs["can_add"]
+            else:
+                self.can_add = False
+
+        super().__init__(*args, **kwargs)
+        if len(args) > 0:
+            self.to = args[0]
+        self.filter = "-"
+
+    def formfield(self, **kwargs):
+        if type(self.to) == str:
+            to = self.model
+        else:
+            to = self.to
+
+        field = self
+
+        if self.search_fields:
+            _search_fields = self.search_fields
+            _query = self.query
+
+            class _Field(forms.ModelMultipleChoiceField):
+                def __init__(self, queryset, *argi, **argv):
+                    nonlocal _query, _search_fields
+                    if _query:
+                        if "Q" in _query:
+                            queryset = queryset.filter(_query["Q"])
+                        if "order" in _query:
+                            queryset = queryset.order_by(*_query["order"])
+                        if "limmit" in _query:
+                            queryset = queryset[: _query["limit"]]
+
+                    widget = ModelSelect2MultipleWidgetExt(
+                        field.verbose_name,
+                        queryset=queryset,
+                        search_fields=_search_fields,
+                    )
+                    widget.attrs["style"] = "width:400px;"
+                    argv["widget"] = widget
+                    forms.ModelMultipleChoiceField.__init__(
+                        self, queryset, *argi, **argv
+                    )
+
+            defaults = {
+                "form_class": _Field,
+            }
+        else:
+            defaults = {}
+        defaults.update(**kwargs)
+        return super().formfield(**defaults)
+
+
 class HiddenForeignKey(models.ForeignKey):
     """Version of django models.ForeignKey class with hidden widget."""
 
@@ -152,8 +233,8 @@ class HiddenForeignKey(models.ForeignKey):
         return field
 
 
-class ManyToManyField(models.ManyToManyField):
-    pass
+# class ManyToManyField(models.ManyToManyField):
+#    pass
 
 
 class ManyToManyFieldWithIcon(models.ManyToManyField):
@@ -207,8 +288,8 @@ class TreeForeignKey(ForeignKey):
 
 
 PtigForeignKey = ForeignKey
+PtigManyToManyField = ManyToManyField
 PtigHiddenForeignKey = HiddenForeignKey
 PtigForeignKeyWithIcon = ForeignKeyWithIcon
-PtigManyToManyField = ManyToManyField
 PtigManyToManyFieldWithIcon = ManyToManyFieldWithIcon
 PtigTreeForeignKey = TreeForeignKey
