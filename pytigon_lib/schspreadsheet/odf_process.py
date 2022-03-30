@@ -25,22 +25,20 @@
 from zipfile import ZipFile, ZIP_DEFLATED
 import re
 import shutil
-import xml.dom.minidom
+try:
+    from lxml import etree
+except:
+    pass
 import base64
 
 from pytigon_lib.schfs.vfstools import delete_from_zip
 
 
-def _enumerate_children(node, tab=None):
-    if tab == None:
-        rettab = []
-    else:
-        rettab = tab
-    for child in node.childNodes:
-        rettab.append(child)
-        if child.hasChildNodes():
-            _enumerate_children(child, rettab)
-    return rettab
+def attr_get(attrs, key):
+    for k in attrs.keys():
+        if k.endswith(key):
+            return attrs[k]
+    return None
 
 
 class OdfDocTransform:
@@ -73,26 +71,32 @@ class OdfDocTransform:
     def set_process_tables(self, tables):
         self.process_tables = tables
 
+
     def nr_col(self):
-        return """{{ tbl.IncCol()}}"""
+        # return """{{ tbl.IncCol()}}"""
+        return """{{ tbl.IncCol }}"""
 
     def nr_row(self, il=1):
-        return """{{ tbl.IncRow(%d)}}{{ tbl.SetCol(1) }}""" % il
+        # return """{{ tbl.IncRow(%d)}}{{ tbl.SetCol(1) }}""" % il
+        return """{{ tbl|args:%d|call:'IncRow' }}{{ tbl|args:1|call:'SetCol' }}""" % il
 
     def zer_row_col(self):
-        return """{{ tbl.SetRow(1) }}{{ tbl.SetCol(1) }}"""
+        # return """{{ tbl.SetRow(1) }}{{ tbl.SetCol(1) }}"""
+        return """{{ tbl|args:1|call:'SetRow' }}{{ tbl|args:1|call:'SetCol' }}"""
 
     def doc_process(self, doc, debug):
         pass
 
     def spreadsheet_process(self, doc, debug):
-        elementy = doc.getElementsByTagName("text:p")
+        elementy = doc.findall(".//{*}p")
         for element in elementy:
-            if element.parentNode.nodeName == "office:annotation":
+            print("A1")
+            print(element.getparent().tag)
+            if element.getparent().tag.endswith("annotation"):
                 data = ""
-                for child in _enumerate_children(element):
-                    if hasattr(child, "data"):
-                        data += child.data
+                for child in element:
+                    if hasattr(child, "text"):
+                        data += child.text
 
                 if data != "" and "!" in data:
                     data = data[data.find("!") :]
@@ -106,148 +110,146 @@ class OdfDocTransform:
                         skladniki = data[poziom:].split("@")
                     else:
                         skladniki = data[poziom:].split("$")
-                    x = element.parentNode
-                    y = element.parentNode.parentNode
-                    y.removeChild(x)
+                    x = element.getparent()
+                    y = element.getparent().getparent()
+                    y.remove(x)
                     if poziom > 1:
-                        y = y.parentNode
+                        y = y.getparent()
                     if poziom > 2:
-                        y = y.parentNode
-                    new_cell = doc.createElement("tmp")
-                    y.parentNode.replaceChild(new_cell, y)
-                    new_cell.appendChild(doc.createTextNode(skladniki[0]))
-                    new_cell.appendChild(y)
+                        y = y.getparent()
+                    new_cell = etree.Element("tmp")
+                    parent = y.getparent()
+                    parent[parent.index(y)] = new_cell
+                    if new_cell.text:
+                        new_cell.text += skladniki[0]
+                    else:
+                        new_cell.text = skladniki[0]
+                    new_cell.append(y)
                     if len(skladniki) > 1:
-                        new_cell.appendChild(doc.createTextNode(skladniki[1]))
-        elementy = doc.getElementsByTagName("table:table-cell")
+                        if new_cell.tail:
+                            new_cell.tail += skladniki[1]
+                        else:
+                            new_cell.tail = skladniki[1]
+
+        elementy = doc.findall(".//{*}table-cell")
         for element in elementy:
-            nr = element.getAttribute("table:number-columns-repeated")
+            nr = attr_get(element.attrib, "number-columns-repeated")
             if nr:
                 nr = int(nr)
                 if nr > 1000:
-                    element.setAttribute("table:number-columns-repeated", "1000")
+                    element.set("number-columns-repeated", "1000")
 
-            if element.getAttribute("office:value-type") == "string":
-                for child in _enumerate_children(element):  # .childNodes:
-                    if child and child.firstChild and hasattr(child.firstChild, "data"):
+            if attr_get(element.attrib, "value-type") == "string":
+                for child in element:
+                    if child and len(child) > 0 and hasattr(child[0], "data"):
                         if (
-                            child.firstChild.data
-                            and len(child.firstChild.data) > 0
+                            child[0].text
+                            and len(child[0].text) > 0
                             and (
-                                child.firstChild.data[0] == "*"
-                                or child.firstChild.data[0] == ":"
-                                or child.firstChild.data[0] == "@"
-                                or child.firstChild.data[0] == "$"
+                                child[0].text[0] == "*"
+                                or child[0].text[0] == ":"
+                                or child[0].text[0] == "@"
+                                or child[0].text[0] == "$"
                             )
                         ):
-                            if (
-                                child.firstChild.data[0] == ":"
-                                or child.firstChild.data[0] == "*"
-                            ):
-                                new_cell = doc.createElement("table:table-cell")
-                                if child.firstChild.data[0] == ":":
-                                    new_cell.setAttribute("office:value-type", "float")
-                                    new_cell.setAttribute(
-                                        "office:value", str(child.firstChild.data[1:])
-                                    )
-                                    new_text = doc.createElement("text:p")
+                            if child[0].text[0] == ":" or child[0].text[0] == "*":
+                                new_cell = etree.Element("table:table-cell")
+                                if child[0].text[0] == ":":
+                                    new_cell.set("office:value-type", "float")
+                                    new_cell.set("office:value", str(child[0].text[1:]))
+                                    new_text = etree.Element("text:p")
                                 else:
-                                    new_cell.setAttribute("office:value-type", "string")
-                                    new_text = doc.createElement("text:p")
-                                    new_text.appendChild(
-                                        doc.createTextNode(
-                                            str(child.firstChild.data[1:])
-                                        )
-                                    )
+                                    new_cell.set("office:value-type", "string")
+                                    new_text = etree.Element("text:p")
+                                    new_text.text += str(child[0].text[1:])
                                 if debug:
-                                    new_annotate = doc.createElement(
-                                        "office:annotation"
-                                    )
-                                    new_text_a = doc.createElement("text:p")
-                                    new_text_a.appendChild(
-                                        doc.createTextNode(child.firstChild.data[2:-1])
-                                    )
-                                    new_annotate.appendChild(new_text_a)
-                                new_cell.appendChild(new_text)
+                                    new_annotate = etree.Element("office:annotation")
+                                    new_text_a = etree.Element("text:p")
+                                    new_text_a.text += child[0].text[2:-1]
+                                    new_annotate.append(new_text_a)
+                                new_cell.append(new_text)
                                 if debug:
-                                    new_cell.appendChild(new_annotate)
-                                new_cell.setAttribute(
+                                    new_cell.append(new_annotate)
+                                new_cell.set(
                                     "table:style-name",
-                                    element.getAttribute("table:style-name"),
+                                    attr_get(element.attrib, "style-name"),
                                 )
-                                new_cell2 = doc.createElement("tmp")
-                                new_cell2.appendChild(new_cell)
-                                new_cell2.appendChild(doc.createTextNode(self.nr_col()))
-                                element.parentNode.replaceChild(new_cell2, element)
-                            if (
-                                child.firstChild.data[0] == "@"
-                                or child.firstChild.data[0] == "$"
-                            ):
-                                new_cell = doc.createElement("table:table-cell")
-                                new_cell.setAttribute("office:value-type", "float")
-                                new_cell.setAttribute("office:value", "0")
-                                if child.firstChild.data[0] == "@":
-                                    new_cell.setAttribute(
-                                        "table:formula",
-                                        "oooc:=" + child.firstChild.data[1:],
-                                    )
-                                else:
-                                    new_cell.setAttribute(
-                                        "table:formula",
-                                        "msoxl:=" + child.firstChild.data[1:],
-                                    )
-                                new_text = doc.createElement("text:p")
-                                if debug:
-                                    new_annotate = doc.createElement(
-                                        "office:annotation"
-                                    )
-                                    new_text_a = doc.createElement("text:p")
-                                    new_text_a.appendChild(
-                                        doc.createTextNode(
-                                            child.firstChild.data[1:].replace("^", "")
-                                        )
-                                    )
-                                    new_annotate.appendChild(new_text_a)
-                                new_cell.appendChild(new_text)
-                                if debug:
-                                    new_cell.appendChild(new_annotate)
-                                new_cell.setAttribute(
-                                    "table:style-name",
-                                    element.getAttribute("table:style-name"),
-                                )
-                                new_cell2 = doc.createElement("tmp")
-                                new_cell2.appendChild(new_cell)
-                                new_cell2.appendChild(doc.createTextNode(self.nr_col()))
-                                element.parentNode.replaceChild(new_cell2, element)
+                                new_cell2 = etree.Element("tmp")
+                                new_cell2.append(new_cell)
+                                new_cell2.text += self.nr_col()
 
-        elementy = doc.getElementsByTagName("table:table-row")
+                                parent = element.getparent()
+                                parent[parent.index(element)] = new_cell2
+
+                            if child[0].text[0] == "@" or child[0].text[0] == "$":
+                                new_cell = etree.Element("table:table-cell")
+                                new_cell.set("office:value-type", "float")
+                                new_cell.set("office:value", "0")
+                                if child[0].text[0] == "@":
+                                    new_cell.set(
+                                        "table:formula",
+                                        "oooc:=" + child[0].text[1:],
+                                    )
+                                else:
+                                    new_cell.set(
+                                        "table:formula",
+                                        "msoxl:=" + child[0].text[1:],
+                                    )
+                                new_text = etree.Element("text:p")
+                                if debug:
+                                    new_annotate = etree.Element("office:annotation")
+                                    new_text_a = etree.Element("text:p")
+                                    new_text_a.text += (
+                                        child[0].text[1:].replace("^", "")
+                                    )
+                                    new_annotate.append(new_text_a)
+                                new_cell.append(new_text)
+                                if debug:
+                                    new_cell.append(new_annotate)
+                                new_cell.set(
+                                    "table:style-name",
+                                    attr_get(element.attrib, "style-name"),
+                                )
+                                new_cell2 = etree.Element("tmp")
+                                new_cell2.append(new_cell)
+                                new_cell2.text += self.nr_col()
+
+                                parent = element.getparent()
+                                parent[parent.index(element)] = new_cell2
+
+        elementy = doc.findall(".//{*}table-row")
         for element in elementy:
-            parent = element.parentNode
-            new_cell = doc.createElement("tmp")
-            nr = element.getAttribute("table:number-rows-repeated")
+            parent = element.getparent()
+            new_cell = etree.Element("tmp")
+            nr = attr_get(element.attrib, "number-rows-repeated")
             if nr:
                 nr = int(nr)
                 if nr > 1000:
-                    element.setAttribute("table:number-rows-repeated", "1000")
+                    element.set("number-rows-repeated", "1000")
             else:
                 nr = 1
-            parent.replaceChild(new_cell, element)
-            new_cell.appendChild(element)
-            new_cell.appendChild(doc.createTextNode(self.nr_row(nr)))
 
-        elementy = doc.getElementsByTagName("table:table")
+            parent = element.getparent()
+            parent[parent.index(element)] = new_cell
+
+            new_cell.append(element)
+            new_cell.text = self.nr_row(nr)
+
+        elementy = doc.findall(".//{*}table:table")
         for element in elementy:
-            parent = element.parentNode
-            new_cell = doc.createElement("tmp")
-            new_cell.appendChild(doc.createTextNode(self.zer_row_col()))
-            parent.replaceChild(new_cell, element)
-            new_cell.appendChild(element)
+            parent = element.getparent()
+            new_cell = etree.Element("tmp")
+            new_cell.text += self.zer_row_col()
+            parent[parent.index(element)] = new_cell
+            new_cell.append(element)
+
         if self.process_tables != None:
-            elementy = doc.getElementsByTagName("table:table")
+            elementy = doc.findall(".//{*}table:table")
             for element in elementy:
-                if not element.getAttribute("table:name") in self.process_tables:
-                    new_cell = doc.createElement("tmp")
-                    element.parentNode.replaceChild(new_cell, element)
+                if not attr_get(element.attrib, "name") in self.process_tables:
+                    new_cell = etree.Element("tmp")
+                    parent = element.getparent()
+                    parent[parent.index(element)] = new_cell
 
     def process_template(self, doc_str, context):
         pass
@@ -275,10 +277,11 @@ class OdfDocTransform:
         ):
             return
 
-        doc = xml.dom.minidom.parseString(
+        doc = etree.fromstring(
             doc_content.replace("&apos;", "'")
             .replace("_start_", "{{")
             .replace("_end_", "}}")
+            .encode("utf-8")
         )
 
         if self.doc_type == 1:
@@ -286,11 +289,18 @@ class OdfDocTransform:
         if self.doc_type == 2:
             self.doc_process(doc, debug)
 
-        doc_str = doc.toxml().replace("<tmp>", "").replace("</tmp>", "")
+        doc_str = (
+            etree.tostring(doc)
+            .decode("utf-8")
+            .replace("<tmp>", "")
+            .replace("</tmp>", "")
+        )
 
         p = re.compile("\^(.*?\(.*?\))")
         doc_str = p.sub(r"${\1}", doc_str)
-        doc_str = doc_str.replace("{{", "{% expr_escape ").replace("}}", " %}")
+        
+        if 'expr_escape' in context:
+            doc_str = doc_str.replace("{{", "{% expr_escape ").replace("}}", " %}")
 
         x = self.process_template(doc_str, context)
         if not x:
@@ -327,6 +337,7 @@ class OdfDocTransform:
 
 
 if __name__ == "__main__":
-    x = OdfDocTransform("./test/test.ods", "./test/test_out.ods")
-    context = {"test": 1}
+    x = OdfDocTransform("./test.ods", "./test_out.ods")
+    object_list = ["x1", "x2", "x3"]
+    context = {"test": 1, "object_list": object_list}
     x.process(context, False)

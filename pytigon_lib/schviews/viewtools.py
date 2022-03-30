@@ -209,14 +209,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 "Content-Type"
             ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             context = self.resolve_context(self.context_data)
-            if "object_list" in context:
-                transform_list = list(context["object_list"])
-            elif "object" in context:
-                transform_list = context["object"]
-            else:
-                transform_list = Context(context)
-
-            stream_out = render_ooxml(self.template_name, transform_list)
+            stream_out = render_ooxml(self.template_name, Context(context))
             if type(stream_out) == tuple:
                 with open(stream_out[0], "rb") as f:
                     self.content = f.read()
@@ -357,9 +350,21 @@ def dict_to_template(template_name):
             elif "redirect" in v:
                 return HttpResponseRedirect(make_href(v["redirect"]))
             elif "template_name" in v:
-                return render_to_response(v["template_name"], v, request=request)
+                # return render_to_response(v["template_name"], v, request=request)
+                if "doc_type" in v:
+                    return render_to_response_ext(
+                        request, v["template_name"], v, doc_type=v["doc_type"]
+                    )
+                else:
+                    return render_to_response_ext(request, v["template_name"], v)
             else:
-                return render_to_response(template_name, v, request=request)
+                # return render_to_response(template_name, v, request=request)
+                if "doc_type" in v:
+                    return render_to_response_ext(
+                        request, template_name, v, doc_type=v["doc_type"]
+                    )
+                else:
+                    return render_to_response_ext(request, template_name, v)
 
         return inner
 
