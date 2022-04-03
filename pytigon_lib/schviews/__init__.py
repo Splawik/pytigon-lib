@@ -46,6 +46,7 @@ from .viewtools import (
     transform_template_name,
     LocalizationTemplateResponse,
     ExtTemplateResponse,
+    DOC_TYPES
 )
 from .form_fun import form_with_perms
 from .perms import make_perms_test_fun, filter_by_permissions
@@ -564,20 +565,12 @@ class GenericRows(object):
                 }
 
             def doc_type(self):
-                if self.kwargs["target"].startswith("pdf"):
-                    return "pdf"
-                elif self.kwargs["target"].startswith("odf"):
-                    return "odf"
-                elif self.kwargs["target"].startswith("xlsx"):
-                    return "xlsx"
-                elif self.kwargs["target"].startswith("json") or (
-                    "json" in self.request.GET and self.request.GET["json"] == "1"
-                ):
+                for doc_type in DOC_TYPES:
+                    if self.kwargs["target"].startswith(doc_type):
+                        return doc_type
+                if "json" in self.request.GET and self.request.GET["json"] == "1":
                     return "json"
-                elif self.kwargs["target"].startswith("txt"):
-                    return "txt"
-                else:
-                    return "html"
+                return "html"
 
             def get_template_names(self):
                 names = super().get_template_names()
@@ -600,7 +593,7 @@ class GenericRows(object):
                 return names
 
             def get_paginate_by(self, queryset):
-                if self.doc_type() in ("pdf", "odf", "txt", "xlsx"):
+                if self.doc_type() in DOC_TYPES:
                     return None
                 else:
                     return self.paginate_by
@@ -920,20 +913,13 @@ class GenericRows(object):
                     return obj
 
             def doc_type(self):
-                if self.kwargs["target"].startswith("pdf"):
-                    return "pdf"
-                elif self.kwargs["target"].startswith("odf"):
-                    return "odf"
-                elif self.kwargs["target"].startswith("xlsx"):
-                    return "xlsx"
-                elif self.kwargs["target"].startswith("json") or (
-                    "json" in self.request.GET and self.request.GET["json"] == "1"
-                ):
+                for doc_type in DOC_TYPES:
+                    if self.kwargs["target"].startswith(doc_type):
+                        return doc_type
+                if "json" in self.request.GET and self.request.GET["json"] == "1":
                     return "json"
-                elif self.kwargs["target"].startswith("txt"):
-                    return "txt"
-                else:
-                    return "html"
+                return "html"
+
 
             def get_template_names(self):
                 names = super().get_template_names()

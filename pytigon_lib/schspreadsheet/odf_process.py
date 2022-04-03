@@ -59,6 +59,7 @@ class OdfDocTransform:
             self.file_name_out = file_name_out
         self.process_tables = None
         self.doc_type = 1
+        self.buf = None
 
     def set_doc_type(self, doc_type):
         """
@@ -139,111 +140,101 @@ class OdfDocTransform:
 
             if attr_get(element.attrib, "value-type") == "string":
                 for child in element:
-                    if child.text:
-                        if child.text and (
-                            child.text[0] == "*"
-                            or child.text[0] == ":"
-                            or child.text[0] == "@"
-                            or child.text[0] == "$"
-                        ):
-                            if child.text[0] == ":" or child.text[0] == "*":
-                                new_cell = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-cell"
-                                )
-                                if child.text[0] == ":":
-                                    new_cell.set(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
-                                        "float",
-                                    )
-                                    new_cell.set(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value",
-                                        str(child.text[1:]),
-                                    )
-                                    new_text = etree.Element(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                    )
-                                    new_text.text = str(child.text[1:])
-                                    new_cell.append(new_text)
-                                else:
-                                    new_cell.set(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
-                                        "string",
-                                    )
-                                    new_text = etree.Element(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                    )
-                                    new_text.text = str(child.text[1:])
-                                    new_cell.append(new_text)
-                                if debug:
-                                    new_annotate = etree.Element(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}annotation"
-                                    )
-                                    new_text_a = etree.Element(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                    )
-                                    new_text_a.text += child.text[2:-1]
-                                    new_annotate.append(new_text_a)
-                                    new_cell.append(new_annotate)
-                                style_name = attr_get(element.attrib, "style-name")
-                                if style_name:
-                                    new_cell.set(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}style-name",
-                                        style_name,
-                                    )
-                                new_cell2 = etree.Element("tmp")
-                                new_cell2.append(new_cell)
-                                new_cell2.text = self.nr_col()
-
-                                parent = element.getparent()
-                                parent[parent.index(element)] = new_cell2
-
-                            if child.text[0] == "@" or child.text[0] == "$":
-                                new_cell = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-cell"
-                                )
+                    if child.text and child.text.startswith(":"):
+                        if child.text[:2] in (":*", ":0"):
+                            new_cell = etree.Element(
+                                "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-cell"
+                            )
+                            if child.text.startswith(":0"):
                                 new_cell.set(
                                     "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
                                     "float",
                                 )
                                 new_cell.set(
                                     "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value",
-                                    "0",
+                                    str(child.text[2:]),
                                 )
-                                if child.text[0] == "@":
-                                    new_cell.set(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}formula",
-                                        "oooc:=" + child.text[1:],
-                                    )
-                                else:
-                                    new_cell.set(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}formula",
-                                        "msoxl:=" + child.text[1:],
-                                    )
                                 new_text = etree.Element(
                                     "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
                                 )
-                                if debug:
-                                    new_annotate = etree.Element(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}annotation"
-                                    )
-                                    new_text_a = etree.Element(
-                                        "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                    )
-                                    new_text_a.text += child.text[1:].replace("^", "")
-                                    new_annotate.append(new_text_a)
+                                new_text.text = str(child.text[2:])
                                 new_cell.append(new_text)
-                                if debug:
-                                    new_cell.append(new_annotate)
+                            else:
+                                new_cell.set(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
+                                    "string",
+                                )
+                                new_text = etree.Element(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
+                                )
+                                new_text.text = str(child.text[2:])
+                                new_cell.append(new_text)
+                            if debug:
+                                new_annotate = etree.Element(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}annotation"
+                                )
+                                new_text_a = etree.Element(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
+                                )
+                                new_text_a.text += child.text[2:-1]
+                                new_annotate.append(new_text_a)
+                                new_cell.append(new_annotate)
+                            style_name = attr_get(element.attrib, "style-name")
+                            if style_name:
                                 new_cell.set(
                                     "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}style-name",
-                                    attr_get(element.attrib, "style-name"),
+                                    style_name,
                                 )
-                                new_cell2 = etree.Element("tmp")
-                                new_cell2.append(new_cell)
-                                new_cell2.text = self.nr_col()
+                            new_cell2 = etree.Element("tmp")
+                            new_cell2.append(new_cell)
+                            new_cell2.text = self.nr_col()
 
-                                parent = element.getparent()
-                                parent[parent.index(element)] = new_cell2
+                            parent = element.getparent()
+                            parent[parent.index(element)] = new_cell2
+
+                        if child.text.startswith(":="):
+                            new_cell = etree.Element(
+                                "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-cell"
+                            )
+                            new_cell.set(
+                                "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
+                                "float",
+                            )
+                            new_cell.set(
+                                "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value",
+                                "0",
+                            )
+                            new_cell.set(
+                                "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}formula",
+                                "oooc:=" + child.text[2:],
+                            )
+                            new_text = etree.Element(
+                                "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
+                            )
+                            new_cell.append(new_text)
+                            if debug:
+                                new_annotate = etree.Element(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}annotation"
+                                )
+                                new_text_a = etree.Element(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
+                                )
+                                new_text_a.text = child.text[1:].replace("^", "")
+                                new_annotate.append(new_text_a)
+                            if debug:
+                                new_cell.append(new_annotate)
+                            style = attr_get(element.attrib, "style-name")
+                            if style:
+                                new_cell.set(
+                                    "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}style-name",
+                                    style,
+                                )
+                            new_cell2 = etree.Element("tmp")
+                            new_cell2.append(new_cell)
+                            new_cell2.text = self.nr_col()
+
+                            parent = element.getparent()
+                            parent[parent.index(element)] = new_cell2
 
         elementy = doc.findall(".//{*}table-row")
         for element in elementy:
@@ -281,6 +272,9 @@ class OdfDocTransform:
 
     def process_template(self, doc_str, context):
         pass
+
+    def extended_transformation(self, xml_name, script):
+        self.buf = script(self, self.buf)
 
     def process(self, context, debug):
         """Transform input file
@@ -353,8 +347,14 @@ class OdfDocTransform:
             data3[1::2] = fdata
             x = "".join(data3)
 
+        self.buf = x
+
+        if "extended_transformations" in context:
+            for pos in context["extended_transformations"]:
+                self.extended_transformation(pos[0], pos[1])
+
         z = ZipFile(self.file_name_out, "a", ZIP_DEFLATED)
-        z.writestr("content.xml", x.encode("utf-8"))
+        z.writestr("content.xml", self.buf.encode("utf-8"))
 
         for pos in files:
             z.writestr(pos[0], base64.b64decode(pos[1].encode("utf-8")))

@@ -40,11 +40,10 @@ def get_template_names(context, doc_type):
         templates.append("schsys/object")
 
     for pos in templates:
-        dtype = doc_type.replace("odf", "ods")
         if doc_type in ("html", "txt", "pdf"):
-            ret.append(f"{pos}_{dtype}.html")
+            ret.append(f"{pos}_{doc_type}.html")
         else:
-            ret.append(f"{pos}.{dtype}")
+            ret.append(f"{pos}.{doc_type}")
 
     return ret
 
@@ -65,7 +64,7 @@ def render_doc(context):
 
     templates = get_template_names(context, doc_type)
 
-    if doc_type in ("odf", "ods"):
+    if doc_type in ("ods", "odt", "odp"):
         file_out, file_in = render_odf(templates, Context(context))
         if file_out:
             with open(file_out, "rb") as f:
@@ -78,7 +77,7 @@ def render_doc(context):
 
         return ret_attr, ret_content
 
-    elif doc_type == "xlsx":
+    elif doc_type in ("xlsx", "docx", "pptx"):
         file_out, file_in = render_ooxml(templates, Context(context))
         if file_out:
             with open(file_out, "rb") as f:

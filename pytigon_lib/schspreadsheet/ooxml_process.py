@@ -249,32 +249,34 @@ class OOXmlDocTransform(OdfDocTransform):
             if id >= 0:
                 s = self.shared_strings[id]
                 if s:
-                    if (s.startswith("@") or s.startswith(":=")) and (
-                        "{{" in s or "{%" in s
-                    ):
+                    if s.startswith(":="):
                         pos.remove(v)
                         pos.attrib["t"] = ""
-                        if s.startswith(":="):
-                            pos.append(etree.XML("<f>%s</f>" % escape(s[2:])))
-                        else:
-                            pos.append(etree.XML("<f>%s</f>" % escape(s[1:])))
-                    elif s.startswith(":?") and ("{{" in s or "{%" in s):
+                        pos.append(etree.XML("<f>%s</f>" % escape(s[2:])))
+                    elif s.startswith(":?"):
                         pos.remove(v)
                         pos.attrib["t"] = ""
                         pos.append(etree.XML("<vauto>%s</vauto>" % escape(s[2:])))
-                    elif s.startswith(":") and ("{{" in s or "{%" in s):
+                    elif s.startswith(":0"):
                         pos.remove(v)
-                        pos.attrib["t"] = ""
-                        pos.append(etree.XML("<v>%s</v>" % escape(s[1:])))
-                    else:
+                        pos.attrib["t"] = "n"
+                        pos.append(etree.XML("<v>%s</v>" % escape(s[2:])))
+                    elif s.startswith(":*"):
+                        pos.attrib["t"] = "inlineStr"
+                        pos.remove(v)
+                        pos.append(etree.XML("<is><t>%s</t></is>" % escape(s[2:])))
+                    elif ("{{" in s and "}}" in s) or ("{%" in s and "%}" in s):
                         pos.attrib["t"] = "inlineStr"
                         pos.remove(v)
                         pos.append(etree.XML("<is><t>%s</t></is>" % escape(s)))
 
-    def transform_template(self, template_str, context):
-        template_header = "{% load exfiltry %}{% load exsyntax %}{% load expr %}"
-        template = Template(template_header + template_str)
-        return template.render(context)
+    def process_template(self, doc_str, context):
+        pass
+
+    # def transform_template(self, template_str, context):
+    #    template_header = "{% load exfiltry %}{% load exsyntax %}{% load expr %}"
+    #    template = Template(template_header + template_str)
+    #    return template.render(context)
 
     def repair_xml(self, sheet):
         max_row = 0
@@ -354,7 +356,7 @@ class OOXmlDocTransform(OdfDocTransform):
         self.shared_strings_to_inline(sheet)
         self.add_comments(sheet)
         sheet_str = etree.tostring(sheet, pretty_print=True).decode("utf-8")
-        sheet_str = self.transform_template(sheet_str, django_context)
+        sheet_str = self.process_template(sheet_str, django_context)
         root = etree.XML(sheet_str)
         self.repair_xml(root)
         return root
@@ -365,70 +367,111 @@ class OOXmlDocTransform(OdfDocTransform):
         Args:
             context - python dict with variables used for transformation
             debut - print debug information
+
         """
         django_context = Context(context)
+        if "doc_type" in context and context["doc_type"] != "xlsx":
+            xlsx = False
+        else:
+            xlsx = True
         shutil.copyfile(self.file_name_in, self.file_name_out)
         self.to_update = []
         self.zip_file = zipfile.ZipFile(self.file_name_out, "r")
-        shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
-        root = etree.XML(shared_strings_str)
-        d2 = root.findall(".//t", namespaces=root.nsmap)
-        self.shared_strings = [pos.text for pos in d2]
-        id = 1
-        while True:
-            try:
-                sheet_name = "xl/worksheets/sheet%d.xml" % id
-                sheet_str = self.zip_file.read(sheet_name)
-                sheet = etree.XML(sheet_str)
+        if xlsx:
+            shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
+            root = etree.XML(shared_strings_str)
+            d2 = root.findall(".//t", namespaces=root.nsmap)
+            self.shared_strings = [pos.text for pos in d2]
+            id = 1
+            while True:
                 try:
-                    sheet_rels_name = "xl/worksheets/_rels/sheet%d.xml.rels" % id
-                    sheet_rels_str = self.zip_file.read(sheet_rels_name)
-                    root = etree.XML(sheet_rels_str)
-                    d1 = root.findall(".//Relationship", namespaces=root.nsmap)
-                    d2 = filter_attr(
-                        d1,
-                        "Type",
-                        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-                    )
-                    if len(d2) > 0:
-                        comments_name = os.path.normpath(
-                            "xl/worksheets/" + d2[0].attrib["Target"]
-                        ).replace("\\", "/")
-                        comments_str = self.zip_file.read(comments_name)
-                        root = etree.XML(comments_str)
-                        d1 = root.findall(".//comment", namespaces=root.nsmap)
-                        for pos in d1:
-                            ref = pos.attrib["ref"]
-                            d2 = pos.findall(".//text/r/t", namespaces=root.nsmap)
-                            for pos2 in d2:
-                                if "{{" in pos2.text or "{%" in pos2.text:
-                                    self.comments[ref] = pos2.text
-                                    comment = pos2.getparent().getparent().getparent()
-                                    comment_list = comment.getparent()
-                                    comment_list.remove(comment)
-                        self.to_update.append((comments_name, root))
+                    sheet_name = "xl/worksheets/sheet%d.xml" % id
+                    sheet_str = self.zip_file.read(sheet_name)
+                    sheet = etree.XML(sheet_str)
+                    try:
+                        sheet_rels_name = "xl/worksheets/_rels/sheet%d.xml.rels" % id
+                        sheet_rels_str = self.zip_file.read(sheet_rels_name)
+                        root = etree.XML(sheet_rels_str)
+                        d1 = root.findall(".//Relationship", namespaces=root.nsmap)
+                        d2 = filter_attr(
+                            d1,
+                            "Type",
+                            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+                        )
+                        if len(d2) > 0:
+                            comments_name = os.path.normpath(
+                                "xl/worksheets/" + d2[0].attrib["Target"]
+                            ).replace("\\", "/")
+                            comments_str = self.zip_file.read(comments_name)
+                            root = etree.XML(comments_str)
+                            d1 = root.findall(".//comment", namespaces=root.nsmap)
+                            for pos in d1:
+                                ref = pos.attrib["ref"]
+                                d2 = pos.findall(".//text/r/t", namespaces=root.nsmap)
+                                for pos2 in d2:
+                                    if "{{" in pos2.text or "{%" in pos2.text:
+                                        self.comments[ref] = pos2.text
+                                        comment = (
+                                            pos2.getparent().getparent().getparent()
+                                        )
+                                        comment_list = comment.getparent()
+                                        comment_list.remove(comment)
+                            self.to_update.append((comments_name, root))
+                    except KeyError:
+                        pass
+                    sheet2 = self.handle_sheet(sheet, django_context)
+                    self.to_update.append((sheet_name, sheet2))
                 except KeyError:
-                    pass
-                sheet2 = self.handle_sheet(sheet, django_context)
-                self.to_update.append((sheet_name, sheet2))
-            except KeyError:
-                break
-            id += 1
-        if "extended_transformations" in django_context:
-            for pos in django_context["extended_transformations"]:
-                self.extended_transformation(pos[0], pos[1])
-        self.zip_file.close()
-        delete_from_zip(self.file_name_out, [pos[0] for pos in self.to_update])
-        z = zipfile.ZipFile(self.file_name_out, "a", zipfile.ZIP_DEFLATED)
-        for pos in self.to_update:
-            z.writestr(
-                pos[0],
-                etree.tostring(pos[1], pretty_print=True)
-                .decode("utf-8")
-                .replace("<tmp>", "")
-                .replace("</tmp>", ""),
-            )
-        z.close()
+                    break
+                id += 1
+            if "extended_transformations" in django_context:
+                for pos in django_context["extended_transformations"]:
+                    self.extended_transformation(pos[0], pos[1])
+
+            self.zip_file.close()
+            delete_from_zip(self.file_name_out, [pos[0] for pos in self.to_update])
+            z = zipfile.ZipFile(self.file_name_out, "a", zipfile.ZIP_DEFLATED)
+            for pos in self.to_update:
+                z.writestr(
+                    pos[0],
+                    etree.tostring(pos[1], pretty_print=True)
+                    .decode("utf-8")
+                    .replace("<tmp>", "")
+                    .replace("</tmp>", ""),
+                )
+            z.close()
+        else:
+            doc_type = context["doc_type"]
+            if doc_type == "docx":
+                doc_name = "word/document.xml"
+                doc_str = self.zip_file.read(doc_name).decode("utf-8")
+                doc_str = self.process_template(doc_str, django_context)
+                self.to_update.append(doc_name, doc_str)
+            elif doc_type == "pptx":
+                id = 1
+                while True:
+                    doc_name = "ppt/slides/slide%d.xml" % id
+                    try:
+                        doc_str = self.zip_file.read(doc_name).decode("utf-8")
+                        doc_str2 = self.process_template(doc_str, django_context)
+                        if doc_str != doc_str2:
+                            self.to_update.append((doc_name, doc_str2))
+                        id += 1
+                    except KeyError:
+                        break
+            else:
+                return 0
+            self.zip_file.close()
+            if self.to_update:
+                delete_from_zip(
+                    self.file_name_out,
+                    [item[0] for item in self.to_update],
+                )
+                z = zipfile.ZipFile(self.file_name_out, "a", zipfile.ZIP_DEFLATED)
+                for item in self.to_update:
+                    z.writestr(item[0], item[1].encode("utf-8"))
+                z.close()
+
         return 1
 
 

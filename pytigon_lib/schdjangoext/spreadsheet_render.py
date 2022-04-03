@@ -53,7 +53,9 @@ class OdfDocTemplateTransform(OdfDocTransform):
 
 class OOXmlDocTemplateTransform(OOXmlDocTransform):
     def process_template(self, doc_str, context):
-        return Template("{% load exsyntax %}{% load expr %}" + doc_str).render(context)
+        return Template(
+            "{% load exsyntax %}{% load exfiltry %}{% load expr %}" + doc_str
+        ).render(context)
 
 
 def oo_dict(template_name):
@@ -136,7 +138,7 @@ def _render_doc(doc_type, template_name, context_instance=None, debug=None):
         else:
             name = template_name
         name_out = get_temp_filename()
-        if doc_type == "ODF":
+        if doc_type.lower().startswith("od"):
             doc = OdfDocTemplateTransform(name, name_out)
         else:
             doc = OOXmlDocTemplateTransform(name, name_out)
@@ -179,7 +181,7 @@ def render_odf(template_name, context_instance=None, debug=None):
 
 
 def render_ooxml(template_name, context_instance=None, debug=None):
-    return _render_doc("ODXML", template_name, context_instance, debug)
+    return _render_doc("OOXML", template_name, context_instance, debug)
 
 
 def render_to_response_odf(template_name, context_instance=None, debug=None):

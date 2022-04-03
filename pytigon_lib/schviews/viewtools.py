@@ -39,6 +39,19 @@ from pytigon_lib.schtools import schjson
 from pytigon_lib.schparser.html_parsers import SimpleTabParserBase
 
 
+DOC_TYPES = (
+    "pdf",
+    "ods",
+    "odt",
+    "odp",
+    "xlsx",
+    "docx",
+    "pptx",
+    "txt",
+    "json",
+)
+
+
 def transform_template_name(obj, request, template_name):
     if hasattr(obj, "transform_template_name"):
         return obj.transform_template_name(request, template_name)
@@ -144,20 +157,34 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     template2.append(context["template_name"] + ".html")
                 for pos in template:
                     template2.append(pos.replace(".html", "_txt.html"))
-            elif context and "view" in context and context["view"].doc_type() == "odf":
+            elif (
+                context
+                and "view" in context
+                and context["view"].doc_type() in ("ods", "odt", "odp")
+            ):
                 template2 = []
                 if "template_name" in context:
-                    template2.append(context["template_name"] + ".ods")
+                    template2.append(
+                        context["template_name"] + "." + context["view"].doc_type()
+                    )
                 for pos in template:
                     template2.append(pos.replace(".html", ".ods"))
                 template2.append("schsys/table.ods")
-            elif context and "view" in context and context["view"].doc_type() == "xlsx":
+            elif (
+                context
+                and "view" in context
+                and context["view"].doc_type() in ("xlsx", "docx", "pptx")
+            ):
                 template2 = []
                 if "template_name" in context:
-                    template2.append(context["template_name"] + ".xlsx")
+                    template2.append(
+                        context["template_name"] + "." + context["view"].doc_type()
+                    )
                 for pos in template:
-                    template2.append(pos.replace(".html", ".xlsx"))
-                template2.append("schsys/table.xlsx")
+                    template2.append(
+                        pos.replace(".html", "." + context["view"].doc_type())
+                    )
+                template2.append("schsys/table." + context["view"].doc_type())
             else:
                 template2 = template
 
@@ -191,7 +218,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         return None
 
     def render(self):
-        if self.context_data["view"].doc_type() == "odf":
+        if self.context_data["view"].doc_type() in ("ods", "odt", "odp"):
             self["Content-Type"] = "application/vnd.oasis.opendocument.spreadsheet"
             file_out, file_in = render_odf(
                 self.template_name, Context(self.resolve_context(self.context_data))
@@ -204,7 +231,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 file_in_name = os.path.basename(file_in)
                 self["Content-Disposition"] = "attachment; filename=%s" % file_in_name
             return self
-        elif self.context_data["view"].doc_type() == "xlsx":
+        elif self.context_data["view"].doc_type() in ("xlsx", "docx", "pptx"):
             self[
                 "Content-Type"
             ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -310,16 +337,12 @@ class ExtTemplateView(generic.TemplateView):
         return self.get(request, *args, **kwargs)
 
     def doc_type(self):
-        if self.kwargs["target"] == "pdf":
-            return "pdf"
-        elif self.kwargs["target"] == "odf":
-            return "odf"
-        elif self.kwargs["target"] == "xlsx":
-            return "xlsx"
-        elif self.kwargs["target"] == "txt":
-            return "txt"
-        else:
-            return "html"
+        for doc_type in DOC_TYPES:
+            if self.kwargs["target"].startswith(doc_type):
+                return doc_type
+        if "json" in self.request.GET and self.request.GET["json"] == "1":
+            return "json"
+        return "html"
 
 
 def render_to_response(
@@ -361,7 +384,7 @@ def dict_to_template(template_name):
                 # return render_to_response(template_name, v, request=request)
                 if "doc_type" in v:
                     return render_to_response_ext(
-                        request, template_name, v, doc_type=v["doc_type"]
+                        request, template_name.replace('.html', '.' + v["doc_type"]), v, doc_type=v["doc_type"]
                     )
                 else:
                     return render_to_response_ext(request, template_name, v)
@@ -376,8 +399,15 @@ def dict_to_odf(template_name):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             c = RequestContext(request, v)
+            if "doc_type" in v:
+                ext = v["doc_type"]
+            else:
+                ext = "ods"
             return render_to_response_ext(
-                request, template_name, c.flatten(), doc_type="odf"
+                request,
+                template_name.replace(".ods", "." + ext),
+                c.flatten(),
+                doc_type=ext,
             )
 
         return inner
@@ -385,13 +415,20 @@ def dict_to_odf(template_name):
     return _dict_to_template
 
 
-def dict_to_xlsx(template_name):
+def dict_to_ooxml(template_name):
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             c = RequestContext(request, v)
+            if "doc_type" in v:
+                ext = v["doc_type"]
+            else:
+                ext = "xlsx"
             return render_to_response_ext(
-                request, template_name, c.flatten(), doc_type="xlsx"
+                request,
+                template_name.replace(".xlsx", "." + ext),
+                c.flatten(),
+                doc_type=ext,
             )
 
         return inner
