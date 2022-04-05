@@ -593,7 +593,7 @@ class GenericRows(object):
                 return names
 
             def get_paginate_by(self, queryset):
-                if self.doc_type() in DOC_TYPES:
+                if self.doc_type() in DOC_TYPES and self.doc_type() != 'json':
                     return None
                 else:
                     return self.paginate_by
