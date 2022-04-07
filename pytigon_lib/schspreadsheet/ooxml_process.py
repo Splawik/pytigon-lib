@@ -45,6 +45,10 @@ from pytigon_lib.schfs.vfstools import delete_from_zip
 SECTION_WIDTH = ord("Z") - ord("A") + 1
 
 
+def transform_str(s):
+    return s.replace("***", '"').replace("**", "'")
+
+
 def filter_attr(tab, attr, value):
     check_type = 0
     ret = []
@@ -249,6 +253,7 @@ class OOXmlDocTransform(OdfDocTransform):
             if id >= 0:
                 s = self.shared_strings[id]
                 if s:
+                    print(s)
                     if s.startswith(":="):
                         pos.remove(v)
                         pos.attrib["t"] = ""
@@ -379,9 +384,13 @@ class OOXmlDocTransform(OdfDocTransform):
         self.zip_file = zipfile.ZipFile(self.file_name_out, "r")
         if xlsx:
             shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
+            print(shared_strings_str)
             root = etree.XML(shared_strings_str)
-            d2 = root.findall(".//t", namespaces=root.nsmap)
-            self.shared_strings = [pos.text for pos in d2]
+            d2 = root.findall(".//si", namespaces=root.nsmap)
+            self.shared_strings = [
+                transform_str(etree.tostring(pos, method="text").decode("utf-8")) for pos in d2
+            ]
+            print(self.shared_strings)
             id = 1
             while True:
                 try:
