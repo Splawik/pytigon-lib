@@ -22,6 +22,7 @@
 
 """
 
+from xml.dom.expatbuilder import TEXT_NODE
 from zipfile import ZipFile, ZIP_DEFLATED
 import re
 import shutil
@@ -34,12 +35,20 @@ import base64
 
 from pytigon_lib.schfs.vfstools import delete_from_zip
 
+OFFICE_URN = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
+TABLE_URN = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
+TEXT_URN = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
+
 
 def attr_get(attrs, key):
     for k in attrs.keys():
         if k.endswith(key):
             return attrs[k]
     return None
+
+
+def transform_str(s):
+    return s.replace("***", '"').replace("**", "'")
 
 
 class OdfDocTransform:
@@ -98,7 +107,7 @@ class OdfDocTransform:
                     data = data[data.find("!") :]
                     poziom = 1
                     if len(data) > 1 and data[1] == "!":
-                        if len(data) > 2 and data[2] == "!":
+                        if len(data) > 2 and data[2] == "*":
                             poziom = 3
                         else:
                             poziom = 2
@@ -116,10 +125,7 @@ class OdfDocTransform:
                     new_cell = etree.Element("tmp")
                     parent = y.getparent()
                     parent[parent.index(y)] = new_cell
-                    if new_cell.text:
-                        new_cell.text += skladniki[0]
-                    else:
-                        new_cell.text = skladniki[0]
+                    new_cell.text = skladniki[0]
                     new_cell.append(y)
                     if len(skladniki) > 1:
                         if new_cell.tail:
@@ -133,108 +139,71 @@ class OdfDocTransform:
             if nr:
                 nr = int(nr)
                 if nr > 1000:
-                    element.set(
-                        "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}number-columns-repeated",
-                        "1000",
-                    )
+                    element.set(TABLE_URN + "number-columns-repeated", "1000")
 
             if attr_get(element.attrib, "value-type") == "string":
-                for child in element:
-                    if child.text and child.text.startswith(":"):
-                        if child.text[:2] in (":*", ":0"):
-                            new_cell = etree.Element(
-                                "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-cell"
-                            )
-                            if child.text.startswith(":0"):
-                                new_cell.set(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
-                                    "float",
-                                )
-                                new_cell.set(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value",
-                                    str(child.text[2:]),
-                                )
-                                new_text = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                )
-                                new_text.text = str(child.text[2:])
-                                new_cell.append(new_text)
-                            else:
-                                new_cell.set(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
-                                    "string",
-                                )
-                                new_text = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                )
-                                new_text.text = str(child.text[2:])
-                                new_cell.append(new_text)
-                            if debug:
-                                new_annotate = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}annotation"
-                                )
-                                new_text_a = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                )
-                                new_text_a.text += child.text[2:-1]
-                                new_annotate.append(new_text_a)
-                                new_cell.append(new_annotate)
-                            style_name = attr_get(element.attrib, "style-name")
-                            if style_name:
-                                new_cell.set(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}style-name",
-                                    style_name,
-                                )
-                            new_cell2 = etree.Element("tmp")
-                            new_cell2.append(new_cell)
-                            new_cell2.text = self.nr_col()
-
-                            parent = element.getparent()
-                            parent[parent.index(element)] = new_cell2
-
-                        if child.text.startswith(":="):
-                            new_cell = etree.Element(
-                                "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-cell"
-                            )
-                            new_cell.set(
-                                "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value-type",
-                                "float",
-                            )
-                            new_cell.set(
-                                "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}value",
-                                "0",
-                            )
-                            new_cell.set(
-                                "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}formula",
-                                "oooc:=" + child.text[2:],
-                            )
-                            new_text = etree.Element(
-                                "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                            )
+                txt = etree.tostring(element, method="text").decode("utf-8")
+                test = False
+                for item in (":=", ":*", ":*", "{{", "}}", "{%", "%}"):
+                    if item in txt:
+                        test = True
+                if test:
+                    txt = transform_str(txt.strip())
+                    if txt.startswith(":="):
+                        new_cell = etree.Element(TABLE_URN + "table-cell")
+                        new_cell.set(OFFICE_URN + "value-type", "float")
+                        new_cell.set(OFFICE_URN + "value", "0")
+                        new_cell.set(TABLE_URN + "formula", "of:=" + txt[2:])
+                        new_text = etree.Element(OFFICE_URN + "p")
+                        new_cell.append(new_text)
+                        if debug:
+                            new_annotate = etree.Element(OFFICE_URN + "annotation")
+                            new_text_a = etree.Element(TEXT_URN + "p")
+                            new_text_a.text = txt[2:].replace("^", "")
+                            new_annotate.append(new_text_a)
+                            new_cell.append(new_annotate)
+                        style = attr_get(element.attrib, "style-name")
+                        if style:
+                            new_cell.set(TABLE_URN + "style-name", style)
+                        new_cell2 = etree.Element("tmp")
+                        new_cell2.append(new_cell)
+                        new_cell2.text = self.nr_col()
+                        parent = element.getparent()
+                        parent[parent.index(element)] = new_cell2
+                    else:
+                        new_cell = etree.Element(TABLE_URN + "table-cell")
+                        if txt.startswith(":0"):
+                            new_cell.set(OFFICE_URN + "value-type", "float")
+                            new_cell.set(OFFICE_URN + "value", str(txt[2:]))
+                            new_text = etree.Element(TEXT_URN + "p")
+                            new_text.text = str(txt[2:])
                             new_cell.append(new_text)
-                            if debug:
-                                new_annotate = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}annotation"
-                                )
-                                new_text_a = etree.Element(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-                                )
-                                new_text_a.text = child.text[1:].replace("^", "")
-                                new_annotate.append(new_text_a)
-                            if debug:
-                                new_cell.append(new_annotate)
-                            style = attr_get(element.attrib, "style-name")
-                            if style:
-                                new_cell.set(
-                                    "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}style-name",
-                                    style,
-                                )
-                            new_cell2 = etree.Element("tmp")
-                            new_cell2.append(new_cell)
-                            new_cell2.text = self.nr_col()
+                        else:
+                            new_cell.set(OFFICE_URN + "value-type", "string")
+                            new_text = etree.Element(TEXT_URN + "p")
+                            if txt.startswith(":*"):
+                                new_text.text = txt[2:]
+                            else:
+                                new_text.text = txt
+                            new_cell.append(new_text)
+                        if debug:
+                            new_annotate = etree.Element(OFFICE_URN + "annotation")
+                            new_text_a = etree.Element(TEXT_URN + "p")
+                            if txt.startswith(":*"):
+                                new_text_a.text = txt[2:]
+                            else:
+                                new_text_a.text = txt
+                            new_annotate.append(new_text_a)
+                            new_cell.append(new_annotate)
+                        style_name = attr_get(element.attrib, "style-name")
+                        if style_name:
+                            new_cell.set(TABLE_URN + "style-name", style_name)
+                        new_cell2 = etree.Element("tmp")
+                        new_cell2.append(new_cell)
+                        new_cell2.text = self.nr_col()
 
-                            parent = element.getparent()
-                            parent[parent.index(element)] = new_cell2
+                        parent = element.getparent()
+                        parent[parent.index(element)] = new_cell2
 
         elementy = doc.findall(".//{*}table-row")
         for element in elementy:

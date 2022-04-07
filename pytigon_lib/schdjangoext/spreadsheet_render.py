@@ -80,15 +80,19 @@ class DefaultTbl(object):
 
     def IncRow(self, row=1):
         self.row = self.row + row
+        return ""
 
     def IncCol(self, col=1):
         self.col = self.col + col
+        return ""
 
     def SetCol(self, col):
         self.col = col
+        return ""
 
     def SetRow(self, row):
         self.row = row
+        return ""
 
 
 def _render_doc(doc_type, template_name, context_instance=None, debug=None):

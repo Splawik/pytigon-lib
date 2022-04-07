@@ -46,7 +46,7 @@ from .viewtools import (
     transform_template_name,
     LocalizationTemplateResponse,
     ExtTemplateResponse,
-    DOC_TYPES
+    DOC_TYPES,
 )
 from .form_fun import form_with_perms
 from .perms import make_perms_test_fun, filter_by_permissions
@@ -54,6 +54,8 @@ from .perms import make_perms_test_fun, filter_by_permissions
 
 # url:  /table/TableName/filter/target/list url width field:
 # /table/TableName/parent_pk/field/filter/target/list
+
+VIEWS_REGISTER = {"list": {}, "detail": {}, "edit": {}, "create": {}, "delete": {}}
 
 
 def make_path(view_name, args=None):
@@ -593,7 +595,7 @@ class GenericRows(object):
                 return names
 
             def get_paginate_by(self, queryset):
-                if self.doc_type() in DOC_TYPES and self.doc_type() != 'json':
+                if self.doc_type() in DOC_TYPES and self.doc_type() != "json":
                     return None
                 else:
                     return self.paginate_by
@@ -867,6 +869,8 @@ class GenericRows(object):
                     else:
                         return ret
 
+        VIEWS_REGISTER["list"][self.base_model] = ListView
+
         fun = make_perms_test_fun(
             parent_class.table.app,
             self.base_model,
@@ -920,7 +924,6 @@ class GenericRows(object):
                     return "json"
                 return "html"
 
-
             def get_template_names(self):
                 names = super().get_template_names()
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
@@ -959,6 +962,8 @@ class GenericRows(object):
 
             def post(self, request, *args, **kwargs):
                 return self.get(request, *args, **kwargs)
+
+        VIEWS_REGISTER["detail"][self.base_model] = DetailView
 
         fun = make_perms_test_fun(
             parent_class.table.app,
@@ -1116,6 +1121,8 @@ class GenericRows(object):
                     return update_row_ok(request, int(self.object.id), str(self.object))
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
+
+        VIEWS_REGISTER["edit"][self.base_model] = UpdateView
 
         fun = make_perms_test_fun(
             parent_class.table.app,
@@ -1349,7 +1356,10 @@ class GenericRows(object):
                 #        if not _app.startswith('_'):
                 #            context['prj'] = app.split('.')[0]
                 #        break
+
                 return context
+
+        VIEWS_REGISTER["create"][self.base_model] = CreateView
 
         fun = make_perms_test_fun(
             parent_class.table.app,
@@ -1407,6 +1417,8 @@ class GenericRows(object):
                 #        break
                 return context
 
+        VIEWS_REGISTER["delete"][self.base_model] = DeleteView
+
         fun = make_perms_test_fun(
             parent_class.table.app,
             self.base_model,
@@ -1428,6 +1440,7 @@ class GenericRows(object):
             model = f.related_model
         else:
             model = self.base_model
+
         parm = dict(
             app=self.table.app,
             tab=self.tab,
@@ -1468,3 +1481,25 @@ def generic_table_start(urlpatterns, app, views_module=None):
         views_module - imported views.py module
     """
     return GenericTable(urlpatterns, app, views_module)
+
+
+def extend_generic_view(view_name, model, method_name, new_method):
+    try:
+        cls = VIEWS_REGISTER[view_name][model]
+    except:
+        cls = None
+    if cls:
+        old_method = getattr(cls, method_name)
+        setattr(cls, method_name, new_method)
+        if old_method:
+            arch_method_name = "old_" + method_name
+            if getattr(cls, arch_method_name):
+                getattr(cls, arch_method_name).append(old_method)
+            else:
+                setattr(
+                    cls,
+                    arch_method_name,
+                    [
+                        new_method,
+                    ],
+                )
