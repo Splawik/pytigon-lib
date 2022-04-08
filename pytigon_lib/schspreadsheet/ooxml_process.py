@@ -386,7 +386,7 @@ class OOXmlDocTransform(OdfDocTransform):
             root = etree.XML(shared_strings_str)
             d2 = root.findall(".//si", namespaces=root.nsmap)
             self.shared_strings = [
-                transform_str(etree.tostring(pos, method="text").decode("utf-8")) for pos in d2
+                transform_str(etree.tostring(pos, method="text", encoding='utf-8').decode("utf-8")) for pos in d2
             ]
             id = 1
             while True:
