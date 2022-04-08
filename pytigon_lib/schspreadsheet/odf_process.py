@@ -213,7 +213,7 @@ class OdfDocTransform:
             if nr:
                 nr = int(nr)
                 if nr > 1000:
-                    element.set("number-rows-repeated", "1000")
+                    element.set(TABLE_URN + "number-rows-repeated", "1000")
             else:
                 nr = 1
 
