@@ -142,7 +142,7 @@ class OdfDocTransform:
                     element.set(TABLE_URN + "number-columns-repeated", "1000")
 
             if attr_get(element.attrib, "value-type") == "string":
-                txt = etree.tostring(element, method="text").decode("utf-8")
+                txt = etree.tostring(element, method="text", encoding="utf-8").decode("utf-8")
                 test = False
                 for item in (":=", ":*", ":*", "{{", "}}", "{%", "%}"):
                     if item in txt:
@@ -281,7 +281,7 @@ class OdfDocTransform:
             self.doc_process(doc, debug)
 
         doc_str = (
-            etree.tostring(doc)
+            etree.tostring(doc, encoding='utf-8', xml_declaration=True)
             .decode("utf-8")
             .replace("<tmp>", "")
             .replace("</tmp>", "")
