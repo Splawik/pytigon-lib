@@ -142,7 +142,9 @@ class OdfDocTransform:
                     element.set(TABLE_URN + "number-columns-repeated", "1000")
 
             if attr_get(element.attrib, "value-type") == "string":
-                txt = etree.tostring(element, method="text", encoding="utf-8").decode("utf-8")
+                txt = etree.tostring(element, method="text", encoding="utf-8").decode(
+                    "utf-8"
+                )
                 test = False
                 for item in (":=", ":*", ":*", "{{", "}}", "{%", "%}"):
                     if item in txt:
@@ -243,7 +245,11 @@ class OdfDocTransform:
         pass
 
     def extended_transformation(self, xml_name, script):
-        self.buf = script(self, self.buf)
+        xml = etree.fromstring(self.buf.encode("utf-8"))
+        script(self, xml)
+        self.buf = etree.tostring(xml, encoding="utf-8", xml_declaration=True).decode(
+            "utf-8"
+        )
 
     def process(self, context, debug):
         """Transform input file
@@ -281,7 +287,7 @@ class OdfDocTransform:
             self.doc_process(doc, debug)
 
         doc_str = (
-            etree.tostring(doc, encoding='utf-8', xml_declaration=True)
+            etree.tostring(doc, encoding="utf-8", xml_declaration=True)
             .decode("utf-8")
             .replace("<tmp>", "")
             .replace("</tmp>", "")

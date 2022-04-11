@@ -356,6 +356,14 @@ class OOXmlDocTransform(OdfDocTransform):
             except:
                 print(txt)
 
+        c_list = sheet.findall(".//c", namespaces=sheet.nsmap)
+        for pos in c_list:
+            f = pos.find(".//f", namespaces=sheet.nsmap)
+            if f != None:
+                v = pos.find(".//v", namespaces=sheet.nsmap)
+                if v != None:
+                    pos.remove(v)
+
     def handle_sheet(self, sheet, django_context):
         self.shared_strings_to_inline(sheet)
         self.add_comments(sheet)
@@ -386,14 +394,24 @@ class OOXmlDocTransform(OdfDocTransform):
             root = etree.XML(shared_strings_str)
             d2 = root.findall(".//si", namespaces=root.nsmap)
             self.shared_strings = [
-                transform_str(etree.tostring(pos, method="text", encoding='utf-8').decode("utf-8")) for pos in d2
+                transform_str(
+                    etree.tostring(pos, method="text", encoding="utf-8").decode("utf-8")
+                )
+                for pos in d2
             ]
             id = 1
             while True:
+                if (
+                    "no_process_sheets" in context
+                    and id in context["no_process_sheets"]
+                ):
+                    id += 1
+                    continue
                 try:
                     sheet_name = "xl/worksheets/sheet%d.xml" % id
                     sheet_str = self.zip_file.read(sheet_name)
                     sheet = etree.XML(sheet_str)
+                    self.comments = {}
                     try:
                         sheet_rels_name = "xl/worksheets/_rels/sheet%d.xml.rels" % id
                         sheet_rels_str = self.zip_file.read(sheet_rels_name)

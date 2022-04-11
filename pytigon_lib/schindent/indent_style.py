@@ -615,8 +615,8 @@ class ConwertToHtml:
                     indent_pos = self._space_count(line)
                     pos = line.rfind(":")
                     buf0 = line + "...|||"
-                    buf = io.StringIO()
                     test = 5
+                    buf = io.StringIO()
                 elif "###>" in line:
                     indent_pos = self._space_count(line)
                     pos = line.find("###>")
