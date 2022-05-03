@@ -106,7 +106,7 @@ def _read_form_line(line):
                         pos,
                         pos,
                     )
-                    for pos in frm[1:-1].split(";")
+                    for pos in frm[1:-1].replace(',',';').split(";")
                     if pos
                 ]
             )

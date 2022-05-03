@@ -1,4 +1,5 @@
 import json
+from re import template
 import markdown
 from django.template.loader import select_template
 
@@ -8,6 +9,18 @@ REG_OBJ_RENDERER = {}
 class BaseObjRenderer:
     def __init__(self, extra_info=""):
         self.extra_info = extra_info
+        self.line_number = 0
+
+    def _get_line_number(self, parent_processor):
+        if self.line_number == 0:
+            self.line_number = 0
+            parent = parent_processor
+            if parent.line_number < 0:
+                return -1
+            while parent:
+                self.line_number += parent.line_number
+                parent = parent.parent_processor
+        return self.line_number
 
     @staticmethod
     def get_info():
@@ -31,26 +44,53 @@ class BaseObjRenderer:
         else:
             return form_class()
 
-    def gen_context(self, param, lines):
+    def gen_context(self, param, lines, output_format, parent_processor):
         return {}
 
     def get_renderer_template_name(self):
         return None
 
     def get_edit_template_name(self):
-        # return "schwiki/" + self.get_info()["name"].lower() + "_wikiobj_edit.html"
         return "schwiki/wikiobj_edit.html"
 
-    def render(self, param, lines):
+    def edit_on_page_link(self, parent_processor, right=False):
+        buf = ""
+        line_number = self._get_line_number(parent_processor)
+        if line_number < 0:
+            return ""
+        if right:
+            buf = " wiki-object-edit-right"
+        return """
+            {%% if perms.wiki.add_page %%}
+                <a class="wiki-object-edit%s" href="{{base_path}}schwiki/edit_object_on_page/{{object.id}}/%d/?name={{name}}&only_content=1" target="popup_edit">
+                    %s <span class="fa fa-cog fa-2" />
+                </a>
+            {%% endif %%}
+        """ % (
+            buf,
+            line_number,
+            self.get_info()["title"],
+        )
+
+    def render(self, param, lines, output_format, parent_processor):
         template_name = self.get_renderer_template_name()
-        context = self.gen_context(param, lines)
+        context = self.gen_context(param, lines, output_format, parent_processor)
+        context["output_format"] = output_format
+        context["line_number"] = self._get_line_number(parent_processor)
+
         if template_name:
             t = select_template(
                 [
                     template_name,
                 ]
             )
-            return t.render(context)
+            ret = t.render(context)
+            return (
+                ret.replace("[%", "{%")
+                .replace("%]", "%}")
+                .replace("[{", "{{")
+                .replace("}]", "}}")
+            )
         else:
             if context and "content" in context:
                 return context["content"]
@@ -106,8 +146,18 @@ def markdown_to_html(buf):
 
 
 class IndentMarkdownProcessor:
-    def __init__(self):
-        pass
+    def __init__(self, output_format="html", parent_processor=None, uri=None):
+        self.output_format = output_format
+        self.parent_processor = parent_processor
+        self.named_renderers = {}
+        self.uri = uri
+        self.lines = None
+        self.line_number = 0
+
+    def get_root(self):
+        if self.parent_processor:
+            return self.parent_processor.get_root()
+        return self
 
     def _json_dumps(self, j):
         return json.dumps(j).replace("\n", "\\n")
@@ -128,33 +178,42 @@ class IndentMarkdownProcessor:
         obj_name = x[0].strip()[1:].strip()
         if obj_name.endswith(":"):
             obj_name = obj_name[:-1]
+
+        if "name/" in obj_name:
+            if lines:
+                name = obj_name.split("name/")[1].strip()
+                self.named_renderers[name] = lines[0].strip()
+            return ""
+
+        if obj_name in self.named_renderers:
+            buf = self.line_number
+            self.line_number = -1
+            ret = self._render_obj(self.named_renderers[obj_name], lines)
+            self.line_number = buf
+            return ret
+
         return self.render_obj(obj_name, param, lines)
-        # f1 = x[0].strip()
-        # if len(f1) < 80:
-        #    f2 = " " * (80 - len(f1))
-        # else:
-        #    f2 = ""
-        # ret_str = f1 + f2 + "#" + self._json_dumps(ret)
-        # return ret_str
 
     def render_obj(self, obj_name, param, lines=None):
         renderer = get_obj_renderer(obj_name)
-        return renderer.render(param, lines)
+        return renderer.render(param, lines, self.output_format, self)
 
     def render_wiki(self, wiki_source):
         return markdown_to_html(wiki_source)
 
-    def convert_to_html(self, indent_wiki_source):
+    def convert(self, indent_wiki_source):
         regs = []
         lbuf = []
         fbuf = []
         in_func = False
         in_func_indent = 0
-
-        lines = indent_wiki_source.replace("\r", "").split("\n")
-        for line in lines + [
+        root = self.get_root()
+        self.lines = indent_wiki_source.replace("\r", "").split("\n")
+        for line in self.lines + [
             ".",
         ]:
+            self.line_number += 1
+            # root.line_number += 1
             line2 = line.strip()
             if in_func:
                 if line:
@@ -163,11 +222,22 @@ class IndentMarkdownProcessor:
                         fbuf.append(line[in_func_indent:])
                     else:
                         in_func = False
+                        tmp = self.line_number
+                        self.line_number -= len(fbuf) + 1
                         regs[-1].append(self._render_obj(regs[-1][0], unindent(fbuf)))
+                        self.line_number = tmp
                         fbuf = []
                 else:
                     fbuf.append("")
+
             if not in_func:
+
+                #                self.line_number += 1
+                #                parent = self.parent_processor
+                #                while parent:
+                #                   parent.line_number += 1
+                #                    parent = parent.parent_processor
+
                 if line2.startswith("%"):
                     buf = line2[1:]
                     x = buf.split("#")[0].strip()[-1]
@@ -188,7 +258,10 @@ class IndentMarkdownProcessor:
                         lbuf.append(line)
 
         if in_func:
+            tmp = self.line_number
+            self.line_number -= len(fbuf) + 1
             regs[-1].append(self._render_obj(regs[-1][0], unindent(fbuf)))
+            self.line_number = tmp
             fbuf = []
 
         buf_out = "\n".join(lbuf)
