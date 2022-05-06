@@ -171,7 +171,6 @@ class OOXmlDocTransform(OdfDocTransform):
 
     def add_comments(self, sheet):
 
-
         if self.comments:
             labels = []
             d = sheet.findall(".//c", namespaces=sheet.nsmap)
@@ -393,14 +392,20 @@ class OOXmlDocTransform(OdfDocTransform):
         self.zip_file = zipfile.ZipFile(self.file_name_out, "r")
         if xlsx:
             shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
-            root = etree.XML(shared_strings_str)
-            d2 = root.findall(".//si", namespaces=root.nsmap)
-            self.shared_strings = [
-                transform_str(
-                    etree.tostring(pos, method="text", encoding="utf-8").decode("utf-8")
-                )
-                for pos in d2
-            ]
+            try:
+                root = etree.XML(shared_strings_str)
+                d2 = root.findall(".//si", namespaces=root.nsmap)
+                self.shared_strings = [
+                    transform_str(
+                        etree.tostring(pos, method="text", encoding="utf-8").decode(
+                            "utf-8"
+                        )
+                    )
+                    for pos in d2
+                ]
+            except:
+                # no shared strings
+                self.shared_strings = []
             id = 1
             while True:
                 if (
@@ -433,7 +438,9 @@ class OOXmlDocTransform(OdfDocTransform):
                             d1 = root.findall(".//{*}comment", namespaces=root.nsmap)
                             for pos in d1:
                                 ref = pos.attrib["ref"]
-                                d2 = pos.findall(".//{*}text/{*}r/{*}t", namespaces=root.nsmap)
+                                d2 = pos.findall(
+                                    ".//{*}text/{*}r/{*}t", namespaces=root.nsmap
+                                )
                                 for pos2 in d2:
                                     if "{{" in pos2.text or "{%" in pos2.text:
                                         self.comments[ref] = pos2.text
@@ -445,7 +452,7 @@ class OOXmlDocTransform(OdfDocTransform):
                             self.to_update.append((comments_name, root))
                     except KeyError:
                         pass
-                    
+
                     sheet2 = self.handle_sheet(sheet, django_context)
                     self.to_update.append((sheet_name, sheet2))
                 except KeyError:
