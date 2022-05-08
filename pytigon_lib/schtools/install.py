@@ -69,31 +69,39 @@ def install():
             if not os.path.exists(temp_path):
                 os.mkdir(temp_path)
             json_path = os.path.join(temp_path, prj_name + ".json")
-            print(json_path)
-            cmd(
-                [
-                    "dumpdata",
-                    "--database",
-                    db_profile,
-                    "--format",
-                    "json",
-                    "--indent",
-                    "4",
-                    "-e",
-                    "auth",
-                    "-e",
-                    "contenttypes",
-                    "-e",
-                    "sessions",
-                    "-e",
-                    "sites",
-                    "-e",
-                    "admin",
-                    "--output",
-                    json_path,
-                ]
-            )
-            cmd(["loaddata", "--database", "default", json_path])
+            parameters = [
+                "dumpdata",
+                "--database",
+                db_profile,
+                "--format",
+                "json",
+                "--indent",
+                "4",
+            ]
+            do_not_export = [
+                "auth",
+                "contenttypes",
+                "sessions",
+                "sites",
+                "admin",
+                "socialaccount",
+                "account",
+                "schreports",
+            ]
+            for item in do_not_export:
+                for app in settings.INSTALLED_APPS:
+                    if item in app:
+                        parameters.append("-e")
+                        parameters.append(item)
+                        break
+
+            parameters.append("--output")
+            parameters.append("json_path")
+            parameters.append("--traceback")
+            print(parameters)
+            cmd(parameters)
+
+            cmd(["loaddata", "--database", "default", json_path, "--traceback"])
             from django.contrib.auth.models import User
 
             User.objects.db_manager("default").create_superuser(
@@ -111,11 +119,6 @@ def export_to_local_db():
     from django.conf import settings
 
     if "local" in settings.DATABASES:
-        db_profile = "local"
-    else:
-        db_profile = "default"
-
-    if db_profile != "default":
         prj_name = settings.PRJ_NAME
         data_path = settings.DATA_PATH
         app_data_path = os.path.join(data_path, prj_name)
@@ -130,40 +133,49 @@ def export_to_local_db():
                 + ".bak",
             )
 
-        cmd(["migrate", "--database", db_profile])
+        cmd(["migrate", "--database", "local"])
 
         temp_path = os.path.join(data_path, "temp")
         if not os.path.exists(temp_path):
             os.mkdir(temp_path)
         json_path = os.path.join(temp_path, prj_name + ".json")
-        cmd(
-            [
-                "dumpdata",
-                "--database",
-                "default",
-                "--format",
-                "json",
-                "--indent",
-                "4",
-                "-e",
-                "auth",
-                "-e",
-                "contenttypes",
-                "-e",
-                "sessions",
-                "-e",
-                "sites",
-                "-e",
-                "admin",
-                "-e",
-                "schprofile" "--output",
-                json_path,
-            ]
-        )
-        cmd(["loaddata", "--database", db_profile, json_path])
+
+        parameters = [
+            "dumpdata",
+            "--database",
+            "default",
+            "--format",
+            "json",
+            "--indent",
+            "4",
+        ]
+        do_not_export = [
+            "auth",
+            "contenttypes",
+            "sessions",
+            "sites",
+            "admin",
+            "socialaccount",
+            "account",
+        ]
+        for item in do_not_export:
+            for app in settings.INSTALLED_APPS:
+                if type(app) != str:
+                    app = app.name
+                if item in app:
+                    parameters.append("-e")
+                    parameters.append(item)
+                    break
+        parameters.append("--output")
+        parameters.append(json_path)
+        parameters.append("--traceback")
+        cmd(parameters)
+
+        cmd(["loaddata", "--database", "local", json_path, "--traceback"])
+
         from django.contrib.auth.models import User
 
-        User.objects.db_manager(db_profile).create_superuser(
+        User.objects.db_manager("local").create_superuser(
             "auto", "auto@pytigon.com", "anawa"
         )
 

@@ -56,20 +56,22 @@ class BaseObjRenderer:
     def edit_on_page_link(self, parent_processor, right=False):
         buf = ""
         line_number = self._get_line_number(parent_processor)
+        title = self.get_info()["title"]
         if line_number < 0:
             return ""
         if right:
             buf = " wiki-object-edit-right"
         return """
             {%% if perms.wiki.add_page %%}
-                <a class="wiki-object-edit%s" href="{{base_path}}schwiki/edit_object_on_page/{{object.id}}/%d/?name={{name}}&only_content=1" target="popup_edit">
+                <a class="wiki-object-edit%s" href="{{base_path}}schwiki/edit_object_on_page/{{object.id}}/%d/?name={{name}}&only_content=1" target="popup_edit" title="%s properties">
                     %s <span class="fa fa-cog fa-2" />
                 </a>
             {%% endif %%}
         """ % (
             buf,
             line_number,
-            self.get_info()["title"],
+            title,
+            title,
         )
 
     def render(self, param, lines, output_format, parent_processor):
@@ -146,13 +148,15 @@ def markdown_to_html(buf):
 
 
 class IndentMarkdownProcessor:
-    def __init__(self, output_format="html", parent_processor=None, uri=None):
+    def __init__(
+        self, output_format="html", parent_processor=None, uri=None, line_number=0
+    ):
         self.output_format = output_format
         self.parent_processor = parent_processor
         self.named_renderers = {}
         self.uri = uri
         self.lines = None
-        self.line_number = 0
+        self.line_number = line_number
 
     def get_root(self):
         if self.parent_processor:
