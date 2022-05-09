@@ -391,8 +391,8 @@ class OOXmlDocTransform(OdfDocTransform):
         self.to_update = []
         self.zip_file = zipfile.ZipFile(self.file_name_out, "r")
         if xlsx:
-            shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
             try:
+                shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
                 root = etree.XML(shared_strings_str)
                 d2 = root.findall(".//si", namespaces=root.nsmap)
                 self.shared_strings = [
