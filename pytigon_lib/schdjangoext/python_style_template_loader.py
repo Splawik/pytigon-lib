@@ -236,7 +236,10 @@ class DBLoader(BaseLoader):
     def get_template_sources(self, template_name, template_dirs=None):
         if not template_dirs:
             template_dirs = settings.TEMPLATES[0]["DIRS"]
-        for template_dir in template_dirs:
+
+        for template_dir in [
+            settings.DATA_PATH + "/plugins",
+        ]:
             try:
                 if template_name.startswith("db/"):
                     for pos in settings.LANGUAGES:
