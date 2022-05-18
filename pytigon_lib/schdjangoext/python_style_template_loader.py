@@ -26,6 +26,7 @@ from django.utils._os import safe_join
 from django.template.loaders.base import Loader as BaseLoader
 import django.template.loaders.filesystem
 import django.template.loaders.app_directories
+from django.contrib.contenttypes.models import ContentType
 
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
 
@@ -224,4 +225,130 @@ class Loader(BaseLoader):
                             pass
         except:
             pass
+        raise TemplateDoesNotExist(origin)
+
+
+class DBLoader(BaseLoader):
+    """Loader compile ihtml file to standard html file and based on language load related compiled template"""
+
+    is_usable = True
+
+    def get_template_sources(self, template_name, template_dirs=None):
+        if not template_dirs:
+            template_dirs = settings.TEMPLATES[0]["DIRS"]
+        for template_dir in template_dirs:
+            try:
+                if template_name.startswith("db/"):
+                    for pos in settings.LANGUAGES:
+                        if "_" + pos[0] + ".html" in template_name:
+                            template_name = template_name.replace(
+                                "_" + pos[0] + ".html", ".html"
+                            )
+                    yield safe_join(
+                        template_dir + "_src", template_name.replace(".html", ".ihtml")
+                    )
+            except UnicodeDecodeError:
+                raise
+            except ValueError:
+                pass
+
+    def get_contents(self, origin):
+        filepath = origin
+        filepath2 = filepath.replace("_src", "").replace(".ihtml", ".html")
+        if "/db/" in filepath:
+            # try:
+            if True:
+                write = False
+
+                x = filepath.split("/")
+                if x[-2] == "db":
+                    app = None
+                    xx = x[-1].split(".")[0]
+                else:
+                    app = x[-2]
+                    xx = x[-1].split(".")[0]
+                parts = xx.split("-")
+                if app:
+                    model = ContentType.objects.get(
+                        app_label=app, model=parts[0].lower()
+                    ).model_class()
+                else:
+                    model = ContentType.objects.get(
+                        model=parts[0].lower()
+                    ).model_class()
+                id = int(parts[1])
+                field_name = parts[2]
+                obj = model.objects.filter(pk=id).first()
+
+                if obj:
+                    if not os.path.exists(os.path.dirname(filepath2)):
+                        os.makedirs(os.path.dirname(filepath2))
+                    if os.path.exists(filepath2):
+                        time2 = os.path.getmtime(filepath2)
+                        time1 = obj.update_time.timestamp()
+                        if time1 > time2:
+                            write = True
+                    else:
+                        write = True
+                    if write:
+                        langs = []
+                        for pos in settings.LANGUAGES:
+                            langs.append(pos[0])
+                        for lang in langs:
+                            try:
+                                ret = ihtml_to_html(
+                                    None, input_str=getattr(obj, field_name), lang=lang
+                                )
+                                if ret:
+                                    try:
+                                        if lang == "en":
+                                            with codecs.open(
+                                                filepath2, "w", encoding="utf-8"
+                                            ) as f:
+                                                f.write(ret)
+                                        else:
+                                            with codecs.open(
+                                                filepath2.replace(
+                                                    ".html", "_" + lang + ".html"
+                                                ),
+                                                "w",
+                                                encoding="utf-8",
+                                            ) as f:
+                                                f.write(ret)
+                                    except:
+                                        try:
+                                            if lang == "en":
+                                                with codecs.open(
+                                                    filepath2, "r", encoding="utf-8"
+                                                ) as f:
+                                                    if f.read() != ret:
+                                                        import traceback
+                                                        import sys
+
+                                                        print(sys.exc_info())
+                                                        print(traceback.print_exc())
+                                            else:
+                                                with codecs.open(
+                                                    filepath2.replace(
+                                                        ".html", "_" + lang + ".html"
+                                                    ),
+                                                    "r",
+                                                    encoding="utf-8",
+                                                ) as f:
+                                                    if f.read() != ret:
+                                                        import traceback
+                                                        import sys
+
+                                                        print(sys.exc_info())
+                                                        print(traceback.print_exc())
+                                        except:
+                                            import traceback
+                                            import sys
+
+                                            print(sys.exc_info())
+                                            print(traceback.print_exc())
+                            except:
+                                pass
+            # except:
+            #    pass
         raise TemplateDoesNotExist(origin)

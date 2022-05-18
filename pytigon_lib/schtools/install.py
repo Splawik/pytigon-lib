@@ -114,7 +114,7 @@ def install():
             print(pos)
 
 
-def export_to_local_db():
+def export_to_local_db(withoutapp=None):
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
 
@@ -158,6 +158,10 @@ def export_to_local_db():
             "socialaccount",
             "account",
         ]
+        if withoutapp:
+            for item in withoutapp:
+                do_not_export.append(item)
+
         for item in do_not_export:
             for app in settings.INSTALLED_APPS:
                 if type(app) != str:
