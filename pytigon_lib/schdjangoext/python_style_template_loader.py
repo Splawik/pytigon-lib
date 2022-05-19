@@ -26,9 +26,10 @@ from django.utils._os import safe_join
 from django.template.loaders.base import Loader as BaseLoader
 import django.template.loaders.filesystem
 import django.template.loaders.app_directories
-from django.contrib.contenttypes.models import ContentType
 
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
+
+CONTENT_TYPE = None
 
 
 def compile_template(
@@ -256,11 +257,15 @@ class DBLoader(BaseLoader):
                 pass
 
     def get_contents(self, origin):
+        global CONTENT_TYPE
         filepath = origin
         filepath2 = filepath.replace("_src", "").replace(".ihtml", ".html")
         if "/db/" in filepath:
-            # try:
-            if True:
+            if not CONTENT_TYPE:
+                from django.contrib.contenttypes.models import ContentType
+
+                CONTENT_TYPE = ContentType
+            try:
                 write = False
 
                 x = filepath.split("/")
@@ -272,11 +277,11 @@ class DBLoader(BaseLoader):
                     xx = x[-1].split(".")[0]
                 parts = xx.split("-")
                 if app:
-                    model = ContentType.objects.get(
+                    model = CONTENT_TYPE.objects.get(
                         app_label=app, model=parts[0].lower()
                     ).model_class()
                 else:
-                    model = ContentType.objects.get(
+                    model = CONTENT_TYPE.objects.get(
                         model=parts[0].lower()
                     ).model_class()
                 id = int(parts[1])
@@ -352,6 +357,6 @@ class DBLoader(BaseLoader):
                                             print(traceback.print_exc())
                             except:
                                 pass
-            # except:
-            #    pass
+            except:
+                pass
         raise TemplateDoesNotExist(origin)
