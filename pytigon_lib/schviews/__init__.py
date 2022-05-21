@@ -527,7 +527,10 @@ class GenericRows(object):
 
             title = self.title_plural
 
-            extra_context = self.extra_context
+            if self.extra_context:
+                extra_context = self.extra_context
+            else:
+                extra_context = {}
             if self.field:
                 rel_field = self.field
             else:
@@ -810,6 +813,7 @@ class GenericRows(object):
                         if self.rel_field:
                             ppk = int(self.kwargs["parent_pk"])
                             parent = self.model.objects.get(id=ppk)
+                            self.extra_context['parent'] = parent
                             f = getattr(parent, self.rel_field)
                             ret = f.all()
                         else:
