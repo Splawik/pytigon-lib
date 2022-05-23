@@ -114,7 +114,7 @@ def install():
             print(pos)
 
 
-def export_to_local_db(withoutapp=None):
+def export_to_db(withoutapp=None, to_local_db=True):
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
 
@@ -124,31 +124,45 @@ def export_to_local_db(withoutapp=None):
         app_data_path = os.path.join(data_path, prj_name)
         db_path = os.path.join(app_data_path, prj_name + ".db")
 
-        if os.path.exists(db_path):
-            os.rename(
-                db_path,
-                db_path
-                + "."
-                + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                + ".bak",
-            )
-
-        cmd(["migrate", "--database", "local"])
+        if to_local_db:
+            if os.path.exists(db_path):
+                os.rename(
+                    db_path,
+                    db_path
+                    + "."
+                    + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                    + ".bak",
+                )
+            cmd(["migrate", "--database", "local"])
+        else:
+            cmd(["migrate"])
 
         temp_path = os.path.join(data_path, "temp")
         if not os.path.exists(temp_path):
             os.mkdir(temp_path)
         json_path = os.path.join(temp_path, prj_name + ".json")
 
-        parameters = [
-            "dumpdata",
-            "--database",
-            "default",
-            "--format",
-            "json",
-            "--indent",
-            "4",
-        ]
+        if to_local_db:
+            parameters = [
+                "dumpdata",
+                "--database",
+                "default",
+                "--format",
+                "json",
+                "--indent",
+                "4",
+            ]
+        else:
+            parameters = [
+                "dumpdata",
+                "--database",
+                "local",
+                "--format",
+                "json",
+                "--indent",
+                "4",
+            ]
+
         do_not_export = [
             "auth",
             "contenttypes",
@@ -175,13 +189,25 @@ def export_to_local_db(withoutapp=None):
         parameters.append("--traceback")
         cmd(parameters)
 
-        cmd(["loaddata", "--database", "local", json_path, "--traceback"])
+        if to_local_db:
+            cmd(["loaddata", "--database", "local", json_path, "--traceback"])
+        else:
+            cmd(["loaddata", "--database", "default", json_path, "--traceback"])
 
-        from django.contrib.auth.models import User
+        if to_local_db:
+            from django.contrib.auth.models import User
 
-        User.objects.db_manager("local").create_superuser(
-            "auto", "auto@pytigon.com", "anawa"
-        )
+            User.objects.db_manager("local").create_superuser(
+                "auto", "auto@pytigon.com", "anawa"
+            )
+
+
+def export_to_local_db(withoutapp=None):
+    return export_to_db(withoutapp, to_local_db=True)
+
+
+def import_from_local_db(withoutapp=None, to_local_db=True):
+    return export_to_db(withoutapp, to_local_db=False)
 
 
 class Ptig:
