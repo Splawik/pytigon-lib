@@ -35,7 +35,7 @@ def get_environ(path=None):
             LOGS_TO_DOCKER=(bool, False),
             PWA=(bool, False),
             GRAPHQL=(bool, False),
-            COMPRESS_ENABLED=(bool, True),
+            COMPRESS_ENABLED=(bool, False),
             SECRET_KEY=(str, ""),
             CHANNELS_REDIS=(str, ""),
         )
