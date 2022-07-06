@@ -20,6 +20,7 @@
 import os
 import os.path
 import logging
+from re import template
 
 LOGGER = logging.getLogger(__name__)
 
@@ -149,14 +150,21 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 if "template_name" in context:
                     template2.append(context["template_name"] + ".html")
                 for pos in template:
-                    template2.append(pos.replace(".html", "_pdf.html"))
+                    if "_pdf.html" in pos:
+                        template2.append(pos)
+                    else:
+                        template2.append(pos.replace(".html", "_pdf.html"))
                 template2.append("schsys/table_pdf.html")
+                print(template2)
             elif context and "view" in context and context["view"].doc_type() == "txt":
                 template2 = []
                 if "template_name" in context:
                     template2.append(context["template_name"] + ".html")
                 for pos in template:
-                    template2.append(pos.replace(".html", "_txt.html"))
+                    if "_txt.html" in pos:
+                        template2.append(pos)
+                    else:
+                        template2.append(pos.replace(".html", "_txt.html"))
             elif (
                 context
                 and "view" in context
@@ -260,6 +268,15 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     self.content = zip_stream.getvalue()
                 else:
                     self["Content-Type"] = "application/pdf"
+                    if type(self.template_name) == str:
+                        tname = self.template_name
+                    else:
+                        tname = self.template_name[0]
+                    self[
+                        "Content-Disposition"
+                    ] = "attachment; filename=%s" % tname.split("/")[-1].replace(
+                        ".html", ".pdf"
+                    )
                     pdf_stream = stream_from_html(
                         self.content,
                         stream_type="pdf",
@@ -384,7 +401,10 @@ def dict_to_template(template_name):
                 # return render_to_response(template_name, v, request=request)
                 if "doc_type" in v:
                     return render_to_response_ext(
-                        request, template_name.replace('.html', '.' + v["doc_type"]), v, doc_type=v["doc_type"]
+                        request,
+                        template_name.replace(".html", "." + v["doc_type"]),
+                        v,
+                        doc_type=v["doc_type"],
                     )
                 else:
                     return render_to_response_ext(request, template_name, v)
