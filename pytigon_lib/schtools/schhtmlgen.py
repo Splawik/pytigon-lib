@@ -50,7 +50,7 @@ class Html(object):
         for elem in self.children:
             ret += elem.dump()
         if self.value:
-            if isinstance(self.value, collections.Callable):
+            if isinstance(self.value, collections.abc.Callable):
                 ret += self.value()
             else:
                 ret += self.value

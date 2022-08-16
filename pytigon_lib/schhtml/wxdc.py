@@ -127,7 +127,7 @@ class DcDc(BaseDc):
         ):
             self._last_pen = wx.Pen(
                 wx.Colour(self._color[0], self._color[1], self._color[2]),
-                (self._line_width + 0.49) * self.scale,
+                int((self._line_width + 0.49) * self.scale),
                 style=wx.SOLID,
             )
             self._last_pen_color = self._color
@@ -198,7 +198,10 @@ class DcDc(BaseDc):
         else:
             font_style = wx.DEFAULT
         font.SetPointSize(
-            (self.scale * (self.base_font_size * 72) * int(style_tab[2])) / (96 * 100.0)
+            int(
+                (self.scale * (self.base_font_size * 72) * int(style_tab[2]))
+                / (96 * 100.0)
+            )
         )
         self.dc.SetFont(font)
         (r, g, b) = self.rgbfromhex(style_tab[0])
@@ -211,10 +214,10 @@ class DcDc(BaseDc):
         self._add(
             self.dc.DrawLine,
             (
-                x * self.scale,
-                y * self.scale,
-                (x + dx) * self.scale,
-                (y + dy) * self.scale,
+                int(x * self.scale),
+                int(y * self.scale),
+                int((x + dx) * self.scale),
+                int((y + dy) * self.scale),
             ),
         )
         BaseDc.add_line(self, x, y, dx, dy)
@@ -222,7 +225,12 @@ class DcDc(BaseDc):
     def add_rectangle(self, x, y, dx, dy):
         self._add(
             self.dc.DrawRectangle,
-            (x * self.scale, y * self.scale, dx * self.scale, dy * self.scale),
+            (
+                int(x * self.scale),
+                int(y * self.scale),
+                int(dx * self.scale),
+                int(dy * self.scale),
+            ),
         )
         BaseDc.add_rectangle(self, x, y, dx, dy)
 
@@ -230,10 +238,10 @@ class DcDc(BaseDc):
         self._add(
             self.dc.DrawRoundedRectangle,
             (
-                x * self.scale,
-                y * self.scale,
-                dx * self.scale,
-                dy * self.scale,
+                int(x * self.scale),
+                int(y * self.scale),
+                int(dx * self.scale),
+                int(dy * self.scale),
                 radius * self.scale,
             ),
         )
@@ -243,10 +251,10 @@ class DcDc(BaseDc):
         self._add(
             self.dc.DrawEllipticArc,
             (
-                (x + radius) * self.scale,
-                (y + radius) * self.scale,
-                radius * 2 * self.scale,
-                radius * 2 * self.scale,
+                int((x + radius) * self.scale),
+                int((y + radius) * self.scale),
+                int(radius * 2 * self.scale),
+                int(radius * 2 * self.scale),
                 (360 - angle1) * self.scale,
                 (360 - angle2) * self.scale,
             ),
@@ -256,35 +264,44 @@ class DcDc(BaseDc):
     def add_ellipse(self, x, y, dx, dy):
         self._add(
             self.dc.DrawEllipse,
-            (x * self.scale, y * self.scale, dx * self.scale, dy * self.scale),
+            (
+                int(x * self.scale),
+                int(y * self.scale),
+                int(dx * self.scale),
+                int(dy * self.scale),
+            ),
         )
         BaseDc.add_ellipse(self, x, y, dx, dy)
 
     def add_polygon(self, xytab):
         tabpoints = []
         for pos in xytab:
-            tabpoints.append(wx.Point(pos[0] * self.scale, pos[1] * self.scale))
+            tabpoints.append(
+                wx.Point(int(pos[0] * self.scale), int(pos[1] * self.scale))
+            )
         self._add(self.dc.DrawPolygon, (tabpoints,))
         BaseDc.add_polygon(self, xytab)
 
     def add_spline(self, xytab, close):
         tabpoints = []
         for pos in xytab:
-            tabpoints.append(wx.Point(pos[0] * self.scale, pos[1] * self.scale))
+            tabpoints.append(
+                wx.Point(int(pos[0] * self.scale), int(pos[1] * self.scale))
+            )
         self._add(self._spline, (self, tabpoints))
         BaseDc.add_spline(self, xytab)
 
     def draw_text(self, x, y, txt):
         (w, h, d, e) = self.dc.GetFullTextExtent(txt)
         dy_up = h - d
-        self.dc.DrawText(txt, x * self.scale, y * self.scale - dy_up)
+        self.dc.DrawText(txt, int(x * self.scale), int(y * self.scale - dy_up))
         BaseDc.draw_text(self, x, y, txt)
 
     def draw_rotated_text(self, x, y, txt, angle):
         (w, h, d, e) = self.dc.GetFullTextExtent(txt)
         dy_up = h - d
         self.dc.DrawRotatedText(
-            txt, x * self.scale + dy_up, y * self.scale, 360 - angle
+            txt, int(x * self.scale + dy_up), int(y * self.scale), 360 - int(angle)
         )
         BaseDc.draw_rotated_text(self, x, y, txt)
 
@@ -323,7 +340,7 @@ class DcDc(BaseDc):
                 while delta_x < dx:
                     if scale == 5 and delta_x > 0:
                         break
-                    self.dc.DrawBitmap(bmp, x + delta_x, y + delta_y)
+                    self.dc.DrawBitmap(bmp, int(x + delta_x), int(y + delta_y))
                     delta_x += w
                 delta_y += h
         BaseDc.draw_image(self, x, y, dx, dy, scale, png_data)

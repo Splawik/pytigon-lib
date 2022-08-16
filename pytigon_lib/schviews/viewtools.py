@@ -464,7 +464,7 @@ def dict_to_txt(template_name):
             return render_to_response_ext(
                 request, template_name, c.flatten(), doc_type="txt"
             )
-
+    
         return inner
 
     return _dict_to_template

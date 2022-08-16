@@ -127,7 +127,7 @@ def gen_row_action(table, action, fun, extra_context=None):
 def transform_extra_context(context1, context2):
     if context2:
         for (key, value) in context2.items():
-            if isinstance(value, collections.Callable):
+            if isinstance(value, collections.abc.Callable):
                 context1[key] = value()
             else:
                 context1[key] = value
@@ -813,7 +813,7 @@ class GenericRows(object):
                         if self.rel_field:
                             ppk = int(self.kwargs["parent_pk"])
                             parent = self.model.objects.get(id=ppk)
-                            self.extra_context['parent'] = parent
+                            self.extra_context["parent"] = parent
                             f = getattr(parent, self.rel_field)
                             ret = f.all()
                         else:
