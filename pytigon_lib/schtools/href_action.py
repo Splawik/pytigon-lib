@@ -364,8 +364,11 @@ class Action:
                     if "fa-" in self.icon_name:
                         x = self.icon_name.split(" ")
                         for pos in x:
-                            if "-" in x and x != "fa-lg":
-                                self.icon_name = "src=fa://%s?size=1" % x
+                            if "-" in pos and pos != "fa-lg":
+                                if "fa-lg" in x:
+                                    self.icon_name = "fa://%s?size=2" % pos
+                                else:
+                                    self.icon_name = "fa://%s?size=1" % pos
                     else:
                         self.icon_name = ""
             else:
