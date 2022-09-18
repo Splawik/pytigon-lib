@@ -6,5 +6,5 @@ fs
 openpyxl
 pyexcel_odsr
 fpdf2
-Django
+Django<4
 django-environ-2
