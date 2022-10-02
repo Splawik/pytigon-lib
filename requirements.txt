@@ -1,7 +1,6 @@
 Pillow
 lxml
 httpx
-httpie
 fs
 openpyxl
 pyexcel_odsr
