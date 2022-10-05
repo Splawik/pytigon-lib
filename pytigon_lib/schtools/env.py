@@ -39,6 +39,7 @@ def get_environ(path=None):
             COMPRESS_ENABLED=(bool, False),
             SECRET_KEY=(str, ""),
             CHANNELS_REDIS=(str, ""),
+            PUBLISH_IN_SUBFOLDER=(bool, False),
         )
 
     if path:
