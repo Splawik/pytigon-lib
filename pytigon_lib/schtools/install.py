@@ -19,6 +19,7 @@
 
 import datetime
 import zipfile
+import io
 from shutil import move
 
 from pytigon_lib.schdjangoext.django_manage import *
@@ -212,10 +213,20 @@ def import_from_local_db(withoutapp=None, to_local_db=True):
 
 class Ptig:
     def __init__(self, ptig_path_or_file):
+        # if type(ptig_path_or_file) == str:
+        #    self.archive = zipfile.ZipFile(ptig_path_or_file, "r")
+        # else:
+        #    self.archive = zipfile.ZipFile(ptig_path_or_file)
         if type(ptig_path_or_file) == str:
-            self.archive = zipfile.ZipFile(ptig_path_or_file, "r")
+            with open(ptig_path_or_file, "rb") as f:
+                zip_content = f.read()
         else:
-            self.archive = zipfile.ZipFile(ptig_path_or_file)
+            zip_content = ptig_path_or_file.read()
+
+        zip_content = zip_content.split(b"\n", 1)[1]
+
+        self.archive = zipfile.ZipFile(io.BytesIO(zip_content))
+
         namelist = self.archive.namelist()
         self.prj_name = None
         self.version = None
@@ -259,11 +270,9 @@ class Ptig:
         from django.conf import settings
 
         if hasattr(pytigon.schserw.settings, "_PRJ_PATH_ALT"):
-            base_path = os.path.join(
-                pytigon.schserw.settings._PRJ_PATH_ALT, self.prj_name
-            )
+            base_path = os.path.join(pytigon.schserw.settings._PRJ_PATH_ALT)
         else:
-            base_path = os.path.join(settings.PRJ_PATH_ALT, self.prj_name)
+            base_path = os.path.join(settings.PRJ_PATH_ALT)
 
         ret = []
         ret.append("Install file: " + self.prj_name)
@@ -273,7 +282,8 @@ class Ptig:
         ret.append("install to: " + extract_to)
 
         if not os.path.exists(base_path):
-            os.mkdir(settings.PRJ_PATH)
+            os.mkdir(base_path)
+            # os.mkdir(settings.PRJ_PATH)
         if not os.path.exists(extract_to):
             os.mkdir(extract_to)
             test_update = False

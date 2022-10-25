@@ -55,7 +55,11 @@ def get_main_paths(prj_name=None):
             root_path = os.path.abspath(os.path.join(serw_path, ".."))
         else:
             root_path = None
-    home_path = os.path.expanduser("~")
+
+    if "SNAP_REAL_HOME" in environ:
+        home_path = environ["SNAP_REAL_HOME"]
+    else:
+        home_path = os.path.expanduser("~")
 
     ret["SERW_PATH"] = if_not_in_env("SERW_PATH", serw_path)
     ret["ROOT_PATH"] = root_path
