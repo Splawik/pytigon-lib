@@ -88,7 +88,7 @@ def get_main_paths(prj_name=None):
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", "/var/log")
         elif platform_type == "pytiogn-lib":
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", data_path)
-        ret["LOG_PATH"] = None
+        ret["LOG_PATH"] = ret["DATA_PATH"]
         ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
         ret["PRJ_PATH_ALT"] = if_not_in_env(
             "PRJ_PATH_ALT", os.path.join(root_path, "prj")
@@ -152,28 +152,28 @@ def get_main_paths(prj_name=None):
                     "PRJ_PATH_ALT", os.path.join(pytigon_path, "prj")
                 )
 
-        if "STATIC_PATH" in environ:
-            static_path = environ["STATIC_PATH"]
-        elif pytigon_path:
-            static_path = os.path.join(pytigon_path, "static")
-        else:
-            static_path = None
+    if "STATIC_PATH" in environ:
+        static_path = environ["STATIC_PATH"]
+    elif pytigon_path:
+        static_path = os.path.join(pytigon_path, "static")
+    else:
+        static_path = None
 
-        if platform_type == "webserver":
-            if PRJ_NAME:
-                ret["STATIC_PATH"] = if_not_in_env(
-                    "STATIC_PATH", os.path.join(data_path, "static", PRJ_NAME)
-                )
-            else:
-                ret["STATIC_PATH"] = if_not_in_env(
-                    "STATIC_PATH", os.path.join(data_path, "static")
-                )
-            ret["STATICFILES_DIRS"] = [
-                os.path.join(pytigon_path, "static"),
-            ]
+    if platform_type == "webserver":
+        if PRJ_NAME:
+            ret["STATIC_PATH"] = if_not_in_env(
+                "STATIC_PATH", os.path.join(data_path, "static", PRJ_NAME)
+            )
         else:
-            ret["STATIC_PATH"] = if_not_in_env("STATIC_PATH", static_path)
-            ret["STATICFILES_DIRS"] = []
+            ret["STATIC_PATH"] = if_not_in_env(
+                "STATIC_PATH", os.path.join(data_path, "static")
+            )
+        ret["STATICFILES_DIRS"] = [
+            os.path.join(pytigon_path, "static"),
+        ]
+    else:
+        ret["STATIC_PATH"] = if_not_in_env("STATIC_PATH", static_path)
+        ret["STATICFILES_DIRS"] = []
 
     if PRJ_NAME:
         ret["MEDIA_PATH"] = if_not_in_env(
