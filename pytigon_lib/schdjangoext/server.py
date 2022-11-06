@@ -59,43 +59,37 @@ def log_action(protocol, action, details):
     sys.stderr.write(msg)
 
 
-def _run(addr, port, prod):
-    # if True or prod:
-    #    channel_layer = get_channel_layer()
-    # else:
-    #    channel_layer = channel_layers[DEFAULT_CHANNEL_LAYER]
-    #    channel_layer.router.check_default(
-    #        http_consumer=ViewConsumer(),
-    #    )
-    #    for _ in range(4):
-    #        worker = WorkerThread(channel_layer)
-    #        worker.daemon = True
-    #        worker.start()
-    try:
-        from daphne.server import Server
-        from daphne.endpoints import build_endpoint_description_strings
-        from channels.routing import get_default_application
+def _run(addr, port, prod, params=None):
+    if params and "wsgi" in params:
+        from waitress.runner import run
 
         django.setup()
+        run(["embeded", "--listen=%s:%s" % (addr, str(port)), "wsgi:application"])
+    else:
+        try:
+            from daphne.server import Server
+            from daphne.endpoints import build_endpoint_description_strings
+            from channels.routing import get_default_application
 
-        # application = django.core.handlers.wsgi.WSGIHandler()
+            django.setup()
 
-        print(addr, port)
-        endpoints = build_endpoint_description_strings(host=addr, port=int(port))
+            # application = django.core.handlers.wsgi.WSGIHandler()
 
-        server = Server(
-            # channel_layer=channel_layer,
-            get_default_application(),
-            endpoints=endpoints,
-            # host=addr,
-            # port=int(port),
-            signal_handlers=False,
-            action_logger=log_action,
-            http_timeout=60,
-        )
-        server.run()
-    except KeyboardInterrupt:
-        return
+            endpoints = build_endpoint_description_strings(host=addr, port=int(port))
+
+            server = Server(
+                # channel_layer=channel_layer,
+                get_default_application(),
+                endpoints=endpoints,
+                # host=addr,
+                # port=int(port),
+                signal_handlers=False,
+                action_logger=log_action,
+                http_timeout=60,
+            )
+            server.run()
+        except KeyboardInterrupt:
+            return
 
 
 class ServProc:
@@ -106,7 +100,7 @@ class ServProc:
         self.proc.terminate()
 
 
-def run_server(address, port, prod=True):
+def run_server(address, port, prod=True, params=None):
     """Run django chanels server
 
     Args:
@@ -116,11 +110,10 @@ def run_server(address, port, prod=True):
         processes (with redis for example). If prod == False - server is runing in development mode, 4 workers are
         started in the some process.
     """
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print("Start server: ", address, port)
+    print("Starting server: ", address, port)
 
-    proc = Process(target=_run, args=(address, port, prod))
+    proc = Process(target=_run, args=(address, port, prod, params))
     proc.start()
 
     while True:

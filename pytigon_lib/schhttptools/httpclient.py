@@ -597,7 +597,8 @@ class HttpClient:
             headers["User-Agent"] = user_agent
         headers["Referer"] = adr
 
-        argv = {"headers": headers, "allow_redirects": True, "cookies": cookies}
+        # argv = {"headers": headers, "allow_redirects": True, "cookies": cookies}
+        argv = {"headers": headers, "follow_redirects": True, "cookies": cookies}
         if credentials:
             argv["auth"] = credentials
 
