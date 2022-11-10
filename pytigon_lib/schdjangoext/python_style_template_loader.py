@@ -122,10 +122,20 @@ def compile_template(
 class FSLoader(django.template.loaders.filesystem.Loader):
     is_usable = True
 
-    def load_template_source(self, template_name, template_dirs=None):
-        return django.template.loaders.filesystem.Loader.load_template_source(
-            self, template_name, template_dirs
-        )
+    def get_template_sources(self, template_name):
+        template_name2 = template_name
+        x = template_name.split("/")
+        if "_" in x[-1]:
+            xx = x[-1].rsplit("_", 1)
+            xx2 = xx[1].split(".")
+            if len(xx2) > 1:
+                template_name2 = "/".join(
+                    x[:-1]
+                    + [
+                        xx[0] + "." + xx2[1],
+                    ]
+                )
+        return super().get_template_sources(template_name2)
 
 
 class Loader(BaseLoader):
