@@ -24,7 +24,7 @@
 #    from HTMLParser import HTMLParser, HTMLParseError
 
 
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
+from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map, ATOM_TAGS, PAR_TAGS
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
@@ -40,27 +40,8 @@ class BodyTag(ParBase):
     def __init__(self, parent, parser, tag, attrs):
         ParBase.__init__(self, parent, parser, tag, attrs)
         self.child_tags += [
-            "p",
-            "table",
-            "h1",
-            "h2",
-            "h3",
-            "h4",
-            "h5",
-            "h6",
-            "calc",
-            "ul",
-            "ol",
             "newpage",
             "page",
-            "ctr*",
-            "dl",
-            "dt",
-            "dd",
-            "form",
-            "hr",
-            "pre",
-            "div",
             "label",
         ]
         self.page = 1
@@ -85,10 +66,10 @@ class BodyTag(ParBase):
         self.dc = parent.dc.subdc(0, 0, width, height, False)
         (self.width, self.height) = self.dc.get_size()
         if self.width >= 0:
-            self.width = width - self.margins[0] - self.margins[1]
+            self.width = width  # - self.margins[0] - self.margins[1]
         else:
             self.width = -1
-        self.height = height - self.margins[2] - self.margins[3]
+        self.height = height  # - self.margins[2] - self.margins[3]
         self.new_page = 0
         self.reg_id(self.dc)
         self.reg_end()

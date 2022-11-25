@@ -19,7 +19,12 @@
 
 import io
 
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
+from pytigon_lib.schhtml.basehtmltags import (
+    BaseHtmlAtomParser,
+    register_tag_map,
+    ATOM_TAGS,
+    PAR_TAGS,
+)
 from pytigon_lib.schhtml.atom import Atom, NullAtom, BrAtom
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
@@ -35,16 +40,7 @@ from pytigon_lib.schhtml.render_helpers import (
 class AtomTag(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = parent.child_tags + [
-            "a",
-            "p",
-            "calc",
-            "big",
-            "strong",
-            "span",
-            "font",
-            "div",
-        ]
+        self.child_tags = ATOM_TAGS + PAR_TAGS + ["table", "vimg", "ctr*"]
         self.gparent = parent.gparent
 
     def draw_atom(self, dc, style, x, y, dx, dy):

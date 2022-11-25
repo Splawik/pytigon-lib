@@ -17,6 +17,29 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
+
+BLOCK_TAGS = ["body", "form"]
+
+ATOM_TAGS = [
+    "br",
+    "a",
+    "i",
+    "b",
+    "small",
+    "big",
+    "sub",
+    "sup",
+    "tt",
+    "span",
+    "img",
+    "calc",
+]
+
+PAR_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "ol", "ul", "li", "div"]
+
+TABLE_TAGS = ["table", "caption", "tr", "td", "th", "hr"]
+
+
 import fnmatch
 
 from pytigon_lib.schhtml.atom import AtomList
@@ -89,6 +112,9 @@ class BaseHtmlElemParser(object):
         self.hover_css_attrs = {}
         self.gparent = self
         self.form_obj = None
+
+    def __str__(self):
+        return self.tag + ":" + str(self.attrs)
 
     def set_hover(self, enable=True):
         self.hover = enable
@@ -352,6 +378,7 @@ class BaseHtmlElemParser(object):
         else:
             if "width" in self.attrs:
                 (parent_width, parent_min, parent_max) = self.parent.get_client_width()
+                print("X1:", parent_width)
                 width = self._norm_sizes([self.attrs["width"]], parent_width)[0]
                 min = self._norm_sizes([self.attrs["width"]], parent_min)[0]
                 max = self._norm_sizes([self.attrs["width"]], parent_max)[0]
@@ -359,10 +386,14 @@ class BaseHtmlElemParser(object):
             return self.calc_width()
 
     def get_client_width(self):
-        return self.get_width()
+        m = self._get_pseudo_margins()
+        x = self.get_width()
+        return (x[0] - m[0] - m[1], x[1] - m[0] - m[1], x[2] - m[0] - m[1])
+        # return self.get_width()
 
     def get_client_height(self):
-        return self.get_height()
+        m = self._get_pseudo_margins()
+        return self.get_height() - m[2] - m[3]
 
     def set_height(self, height):
         self.height = height
@@ -393,7 +424,7 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
         self.atom_list = None
-        self.atom_dy = 0.5
+        self.atom_dy = 0
         self.style = -1
         self.no_wrap = False
         if "white-space" in self.attrs and self.attrs["white-space"] == "pre":

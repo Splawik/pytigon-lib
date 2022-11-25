@@ -77,8 +77,8 @@ def get_main_paths(prj_name=None):
     elif "www-data" in cwd:
         platform_type = "webserver"
         home_path = "/home/www-data/"
-    elif os.path.exists(os.path.join(cwd, "prj")):
-        platform_type = "dev"
+    # elif os.path.exists(os.path.join(cwd, "prj")):
+    #    platform_type = "dev"
 
     ret["PLATFORM_TYPE"] = platform_type
 
@@ -130,20 +130,17 @@ def get_main_paths(prj_name=None):
                 "DATA_PATH", os.path.join(home_path, ".pytigon")
             )
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", data_path)
-            cwd_prj = os.path.join(cwd, "prj")
-            if os.path.exists(cwd_prj):
-                ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", cwd_prj)
-                ret["PRJ_PATH_ALT"] = if_not_in_env(
-                    "PRJ_PATH_ALT", os.path.join(root_path, "prj")
-                )
-            else:
-                ret["PRJ_PATH"] = if_not_in_env(
-                    "PRJ_PATH", os.path.join(data_path, "prj")
-                )
-                ret["PRJ_PATH_ALT"] = if_not_in_env(
-                    "PRJ_PATH_ALT", os.path.join(root_path, "prj")
-                )
-
+            # cwd_prj = os.path.join(cwd, "prj")
+            # if os.path.exists(cwd_prj):
+            #    ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", cwd_prj)
+            #    ret["PRJ_PATH_ALT"] = if_not_in_env(
+            #        "PRJ_PATH_ALT", os.path.join(root_path, "prj")
+            #    )
+            # else:
+            ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
+            ret["PRJ_PATH_ALT"] = if_not_in_env(
+                "PRJ_PATH_ALT", os.path.join(root_path, "prj")
+            )
             if platform_name() == "Emscripten":
                 ret["PRJ_PATH"] = if_not_in_env(
                     "PRJ_PATH", os.path.abspath(os.path.join(pytigon_path, ".."))

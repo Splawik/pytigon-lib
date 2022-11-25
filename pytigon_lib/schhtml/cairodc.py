@@ -25,7 +25,7 @@ except:
 import io
 from math import pi
 
-from pytigon_gui.schhtml.basedc import BaseDc, BaseDcInfo
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 
 # A4 mm width, height = 2100, 2970
 #

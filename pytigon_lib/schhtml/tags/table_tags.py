@@ -631,6 +631,8 @@ class TrTag(BaseHtmlElemParser):
 class TdTag(Par):
     def __init__(self, parent, parser, tag, attrs):
         Par.__init__(self, parent, parser, tag, attrs)
+        #self.child_tags += ["h1", "h2", "div", "span", "a", "img"]
+
         self.border = [0, 0, 0, 0]
         self.padding = [0, 0, 0, 0]
         if "colspan" in attrs:
@@ -691,4 +693,3 @@ register_tag_map("caption", CaptionTag)
 register_tag_map("tr", TrTag)
 register_tag_map("td", TdTag)
 register_tag_map("th", TdTag)
-register_tag_map("hr", TableTag)

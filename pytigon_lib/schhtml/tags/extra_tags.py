@@ -18,12 +18,15 @@
 # version: "0.1a"
 
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
+from pytigon_lib.schhtml.tags.p_tags import ParBase, Par
 from pytigon_lib.schhtml.atom import Atom
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
     RenderCellSpacing,
     RenderCellPadding,
+    RenderPadding,
+    RenderMargin,
     get_size,
 )
 

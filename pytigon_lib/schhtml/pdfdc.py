@@ -363,7 +363,7 @@ class PdfDcInfo(BaseDcInfo):
         dy_up = self.dc.dc.font_size_pt
         dy_down = 0
         dx_space = self.dc.dc.get_string_width(" ")
-        if word[-1] != " ":
+        if not word or word[-1] != " ":
             dx_space = 0
         return (dx, dx_space, dy_up, dy_down)
 

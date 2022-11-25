@@ -298,18 +298,19 @@ class AtomList(object):
                 y = size[1] - y2
         else:
             y = 0
-        for line in self.list_for_draw:
-            if len(line.objs) > 0:
-                if align == 0:
-                    x = 0
-                else:
-                    if align == 1:
-                        x = (size[0] - line.dx + line.space) / 2
+        if self.list_for_draw:
+            for line in self.list_for_draw:
+                if len(line.objs) > 0:
+                    if align == 0:
+                        x = 0
                     else:
-                        x = size[0] - line.dx + line.space
-                subdc = dc.subdc(x, y, size[0] - x, line.get_height())
-                subdc.draw_atom_line(0, 0, line)
-                y += line.get_height() + self.line_dy
+                        if align == 1:
+                            x = (size[0] - line.dx + line.space) / 2
+                        else:
+                            x = size[0] - line.dx + line.space
+                    subdc = dc.subdc(x, y, size[0] - x, line.get_height())
+                    subdc.draw_atom_line(0, 0, line)
+                    y += line.get_height() + self.line_dy
         return y - self.line_dy
 
     def to_txt(self):

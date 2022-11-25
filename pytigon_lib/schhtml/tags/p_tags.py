@@ -17,7 +17,12 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
+from pytigon_lib.schhtml.basehtmltags import (
+    BaseHtmlAtomParser,
+    register_tag_map,
+    ATOM_TAGS,
+    PAR_TAGS,
+)
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
@@ -27,40 +32,13 @@ from pytigon_lib.schhtml.render_helpers import (
     RenderMargin,
     get_size,
 )
+from pytigon_lib.schhtml.atom import Atom
 
 
 class ParBase(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = [
-            "br",
-            "i",
-            "b",
-            "em",
-            "strong",
-            "s",
-            "small",
-            "big",
-            "sub",
-            "sup",
-            "tt",
-            "span",
-            "font",
-            "table",
-            "ul",
-            "ol",
-            "img",
-            "vimg",
-            "a",
-            "li",
-            "ctr*",
-            "form",
-            "hr",
-            "calc",
-            "pre",
-            "div",
-            "ctr*",
-        ]
+        self.child_tags = ATOM_TAGS + PAR_TAGS + ["table", "vimg", "ctr*"]
         self.gparent = self
         self.float_width = True
         self.float_height = True
@@ -324,6 +302,76 @@ class Ul(ParArray):
             return "  " + z + " "
 
 
+class Div(Par):
+    def __init__(self, parent, parser, tag, attrs):
+        BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
+
+        self.child_tags += [
+            "h1",
+            "h2",
+            "ctr*",
+        ]
+
+        self.render_helpers = [
+            RenderMargin(self),
+            RenderBorder(self),
+            RenderBackground(self),
+            RenderPadding(self),
+        ]
+        self.extra_space = get_size(self.render_helpers)
+        self.draw_txt = ""
+        self.in_draw = False
+
+    def _get_pseudo_margins(self):
+        return [
+            self.extra_space[0],
+            self.extra_space[1],
+            self.extra_space[2],
+            self.extra_space[3],
+        ]
+
+    def close(self):
+        if not self.width > 0:
+            self.width = self.get_width()[2]
+        if not self.height > 0:
+            self.height = self.get_height()
+        else:
+            if not self.atom_list.list_for_draw:
+                self.atom_list.gen_list_for_draw(
+                    (self.width - self.extra_space[0]) - self.extra_space[1]
+                )
+        atom = Atom(
+            self,
+            dx=self.width,
+            dx_space=0,
+            dy_up=self.height,
+            dy_down=0,
+        )
+        atom.set_parent(self)
+        _atom_list = self.atom_list
+        _rendered_children = self.rendered_children
+        self.atom_list = None
+        self.make_atom_list()
+        self.atom_list.append_atom(atom)
+        self.parent.append_atom_list(self.atom_list)
+        self.atom_list = _atom_list
+        self.rendered_children = _rendered_children
+
+    def draw_atom(self, dc, style, x, y, dx, dy):
+        if self.in_draw:
+            return False
+        self.in_draw = True
+        self.reg_id(dc)
+        self.reg_end()
+        dc2 = dc.subdc(x, y, dx, dy, True)
+        for r in self.render_helpers:
+            dc2 = r.render(dc2)
+        if self.atom_list:
+            self.atom_list.draw_atom_list(dc2)
+        self.in_draw = False
+        return True
+
+
 register_tag_map("p", Par)
 register_tag_map("h1", Par)
 register_tag_map("h2", Par)
@@ -332,12 +380,11 @@ register_tag_map("h4", Par)
 register_tag_map("h5", Par)
 register_tag_map("h6", Par)
 
-register_tag_map("dt", Par)
-register_tag_map("dd", Par)
-
 register_tag_map("pre", Par)
-register_tag_map("div", Par)
 
 register_tag_map("ol", Ul)
 register_tag_map("ul", Ul)
 register_tag_map("li", Li)
+
+register_tag_map("div", Div)
+register_tag_map("hr", Div)

@@ -232,7 +232,7 @@ class RenderPadding(RenderPaddingMargin):
 class RenderMargin(RenderPaddingMargin):
     def __init__(self, parent):
         RenderPaddingMargin.__init__(self, parent)
-        self.rendered_attribs = ("margins",)
+        self.rendered_attribs = ("margin",)
 
 
 def sizes_from_attr(attr_value):
