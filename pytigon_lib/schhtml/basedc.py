@@ -25,7 +25,7 @@ import json
 
 class BaseDc(object):
     def __init__(
-        self, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0
+        self, calc_only=False, width=None, height=None, output_name=None, scale=1.0
     ):
         self.x = 0
         self.y = 0
@@ -36,10 +36,16 @@ class BaseDc(object):
         self.rec = True
         self.calc_only = calc_only
 
-        self.default_height = 595
-        self.default_width = 842
-        self.width = width
-        self.height = height
+        self.default_width = int(210 * 72 / 25.4)
+        self.default_height = int(297 * 72 / 25.4)
+        if width == None:
+            self.width = self.default_width
+        else:
+            self.width = width
+        if height == None:
+            self.height = self.default_height
+        else:
+            self.height = height
         self.output_name = output_name
         self.base_font_size = 10
         self.paging = False

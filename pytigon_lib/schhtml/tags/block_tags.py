@@ -24,7 +24,12 @@
 #    from HTMLParser import HTMLParser, HTMLParseError
 
 
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map, ATOM_TAGS, PAR_TAGS
+from pytigon_lib.schhtml.basehtmltags import (
+    BaseHtmlElemParser,
+    register_tag_map,
+    ATOM_TAGS,
+    PAR_TAGS,
+)
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
@@ -222,7 +227,9 @@ class BodyTag(ParBase):
                         or self.new_page != 2
                     ):
                         (dy, cont) = child.render(
-                            self.dc_page.subdc(0, self.y, self.width, dy)
+                            self.dc_page.subdc(
+                                0, self.y, self.get_client_width()[0], dy
+                            )
                         )
                         self.new_page = 2
                         if dy > 0:

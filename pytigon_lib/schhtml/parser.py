@@ -22,6 +22,7 @@ try:
 
     LXML = True
 except:
+
     import xml.etree.ElementTree as etree
     from naivehtmlparser import NaiveHTMLParser
 

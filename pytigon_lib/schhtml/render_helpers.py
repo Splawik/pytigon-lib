@@ -163,7 +163,7 @@ class RenderBorder(RenderBase):
         )
 
     def handle_get_size(self, border):
-        return sizes_from_attr(border)
+        return sizes_from_attr(border, self)
 
     def handle_render(self, dc, attr_name, border):
         p = self.handle_get_size(border)
@@ -199,7 +199,7 @@ class RenderPaddingMargin(RenderBase):
         RenderBase.__init__(self, parent)
 
     def handle_get_size(self, padding):
-        return sizes_from_attr(padding)
+        return sizes_from_attr(padding, self)
 
     def handle_render(
         self,
@@ -235,31 +235,60 @@ class RenderMargin(RenderPaddingMargin):
         self.rendered_attribs = ("margin",)
 
 
-def sizes_from_attr(attr_value):
+def sizes_from_attr(attr_value, parent):
     if type(attr_value) == str:
-        v = attr_value.strip().replace("px", "").replace("em", "")
-        try:
-            size = int(v)
-            p = [size, size, size, size]
-        except:
-            p = [0, 0, 0, 0]
-            sizes = v.split(" ")
-            if len(sizes) == 2:
-                p[2] = p[3] = int(sizes[0])
-                p[0] = p[1] = int(sizes[1])
+        sizes = attr_value.strip().replace("px", "").replace("em", "").split(" ")
+        norm_sizes = []
+        for i, size in enumerate(sizes):
+            if size.endswith("%"):
+                try:
+                    x = int(size[:-1])
+                    if (
+                        (len(sizes) == 4 and i in (1, 3))
+                        or (len(sizes) == 2 and i == 1)
+                        or len(sizes) == 1
+                    ):
+                        p = parent.parent
+                        while p != None and p.width <= 0:
+                            p = p.parent
+                        if p:
+                            norm_sizes.append(int(p.width * x / 100))
+                        else:
+                            norm_sizes.append(10)
+                    else:
+                        p = parent
+                        while p and p.height <= 0:
+                            p = p.parent
+                        if p:
+                            norm_sizes.append(int(p.width * x / 100))
+                        else:
+                            norm_sizes.append(10)
+                except:
+                    norm_sizes.append(10)
             else:
-                if len(sizes) == 4:
-                    p[0] = int(sizes[3])
-                    p[1] = int(sizes[1])
-                    p[2] = int(sizes[0])
-                    p[3] = int(sizes[2])
-                else:
-                    print(
-                        "size_from_attr error:",
-                        "{" + attr_value + "}",
-                        len(sizes),
-                        sizes,
-                    )
+                try:
+                    x = int(size)
+                    norm_sizes.append(x)
+                except:
+                    norm_sizes.append(10)
+        p = [10, 10, 10, 10]
+        if len(sizes) == 1:
+            p = [norm_sizes[0], norm_sizes[0], norm_sizes[0], norm_sizes[0]]
+        elif len(sizes) == 2:
+            p[2] = p[3] = norm_sizes[0]
+            p[0] = p[1] = norm_sizes[1]
+        elif len(sizes) == 4:
+            p[0] = norm_sizes[3]
+            p[1] = norm_sizes[1]
+            p[2] = norm_sizes[0]
+            p[3] = norm_sizes[2]
+        else:
+            print(
+                "size_from_attr error:",
+                "{" + attr_value + "}",
+                len(sizes),
+                sizes,
+            )
         return p
     else:
         return attr_value

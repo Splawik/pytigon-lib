@@ -304,9 +304,11 @@ class Ul(ParArray):
 
 class Div(Par):
     def __init__(self, parent, parser, tag, attrs):
-        BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
+        Par.__init__(self, parent, parser, tag, attrs)
 
         self.child_tags += [
+            "div",
+            "p",
             "h1",
             "h2",
             "ctr*",
@@ -336,7 +338,7 @@ class Div(Par):
         if not self.height > 0:
             self.height = self.get_height()
         else:
-            if not self.atom_list.list_for_draw:
+            if self.atom_list and not self.atom_list.list_for_draw:
                 self.atom_list.gen_list_for_draw(
                     (self.width - self.extra_space[0]) - self.extra_space[1]
                 )
@@ -372,7 +374,8 @@ class Div(Par):
         return True
 
 
-register_tag_map("p", Par)
+register_tag_map("p", Div)
+
 register_tag_map("h1", Par)
 register_tag_map("h2", Par)
 register_tag_map("h3", Par)

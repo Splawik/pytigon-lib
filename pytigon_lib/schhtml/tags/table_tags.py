@@ -117,15 +117,15 @@ class TableTag(BaseHtmlAtomParser):
         rb = RenderBorder(self)
         self.border = rb.get_size()
         if "cellspacing" in attrs:
-            self.cellspacing = sizes_from_attr(attrs["cellspacing"])
+            self.cellspacing = sizes_from_attr(attrs["cellspacing"], self)
         else:
             self.cellspacing = [0, 0, 0, 0]
         if "cellpadding" in attrs:
-            self.cellpadding = sizes_from_attr(attrs["cellpadding"])
+            self.cellpadding = sizes_from_attr(attrs["cellpadding"], self)
         else:
             self.cellpadding = [0, 0, 0, 0]
         if "padding" in attrs:
-            self.padding = sizes_from_attr(attrs["padding"])
+            self.padding = sizes_from_attr(attrs["padding"], self)
         else:
             self.padding = [0, 0, 0, 0]
         self.tr_list = []
@@ -630,8 +630,11 @@ class TrTag(BaseHtmlElemParser):
 
 class TdTag(Par):
     def __init__(self, parent, parser, tag, attrs):
+        if not "border" in attrs:
+            if "border" in parent.parent.attrs:
+                attrs["border"] = parent.parent.attrs["border"]
         Par.__init__(self, parent, parser, tag, attrs)
-        #self.child_tags += ["h1", "h2", "div", "span", "a", "img"]
+        # self.child_tags += ["h1", "h2", "div", "span", "a", "img"]
 
         self.border = [0, 0, 0, 0]
         self.padding = [0, 0, 0, 0]
@@ -644,8 +647,8 @@ class TdTag(Par):
         else:
             self.rowspan = 1
         try:
-            if not "border" in attrs:
-                self.attrs["border"] = self.parent.parent.border
+            # if not "border" in attrs:
+            #    self.attrs["border"] = self.parent.parent.border
             if not "cellspacing" in attrs:
                 self.attrs["cellspacing"] = self.parent.parent.cellspacing
             if not "cellpadding" in attrs:

@@ -82,7 +82,7 @@ class PDFSurface:
 
 class PdfDc(BaseDc):
     def __init__(
-        self, dc=None, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0
+        self, dc=None, calc_only=False, width=None, height=None, output_name=None, scale=1.0
     ):
         BaseDc.__init__(self, calc_only, width, height, output_name, scale)
         if self.width >= 0:

@@ -47,7 +47,7 @@ class BaseRenderingLib:
         height=int(297 * 72 / 25.4),
         stream_type="pdf",
         base_url=None,
-        info=None
+        info=None,
     ):
         pass
 
@@ -352,7 +352,7 @@ def stream_from_html(
             return RENDERING_LIB.render(
                 html, output_stream, css, width, height, stream_type, base_url, info
             )
-            
+
     if not type(html) == str:
         html = html.decode("utf-8")
     if "<html" in html:
