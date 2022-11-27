@@ -25,6 +25,7 @@ ATOM_TAGS = [
     "a",
     "i",
     "b",
+    "s",
     "small",
     "big",
     "sub",
@@ -33,9 +34,10 @@ ATOM_TAGS = [
     "span",
     "img",
     "calc",
+    "hr",
 ]
 
-PAR_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "ol", "ul", "li", "div"]
+PAR_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ol", "ul", "li", "div"]
 
 TABLE_TAGS = ["table", "caption", "tr", "td", "th", "hr"]
 

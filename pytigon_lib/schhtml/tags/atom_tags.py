@@ -181,17 +181,60 @@ class ParCalc(AtomTag):
         return AtomTag.handle_data(self, data2)
 
 
+class HrTag(AtomTag):
+    def __init__(self, parent, parser, tag, attrs):
+        AtomTag.__init__(self, parent, parser, tag, attrs)
+        self.render_helpers = [
+            RenderMargin(self),
+        ]
+        self.extra_space = get_size(self.render_helpers)
+        self.in_draw = False
+
+    def close(self):
+        b = 1
+        print(self.width)
+        print(self.extra_space)
+        if "border" in self.attrs:
+            b = int(self.attrs["border"])
+        atom = Atom(
+            self,
+            dx=self.width - self.extra_space[0] - self.extra_space[1],
+            dx_space=0,
+            dy_up=self.extra_space[2] + b,  # self.height,
+            dy_down=self.extra_space[3],
+        )
+
+        atom.set_parent(self)
+        self.make_atom_list()
+        self.atom_list.append_atom(atom)
+        self.parent.append_atom_list(self.atom_list)
+
+    def draw_atom(self, dc, style, x, y, dx, dy):
+        if self.in_draw:
+            return False
+        print("draw_atom: ", x, y, dx, dy)
+        self.in_draw = True
+        self.reg_id(dc)
+        self.reg_end()
+        dc2 = dc.subdc(x, y, dx, dy, True)
+        for r in self.render_helpers:
+            dc2 = r.render(dc2)
+        if "border" in self.attrs:
+            print("BORDER: ", self.attrs["border"])
+            dc2.set_line_width(int(self.attrs["border"]))
+        dc2.add_line(
+            self.extra_space[0],
+            self.extra_space[2],
+            dx - self.extra_space[0] - self.extra_space[1],
+            0,
+        )
+        dc2.draw()
+        self.in_draw = False
+        return True
+
+
 register_tag_map("br", BrTag)
 register_tag_map("a", Atag)
-register_tag_map("i", AtomTag)
-register_tag_map("b", AtomTag)
-register_tag_map("s", AtomTag)
-register_tag_map("small", AtomTag)
-register_tag_map("big", AtomTag)
-register_tag_map("sub", AtomTag)
-register_tag_map("sup", AtomTag)
-register_tag_map("tt", AtomTag)
-register_tag_map("span", AtomTag)
-register_tag_map("font", AtomTag)
 register_tag_map("img", ImgTag)
 register_tag_map("calc", ParCalc)
+register_tag_map("hr", HrTag)

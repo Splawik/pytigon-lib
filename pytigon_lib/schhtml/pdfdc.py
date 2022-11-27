@@ -149,7 +149,7 @@ class PdfDc(BaseDc):
         else:
             self.dc.DrawSpline(points)
 
-    def _draw_and_fill(self):
+    def _draw_and_fill(self):   
         for fun_arg in self._fun_stack:
             fun_arg[0](*fun_arg[1])
 

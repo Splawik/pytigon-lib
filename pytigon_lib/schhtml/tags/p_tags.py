@@ -374,8 +374,6 @@ class Div(Par):
         return True
 
 
-register_tag_map("p", Div)
-
 register_tag_map("h1", Par)
 register_tag_map("h2", Par)
 register_tag_map("h3", Par)
@@ -383,11 +381,19 @@ register_tag_map("h4", Par)
 register_tag_map("h5", Par)
 register_tag_map("h6", Par)
 
-register_tag_map("pre", Par)
-
 register_tag_map("ol", Ul)
 register_tag_map("ul", Ul)
 register_tag_map("li", Li)
 
+register_tag_map("i", Par)
+register_tag_map("b", Par)
+register_tag_map("s", Par)
+register_tag_map("small", Par)
+register_tag_map("big", Par)
+register_tag_map("sub", Div)
+register_tag_map("sup", Div)
+register_tag_map("tt", Par)
+register_tag_map("span", Par)
+
+register_tag_map("p", Div)
 register_tag_map("div", Div)
-register_tag_map("hr", Div)
