@@ -441,6 +441,10 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
     def handle_data(self, data):
         if not self.pre:
             data2 = data.strip()
+            if len(data) > 0 and data[-1] == " ":
+                data2 += " "
+            if len(data) > 0 and data[0] == " ":
+                data2 = " " + data2
         else:
             data2 = data
         if data2 and len(data2) > 0:
