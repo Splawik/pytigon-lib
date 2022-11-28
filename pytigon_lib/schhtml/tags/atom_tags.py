@@ -192,8 +192,6 @@ class HrTag(AtomTag):
 
     def close(self):
         b = 1
-        print(self.width)
-        print(self.extra_space)
         if "border" in self.attrs:
             b = int(self.attrs["border"])
         atom = Atom(
@@ -212,7 +210,6 @@ class HrTag(AtomTag):
     def draw_atom(self, dc, style, x, y, dx, dy):
         if self.in_draw:
             return False
-        print("draw_atom: ", x, y, dx, dy)
         self.in_draw = True
         self.reg_id(dc)
         self.reg_end()
@@ -220,7 +217,6 @@ class HrTag(AtomTag):
         for r in self.render_helpers:
             dc2 = r.render(dc2)
         if "border" in self.attrs:
-            print("BORDER: ", self.attrs["border"])
             dc2.set_line_width(int(self.attrs["border"]))
         dc2.add_line(
             self.extra_space[0],
