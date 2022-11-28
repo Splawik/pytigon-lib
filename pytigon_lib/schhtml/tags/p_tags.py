@@ -395,5 +395,5 @@ register_tag_map("sup", Div)
 register_tag_map("tt", Par)
 register_tag_map("span", Par)
 
-register_tag_map("p", Div)
+register_tag_map("p", Par)
 register_tag_map("div", Div)
