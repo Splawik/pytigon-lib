@@ -337,6 +337,12 @@ class Div(Par):
             self.extra_space[3],
         ]
 
+    def handle_data(self, data):
+        if data.strip() == "":
+            return
+        else:
+            super().handle_data(data)
+
     def close(self):
         if self.subdiv:
             if not self.width > 0:
