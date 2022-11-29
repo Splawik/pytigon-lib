@@ -324,6 +324,11 @@ class Div(Par):
         self.draw_txt = ""
         self.in_draw = False
 
+        if type(self.parent).__name__ in ("BodyTag",):
+            self.subdiv = False
+        else:
+            self.subdiv = True
+
     def _get_pseudo_margins(self):
         return [
             self.extra_space[0],
@@ -333,33 +338,39 @@ class Div(Par):
         ]
 
     def close(self):
-        if not self.width > 0:
-            self.width = self.get_width()[2]
-        if not self.height > 0:
-            self.height = self.get_height()
+        if self.subdiv:
+            if not self.width > 0:
+                self.width = self.get_width()[2]
+            if not self.height > 0:
+                self.height = self.get_height()
+            else:
+                if self.atom_list and not self.atom_list.list_for_draw:
+                    self.atom_list.gen_list_for_draw(
+                        (self.width - self.extra_space[0]) - self.extra_space[1]
+                    )
+            atom = Atom(
+                self,
+                dx=self.width,
+                dx_space=0,
+                dy_up=self.height,
+                dy_down=0,
+            )
+            atom.set_parent(self)
+            _atom_list = self.atom_list
+            _rendered_children = self.rendered_children
+            self.atom_list = None
+            self.make_atom_list()
+            self.atom_list.append_atom(atom)
+            self.parent.append_atom_list(self.atom_list)
+            self.atom_list = _atom_list
+            self.rendered_children = _rendered_children
+
         else:
-            if self.atom_list and not self.atom_list.list_for_draw:
-                self.atom_list.gen_list_for_draw(
-                    (self.width - self.extra_space[0]) - self.extra_space[1]
-                )
-        atom = Atom(
-            self,
-            dx=self.width,
-            dx_space=0,
-            dy_up=self.height,
-            dy_down=0,
-        )
-        atom.set_parent(self)
-        _atom_list = self.atom_list
-        _rendered_children = self.rendered_children
-        self.atom_list = None
-        self.make_atom_list()
-        self.atom_list.append_atom(atom)
-        self.parent.append_atom_list(self.atom_list)
-        self.atom_list = _atom_list
-        self.rendered_children = _rendered_children
+            BaseHtmlAtomParser.close(self)
 
     def draw_atom(self, dc, style, x, y, dx, dy):
+        if not self.subdiv:
+            return
         if self.in_draw:
             return False
         self.in_draw = True
