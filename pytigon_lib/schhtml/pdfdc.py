@@ -36,8 +36,9 @@ fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg["STATIC_PATH"], "fonts")
 
 
 class PDFSurface:
-    def __init__(self, output_name, width, height):
+    def __init__(self, output_name, output_stream, width, height):
         self.output_name = output_name
+        self.output_stream = output_stream
         self.width = width
         self.height = height
         self.pdf = fpdf.FPDF(unit="pt", orientation="L" if width > height else "P")
@@ -77,14 +78,27 @@ class PDFSurface:
         return self.pdf
 
     def save(self):
-        self.pdf.output(self.output_name, "F")
+        if self.output_stream:
+            buf = self.pdf.output(dest="S")
+            self.output_stream.write(buf)
+        else:
+            self.pdf.output(self.output_name, "F")
 
 
 class PdfDc(BaseDc):
     def __init__(
-        self, dc=None, calc_only=False, width=None, height=None, output_name=None, scale=1.0
+        self,
+        dc=None,
+        calc_only=False,
+        width=None,
+        height=None,
+        output_name=None,
+        output_stream=None,
+        scale=1.0,
     ):
-        BaseDc.__init__(self, calc_only, width, height, output_name, scale)
+        BaseDc.__init__(
+            self, calc_only, width, height, output_name, output_stream, scale
+        )
         if self.width >= 0:
             width2 = self.width
         else:
@@ -96,7 +110,7 @@ class PdfDc(BaseDc):
         self.dc_info = PdfDcInfo(self)
         self.type = None
         if self.calc_only:
-            self.surf = PDFSurface(None, 10, 10)
+            self.surf = PDFSurface(None, None, 10, 10)
             if width < 0:
                 self.width = -1
             if height < 0:
@@ -109,9 +123,9 @@ class PdfDc(BaseDc):
             else:
                 if output_name:
                     name = output_name.lower()
-                    self.surf = PDFSurface(output_name, width2, height2)
+                    self.surf = PDFSurface(output_name, output_stream, width2, height2)
                 else:
-                    self.surf = PDFSurface(None, width2, height2)
+                    self.surf = PDFSurface(None, None, width2, height2)
 
                 self.dc = self.surf.get_dc()
 
@@ -149,7 +163,7 @@ class PdfDc(BaseDc):
         else:
             self.dc.DrawSpline(points)
 
-    def _draw_and_fill(self):   
+    def _draw_and_fill(self):
         for fun_arg in self._fun_stack:
             fun_arg[0](*fun_arg[1])
 

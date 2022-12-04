@@ -42,9 +42,12 @@ class CairoDc(BaseDc):
         width=-1,
         height=-1,
         output_name=None,
+        output_stream=None,
         scale=1.0,
     ):
-        BaseDc.__init__(self, calc_only, width, height, output_name, scale)
+        BaseDc.__init__(
+            self, calc_only, width, height, output_name, output_stream, scale
+        )
         if self.width >= 0:
             width2 = self.width
         else:
@@ -70,10 +73,16 @@ class CairoDc(BaseDc):
                 if output_name:
                     name = output_name.lower()
                     if ".pdf" in name:
-                        self.surf = cairo.PDFSurface(output_name, width2, height2)
+                        if self.output_stream:
+                            self.surf = cairo.PDFSurface(output_stream, width2, height2)
+                        else:
+                            self.surf = cairo.PDFSurface(output_name, width2, height2)
                         self.type = "pdf"
                     elif ".svg" in name:
-                        self.surf = cairo.SVGSurface(output_name, width2, height2)
+                        if self.output_stream:
+                            self.surf = cairo.SVGSurface(output_stream, width2, height2)
+                        else:
+                            self.surf = cairo.SVGSurface(output_name, width2, height2)
                         self.type = "svg"
                     elif ".png" in name:
                         self.surf = cairo.ImageSurface(

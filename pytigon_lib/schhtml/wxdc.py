@@ -24,9 +24,18 @@ import io
 
 class DcDc(BaseDc):
     def __init__(
-        self, dc=None, calc_only=False, width=-1, height=-1, output_name=None, scale=1.0
+        self,
+        dc=None,
+        calc_only=False,
+        width=-1,
+        height=-1,
+        output_name=None,
+        output_stream=None,
+        scale=1.0,
     ):
-        BaseDc.__init__(self, calc_only, width, height, output_name, scale)
+        BaseDc.__init__(
+            self, calc_only, width, height, output_name, output_stream, scale
+        )
         self.dc_info = DcDcinfo(self)
         if self.width >= 0:
             width2 = self.width
@@ -88,7 +97,10 @@ class DcDc(BaseDc):
                 ext = wx.BITMAP_TYPE_PNG
                 if self.type == "jpg":
                     ext = wx.BITMAP_TYPE_JPEG
-                img.SaveFile(self.output_name, ext)
+                if self.output_stream:
+                    img.SaveFile(self.output_stream, ext)
+                else:
+                    img.SaveFile(self.output_name, ext)
 
     def set_scale(self, scale):
         self.scale = scale

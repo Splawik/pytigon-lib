@@ -25,7 +25,13 @@ import json
 
 class BaseDc(object):
     def __init__(
-        self, calc_only=False, width=None, height=None, output_name=None, scale=1.0
+        self,
+        calc_only=False,
+        width=None,
+        height=None,
+        output_name=None,
+        output_stream=None,
+        scale=1.0,
     ):
         self.x = 0
         self.y = 0
@@ -47,6 +53,7 @@ class BaseDc(object):
         else:
             self.height = height
         self.output_name = output_name
+        self.output_stream = output_stream
         self.base_font_size = 10
         self.paging = False
         self.pages = []

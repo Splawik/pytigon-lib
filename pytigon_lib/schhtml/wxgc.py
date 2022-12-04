@@ -24,9 +24,18 @@ import io
 
 class GraphicsContextDc(BaseDc):
     def __init__(
-        self, ctx=None, calc_only=False, width=-1, height=-1, output_name=None
+        self,
+        ctx=None,
+        calc_only=False,
+        width=-1,
+        height=-1,
+        output_name=None,
+        output_stream=None,
+        scale=1.0,
     ):
-        BaseDc.__init__(self, calc_only, width, height, output_name)
+        BaseDc.__init__(
+            self, calc_only, width, height, output_name, output_stream, scale
+        )
         self.dc_info = GraphicsContextDcinfo(self)
         self.type = None
         if self.calc_only:
@@ -80,7 +89,10 @@ class GraphicsContextDc(BaseDc):
         if not self.calc_only:
             if self.type in ("png",):
                 image = self.surf.ConvertToImage()
-                image.SaveFile(self.output_name, wx.BITMAP_TYPE_PNG)
+                if self.output_stream:
+                    image.SaveFile(self.output_stream, wx.BITMAP_TYPE_PNG)
+                else:
+                    image.SaveFile(self.output_name, wx.BITMAP_TYPE_PNG)
 
     def new_page(self):
         BaseDc.new_page(self)
