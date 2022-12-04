@@ -553,7 +553,7 @@ class SubDc(object):
 
     @convert_fun_arg
     def draw_image(self, x, y, dx, dy, scale, png_data):
-        return self._parent.draw_text(x, y, dx, dy, scale, png_data)
+        return self._parent.draw_image(x, y, dx, dy, scale, png_data)
 
     @convert_fun_arg
     def draw_atom_line(self, x, y, line):

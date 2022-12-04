@@ -38,7 +38,9 @@ from pytigon_lib.schhtml.atom import Atom
 class ParBase(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ATOM_TAGS + PAR_TAGS + ["table", "vimg", "ctr*"]
+        self.child_tags = (
+            ATOM_TAGS + PAR_TAGS + ["table", "form", "comment", "vimg", "ctr*"]
+        )
         self.gparent = self
         self.float_width = True
         self.float_height = True
@@ -391,16 +393,14 @@ class Div(Par):
         return True
 
 
+register_tag_map("p", Par)
+
 register_tag_map("h1", Par)
 register_tag_map("h2", Par)
 register_tag_map("h3", Par)
 register_tag_map("h4", Par)
 register_tag_map("h5", Par)
 register_tag_map("h6", Par)
-
-register_tag_map("ol", Ul)
-register_tag_map("ul", Ul)
-register_tag_map("li", Li)
 
 register_tag_map("i", Par)
 register_tag_map("b", Par)
@@ -412,5 +412,9 @@ register_tag_map("sup", Div)
 register_tag_map("tt", Par)
 register_tag_map("span", Par)
 
-register_tag_map("p", Par)
+
+register_tag_map("ol", Ul)
+register_tag_map("ul", Ul)
+register_tag_map("li", Li)
+
 register_tag_map("div", Div)

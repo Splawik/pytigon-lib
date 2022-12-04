@@ -17,6 +17,10 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
+from pytigon_lib.schtools.images import svg_to_png, spec_resize
+
+import PIL
+
 
 class RenderBase(object):
     def __init__(self, parent):
@@ -56,7 +60,7 @@ class RenderBackground(RenderBase):
             "background",
         )
 
-    def background(self, dc, bgcolor, image, repeat, attachment, x, y):
+    def background(self, dc, bgcolor, image_url, repeat, attachment, x, y):
         if dc.calc_only:
             return
         if bgcolor:
@@ -64,7 +68,7 @@ class RenderBackground(RenderBase):
             dc.set_color(r, g, b)
             dc.add_rectangle(0, 0, dc.dx, dc.dy)
             dc.fill()
-        if image:
+        if image_url:
             style = 0
             if "background-size" in self.parent.attrs:
                 attr = self.parent.attrs["background-size"]
@@ -83,12 +87,41 @@ class RenderBackground(RenderBase):
                     pass
                 else:
                     style = 6
-            dc.draw_image(0, 0, dc.dx, dc.dy, style, image)
+
+            # try:
+            if True:
+                http = self.parent.parser.get_http_object()
+                response = http.get(self, image_url)
+                if response.ret_code == 404:
+                    img = None
+                else:
+                    img = response.ptr()
+            # except:
+            #    img = None
+
+            if img:
+                img_name = image_url.lower()
+                if ".png" in img_name:
+                    img_bytes = img
+                elif ".svg" in img_name:
+                    itype = "simple"
+                    if "image-type" in self.parent.attrs:
+                        itype = self.parent.attrs["image-type"]
+                    img2 = svg_to_png(img, int(dc.dx), int(dc.dy), itype)
+                    img_bytes = img2
+                else:
+                    image = PIL.Image.open(io.BytesIO(img))
+                    output = io.BytesIO()
+                    image.save(output, "PNG")
+                    img_bytes = output.getvalue()
+
+                dc.draw_image(0, 0, dc.dx, dc.dy, style, img_bytes)
+                # dc.draw_image(0, 0, dc.dx, dc.dy, 3, img_bytes)
 
     def handle_render(self, dc, attr_name, value):
         if attr_name == "background-image":
-            img_name = value.replace("url(", "").replace(")", "")
-            self.background(dc, None, img_name, None, None, None, None)
+            img_url = value.replace("url(", "").replace(")", "")
+            self.background(dc, None, img_url, None, None, None, None)
         elif attr_name == "background":
             tab_attr = value.split(" ")
             attr_nr = 0

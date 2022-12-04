@@ -36,11 +36,17 @@ from pytigon_lib.schhtml.render_helpers import (
     get_size,
 )
 
+from pytigon_lib.schtools.images import svg_to_png, spec_resize
+
+import PIL
+
 
 class AtomTag(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ATOM_TAGS + PAR_TAGS + ["table", "vimg", "ctr*"]
+        self.child_tags = (
+            ATOM_TAGS + PAR_TAGS + ["table", "form", "comment", "vimg", "ctr*"]
+        )
         self.gparent = parent.gparent
 
     def draw_atom(self, dc, style, x, y, dx, dy):
@@ -125,6 +131,12 @@ class ImgTag(AtomTag):
         self.img = None
         self.dx = 0
         self.dy = 0
+
+    def close(self):
+        if self.width > 0 and self.height > 0:
+            self.dx = self.width
+            self.dy = self.height
+
         if self.src:
             http = self.parser.get_http_object()
             try:
@@ -139,24 +151,27 @@ class ImgTag(AtomTag):
                 img_name = self.src.lower()
                 if ".png" in img_name:
                     self.img = img
+                elif ".svg" in img_name:
+                    itype = "simple"
+                    if "image-type" in self.attrs:
+                        itype = self.attrs["image-type"]
+                    img2 = svg_to_png(img, self.width, self.height, itype)
+                    self.img = img2
                 else:
-                    stream = io.BytesIO(img)
-                    import PIL
-
-                    image = PIL.Image.open(stream)
+                    image = PIL.Image.open(io.BytesIO(img))
                     output = io.BytesIO()
                     image.save(output, "PNG")
                     self.img = output.getvalue()
             else:
                 self.img = None
 
-    def close(self):
         if self.img:
             if self.width > 0 and self.height > 0:
                 self.dx = self.width
                 self.dy = self.height
             else:
                 (self.dx, self.dy) = self.dc_info.get_img_size(self.img)
+
             img_atom = Atom(
                 ImgDraw(self, self.img, self.dx, self.dy), self.dx, 0, self.dy, 0
             )
