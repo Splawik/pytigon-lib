@@ -2,8 +2,9 @@ Pillow
 lxml
 httpx
 fs
-openpyxl
-pyexcel_odsr
-fpdf2
 Django
 django-environ-2
+openpyxl
+pyexcel_odsr
+htmldocx
+fpdf2

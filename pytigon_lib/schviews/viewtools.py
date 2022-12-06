@@ -19,6 +19,7 @@
 
 import os
 import os.path
+import io
 import logging
 from re import template
 
@@ -50,6 +51,7 @@ DOC_TYPES = (
     "pptx",
     "txt",
     "json",
+    "hdoc",
 )
 
 
@@ -143,7 +145,6 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         context["template"] = template
         if context and "view" in context and context["view"]:
             template2 = self._get_model_template(context, context["view"].doc_type())
-
         if not template2:
             if context and "view" in context and context["view"].doc_type() == "pdf":
                 template2 = []
@@ -155,7 +156,6 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     else:
                         template2.append(pos.replace(".html", "_pdf.html"))
                 template2.append("schsys/table_pdf.html")
-                print(template2)
             elif context and "view" in context and context["view"].doc_type() == "txt":
                 template2 = []
                 if "template_name" in context:
@@ -165,6 +165,15 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                         template2.append(pos)
                     else:
                         template2.append(pos.replace(".html", "_txt.html"))
+            elif context and "view" in context and context["view"].doc_type() == "hdoc":
+                template2 = []
+                if "template_name" in context:
+                    template2.append(context["template_name"] + ".html")
+                for pos in template:
+                    if "_hdoc.html" in pos:
+                        template2.append(pos)
+                    else:
+                        template2.append(pos.replace(".html", "_hdoc.html"))
             elif (
                 context
                 and "view" in context
@@ -253,6 +262,27 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 self.content = stream_out.getvalue()
                 file_in_name = os.path.basename(self.template_name[0])
             self["Content-Disposition"] = "attachment; filename=%s" % file_in_name
+            return self
+        elif self.context_data["view"].doc_type() in ("hdoc",):
+            self[
+                "Content-Type"
+            ] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            context = self.resolve_context(self.context_data)
+
+            t = loader.select_template(self.template_name)
+            content = "" + t.render(context)
+
+            from htmldocx import HtmlToDocx
+
+            docx_parser = HtmlToDocx()
+            output = io.BytesIO()
+            doc = docx_parser.parse_html_string(content)
+            doc.save(output)
+            self.content = output.getvalue()
+            file_in_name = os.path.basename(self.template_name[0])
+            self[
+                "Content-Disposition"
+            ] = "attachment; filename=%s" % file_in_name.replace("html", "docx")
             return self
         else:
             ret = TemplateResponse.render(self)
@@ -464,7 +494,21 @@ def dict_to_txt(template_name):
             return render_to_response_ext(
                 request, template_name, c.flatten(), doc_type="txt"
             )
-    
+
+        return inner
+
+    return _dict_to_template
+
+
+def dict_to_hdoc(template_name):
+    def _dict_to_template(func):
+        def inner(request, *args, **kwargs):
+            v = func(request, *args, **kwargs)
+            c = RequestContext(request, v)
+            return render_to_response_ext(
+                request, template_name, c.flatten(), doc_type="hdoc"
+            )
+
         return inner
 
     return _dict_to_template

@@ -40,7 +40,7 @@ def get_template_names(context, doc_type):
         templates.append("schsys/object")
 
     for pos in templates:
-        if doc_type in ("html", "txt", "pdf"):
+        if doc_type in ("html", "txt", "pdf", "hdoc"):
             ret.append(f"{pos}_{doc_type}.html")
         else:
             ret.append(f"{pos}.{doc_type}")
@@ -111,6 +111,20 @@ def render_doc(context):
         ret_content = "" + t.render(context)
         return ret_attr, ret_content
 
+    elif doc_type == "hdoc":
+        t = loader.select_template(templates)
+        content = "" + t.render(context)
+        ret_attr["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(
+            templates[0]
+        ).replace(".html", "").replace("_hdoc", ".docx")
+        ret_attr[
+            "Content-Type"
+        ] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        from htmldocx import HtmlToDocx
+
+        docx_parser = HtmlToDocx()
+        ret_content = docx_parser.parse_html_string(content)
+        return ret_attr, ret_content
     else:
         ret_attr["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(
             templates[0]
