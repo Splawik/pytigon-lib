@@ -61,6 +61,7 @@ class BaseDc(object):
         self._maxheight = 0
         self.last_style = "None"
         self.scale = scale
+        self.handle_html_directly = False
 
     def close(self):
         pass

@@ -233,8 +233,11 @@ class HtmlViewerParser(HtmlModParser):
                     s2 = s.split(":")
                     if len(s2) == 2:
                         attrs[s2[0].lower()] = s2[1]
+
             if "class" in attrs:
-                attrs["class"] = attrs["class"].split(" ")[0]
+                classes = attrs["class"].split(" ")
+                attrs["class"] = classes[0]
+                attrs["classes"] = attrs["class"]
 
             tmap = get_tag_preprocess_map()
             tag2 = tag.lower()

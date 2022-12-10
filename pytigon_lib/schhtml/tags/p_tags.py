@@ -107,6 +107,11 @@ class ParBase(BaseHtmlAtomParser):
         if "class" in self.attrs:
             self.reg_action("class", dc)
         self.reg_end()
+
+        if dc.handle_html_directly:
+            dc.handle_html_tag(self)
+            return (0, False)
+
         if dc.dx == -1:
             dc2 = dc
             dc2.dx = self.width
@@ -208,6 +213,11 @@ class ParArray(ParBase):
         return dy
 
     def render(self, dc_parm):
+
+        if dc_parm.handle_html_directly:
+            dc_parm.handle_html_tag(self)
+            return (0, False)
+
         if len(self.rendered_children) > 0:
             child = self.rendered_children[0]
             dc = dc_parm.subdc(

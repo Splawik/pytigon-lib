@@ -72,6 +72,9 @@ class TdEmptyTag(object):
         return 0
 
     def render(self, dc):
+        if dc.handle_html_directly:
+            dc.handle_html_tag(self)
+            return (0, False)
         return (0, False)
 
     def set_width(self, width):
@@ -443,6 +446,11 @@ class TableTag(BaseHtmlAtomParser):
     def render(self, dc_parm):
         self.reg_id(dc_parm)
         self.reg_end()
+
+        if dc_parm.handle_html_directly:
+            dc_parm.handle_html_tag(self)
+            return (0, False)
+
         if "border-color" in self.attrs:
             rgb = dc_parm.rgbfromhex(self.attrs["border-color"])
         else:

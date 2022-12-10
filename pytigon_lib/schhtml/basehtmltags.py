@@ -316,14 +316,18 @@ class BaseHtmlElemParser(object):
             self.parent.child_ready_to_render(self)
 
     def render(self, dc):
-        if len(self.rendered_children):
-            for child in self.rendered_children:
-                ret = self.rendered_child.render(
-                    dc.subdc(0, 0, self.child_dx, self.child_dy)
-                )
-                self.dy += self.child_dy
-                self.rendered_child = None
-            return ret
+        if dc.handle_html_directly:
+            dc.handle_html_tag(self)
+            return 0
+        else:
+            if len(self.rendered_children):
+                for child in self.rendered_children:
+                    ret = self.rendered_child.render(
+                        dc.subdc(0, 0, self.child_dx, self.child_dy)
+                    )
+                    self.dy += self.child_dy
+                    self.rendered_child = None
+                return ret
         return True
 
     def refresh(self):
@@ -408,7 +412,6 @@ class BaseHtmlElemParser(object):
         else:
             if "width" in self.attrs:
                 (parent_width, parent_min, parent_max) = self.parent.get_client_width()
-                print("X1:", parent_width)
                 width = self._norm_sizes([self.attrs["width"]], parent_width)[0]
                 min = self._norm_sizes([self.attrs["width"]], parent_min)[0]
                 max = self._norm_sizes([self.attrs["width"]], parent_max)[0]

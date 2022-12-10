@@ -155,8 +155,11 @@ class ImgTag(AtomTag):
                     itype = "simple"
                     if "image-type" in self.attrs:
                         itype = self.attrs["image-type"]
-                    img2 = svg_to_png(img, self.width, self.height, itype)
-                    self.img = img2
+                    if self.width > 0 and self.height > 0:
+                        img2 = svg_to_png(img, self.width, self.height, itype)
+                        self.img = img2
+                    else:
+                        self.img = None
                 else:
                     image = PIL.Image.open(io.BytesIO(img))
                     output = io.BytesIO()

@@ -272,17 +272,21 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             t = loader.select_template(self.template_name)
             content = "" + t.render(context)
 
-            from htmldocx import HtmlToDocx
+            from pytigon_lib.schhtml.docxdc import DocxDc
+            from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
 
-            docx_parser = HtmlToDocx()
             output = io.BytesIO()
-            doc = docx_parser.parse_html_string(content)
-            doc.save(output)
+            file_name = os.path.basename(self.template_name[0]).replace("html", "docx")
+            dc = DocxDc(output_name=file_name, output_stream=output)
+            dc.set_paging(False)
+            p = HtmlViewerParser(dc=dc)
+            p.feed(content)
+            p.close()
+            dc.end_page()
+
             self.content = output.getvalue()
-            file_in_name = os.path.basename(self.template_name[0])
-            self[
-                "Content-Disposition"
-            ] = "attachment; filename=%s" % file_in_name.replace("html", "docx")
+
+            self["Content-Disposition"] = "attachment; filename=%s" % file_name
             return self
         else:
             ret = TemplateResponse.render(self)
