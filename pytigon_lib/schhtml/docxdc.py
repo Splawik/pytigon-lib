@@ -24,6 +24,7 @@ from docx import Document
 from docx.shared import Inches
 from docx.text.run import Font
 from docx.shared import Pt
+import docx.enum.text
 
 
 class DocxDc(BaseDc):
@@ -36,6 +37,7 @@ class DocxDc(BaseDc):
         output_name=None,
         output_stream=None,
         scale=1.0,
+        docx_template_path = None,
     ):
         BaseDc.__init__(self, calc_only, -1, -1, output_name, output_stream, scale)
         self.dc_info = DocxDcinfo(self)
@@ -48,7 +50,7 @@ class DocxDc(BaseDc):
 
         self.last_style_tab = None
         self.handle_html_directly = True
-        self.document = Document()
+        self.document = Document(docx_template_path)
 
         self.page_width = width
         self.page_height = height
@@ -123,11 +125,93 @@ class DocxDc(BaseDc):
                 )
         return (width, height)
 
+    # orientation 0 - vertical, 1 - horizontal
+    def _inch_from_param(self, param, orientation):
+        if "%" in param:
+            x = (
+                (self.body_height if orientation == 0 else self.body_width)
+                * int(param.replace("%", ""))
+                / 100
+            )
+        else:
+            x = int(param.replace("px", "").replace("rem", "").replace("em", "")) / 300
+        return x
+
     def _add_style(self, dest_element, source_element):
         if "classes" in source_element.attrs:
             for attr in source_element.attrs["classes"].split(" "):
                 if attr.startswith("Style-"):
                     dest_element.style = attr[6:].replace("-", " ")
+
+        padding = None
+        margin = None
+
+        if "padding" in source_element.attrs:
+            padding = source_element.attrs["padding"].split(" ")
+        if "margin" in source_element.attrs:
+            margin = source_element.attrs["margin"].split(" ")
+
+        if padding or margin:
+            dest_element.paragraph_format.left_indent = Inches(0)
+            dest_element.paragraph_format.right_indent = Inches(0)
+            dest_element.paragraph_format.space_before = Inches(0)
+            dest_element.paragraph_format.space_after = Inches(0)
+
+            for tab in (margin, padding):
+                if tab:
+                    if len(tab) == 4:
+                        dest_element.paragraph_format.left_indent += Inches(
+                            self._inch_from_param(tab[3], 1)
+                        )
+                        dest_element.paragraph_format.right_indent += Inches(
+                            self._inch_from_param(tab[1], 1)
+                        )
+                        dest_element.paragraph_format.space_before += Inches(
+                            self._inch_from_param(tab[0], 0)
+                        )
+                        dest_element.paragraph_format.space_after += Inches(
+                            self._inch_from_param(tab[2], 0)
+                        )
+                    elif len(tab) == 2:
+                        dest_element.paragraph_format.left_indent += Inches(
+                            self._inch_from_param(tab[1], 1)
+                        )
+                        dest_element.paragraph_format.right_indent += Inches(
+                            self._inch_from_param(tab[1], 1)
+                        )
+                        dest_element.paragraph_format.space_before += Inches(
+                            self._inch_from_param(tab[0], 0)
+                        )
+                        dest_element.paragraph_format.space_after += Inches(
+                            self._inch_from_param(tab[0], 0)
+                        )
+                    else:
+                        dest_element.paragraph_format.left_indent += Inches(
+                            self._inch_from_param(tab[0], 1)
+                        )
+                        dest_element.paragraph_format.right_indent += Inches(
+                            self._inch_from_param(tab[0], 1)
+                        )
+                        dest_element.paragraph_format.space_before += Inches(
+                            self._inch_from_param(tab[0], 0)
+                        )
+                        dest_element.paragraph_format.space_after += Inches(
+                            self._inch_from_param(tab[0], 0)
+                        )
+        if "align" in source_element.attrs:
+            attr = source_element.attrs["align"]
+        else:
+            if "text-align" in source_element.attrs:
+                attr = source_element.attrs["text-align"]
+            else:
+                attr = ""
+        if attr == "center":
+            dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
+        else:
+            if attr == "right":
+                dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.RIGHT
+            else:
+                dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.LEFT
 
     def _add_image(self, img, dest_element, width=None, height=None):
         img_stream = io.BytesIO(img)
@@ -187,7 +271,6 @@ class DocxDc(BaseDc):
         self._process_atom_list(par, element)
 
     def image(self, element):
-        print("IMAGE")
         if element.img:
             img_stream = io.BytesIO(element.img)
             width, height = self._handle_width_and_height(element)
