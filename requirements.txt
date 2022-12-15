@@ -4,7 +4,8 @@ httpx
 fs
 Django
 django-environ-2
-openpyxl
-pyexcel_odsr
+pyexcel
+pyexcel-xlsx
+pyexcel-ods3
 python-docx
 fpdf2
