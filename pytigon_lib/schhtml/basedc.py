@@ -348,6 +348,9 @@ class BaseDc(object):
                 )
             dx += obj.dx
 
+    def annotate(self, what, data):
+        pass
+
 
 class BaseDcInfo(object):
     def __init__(self, dc):

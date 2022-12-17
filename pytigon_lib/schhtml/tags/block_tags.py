@@ -199,6 +199,9 @@ class BodyTag(ParBase):
                 self._maxheight = self.y
 
     def child_ready_to_render(self, child):
+        if self.dc_info.dc.handle_html_directly:
+            return super().child_ready_to_render(child)
+        
         if self.parser.parse_only:
             return
 

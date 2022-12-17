@@ -276,6 +276,7 @@ class BaseHtmlElemParser(object):
             return None
 
     def handle_starttag(self, parser, tag, attrs):
+
         if tag in self.child_tags or tag == "comment":
             handler = self.class_from_tag_name(tag)
             if handler:
@@ -308,12 +309,17 @@ class BaseHtmlElemParser(object):
         pass
 
     def child_ready_to_render(self, child):
+        if self.dc_info and self.dc_info.dc and self.dc_info.dc.handle_html_directly:
+            if self.dc_info.dc.handle_html_child_tag(self, child):
+                return
         self.rendered_children.append(child)
         if not (
-            "page-break-inside" in child.attrs
+            child
+            and "page-break-inside" in child.attrs
             and child.attrs["page-break-inside"] == "avoid"
         ):
-            self.parent.child_ready_to_render(self)
+            if self.parent:
+                self.parent.child_ready_to_render(self)
 
     def render(self, dc):
         if dc.handle_html_directly:

@@ -52,6 +52,7 @@ DOC_TYPES = (
     "txt",
     "json",
     "hdoc",
+    "hxls",
 )
 
 
@@ -174,6 +175,15 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                         template2.append(pos)
                     else:
                         template2.append(pos.replace(".html", "_hdoc.html"))
+            elif context and "view" in context and context["view"].doc_type() == "hxls":
+                template2 = []
+                if "template_name" in context:
+                    template2.append(context["template_name"] + ".html")
+                for pos in template:
+                    if "_hxls.html" in pos:
+                        template2.append(pos)
+                    else:
+                        template2.append(pos.replace(".html", "_hxls.html"))
             elif (
                 context
                 and "view" in context
@@ -263,21 +273,37 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 file_in_name = os.path.basename(self.template_name[0])
             self["Content-Disposition"] = "attachment; filename=%s" % file_in_name
             return self
-        elif self.context_data["view"].doc_type() in ("hdoc",):
-            self[
-                "Content-Type"
-            ] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif self.context_data["view"].doc_type() in ("hdoc", "hxls"):
             context = self.resolve_context(self.context_data)
 
             t = loader.select_template(self.template_name)
             content = "" + t.render(context)
 
-            from pytigon_lib.schhtml.docxdc import DocxDc
+            if self.context_data["view"].doc_type() == "hdoc":
+                self[
+                    "Content-Type"
+                ] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+                from pytigon_lib.schhtml.docxdc import DocxDc as Dc
+
+                file_name = os.path.basename(self.template_name[0]).replace(
+                    "html", "docx"
+                )
+            else:
+                self[
+                    "Content-Type"
+                ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+                from pytigon_lib.schhtml.xlsxdc import XlsxDc as Dc
+
+                file_name = os.path.basename(self.template_name[0]).replace(
+                    "html", "xlsx"
+                )
+
             from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
 
             output = io.BytesIO()
-            file_name = os.path.basename(self.template_name[0]).replace("html", "docx")
-            dc = DocxDc(output_name=file_name, output_stream=output)
+            dc = Dc(output_name=file_name, output_stream=output)
             dc.set_paging(False)
             p = HtmlViewerParser(dc=dc)
             p.feed(content)
@@ -511,6 +537,20 @@ def dict_to_hdoc(template_name):
             c = RequestContext(request, v)
             return render_to_response_ext(
                 request, template_name, c.flatten(), doc_type="hdoc"
+            )
+
+        return inner
+
+    return _dict_to_template
+
+
+def dict_to_hxls(template_name):
+    def _dict_to_template(func):
+        def inner(request, *args, **kwargs):
+            v = func(request, *args, **kwargs)
+            c = RequestContext(request, v)
+            return render_to_response_ext(
+                request, template_name, c.flatten(), doc_type="hxls"
             )
 
         return inner

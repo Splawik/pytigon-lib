@@ -262,6 +262,9 @@ class Ul(ParArray):
             p = p.parent
 
     def child_ready_to_render(self, child):
+        if self.dc_info.dc.handle_html_directly:
+            return super().child_ready_to_render(child)
+
         if not child in self.children:
             if child.lp < 0:
                 child.lp = self.lp

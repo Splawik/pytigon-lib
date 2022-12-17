@@ -300,6 +300,9 @@ class TableTag(BaseHtmlAtomParser):
         return y
 
     def child_ready_to_render(self, child):
+        if self.dc_info.dc.handle_html_directly:
+            return super().child_ready_to_render(child)
+
         if self.col_count < 0:
             i = 0
             for pos in child.td_list:
@@ -628,6 +631,8 @@ class TrTag(BaseHtmlElemParser):
             BaseHtmlElemParser.close(self)
 
     def child_ready_to_render(self, child):
+        if self.dc_info.dc.handle_html_directly:
+            return super().child_ready_to_render(child)
         self.td_list.append(child)
 
     def get_width(self):

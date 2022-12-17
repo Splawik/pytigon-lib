@@ -17,17 +17,16 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 import io
+import os
 
-from docx import Document
-from docx.shared import Inches
-from docx.text.run import Font
-from docx.shared import Pt
-import docx.enum.text
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+from pytigon_lib.schfs.vfstools import get_temp_filename
+
+import xlsxwriter
 
 
-class DocxDc(BaseDc):
+class XlsxDc(BaseDc):
     def __init__(
         self,
         ctx=None,
@@ -37,10 +36,9 @@ class DocxDc(BaseDc):
         output_name=None,
         output_stream=None,
         scale=1.0,
-        docx_template_path=None,
     ):
         BaseDc.__init__(self, calc_only, -1, -1, output_name, output_stream, scale)
-        self.dc_info = DocxDcinfo(self)
+        self.dc_info = XlsxDcinfo(self)
         self.type = None
 
         if width < 0:
@@ -50,14 +48,15 @@ class DocxDc(BaseDc):
 
         self.last_style_tab = None
         self.handle_html_directly = True
-        self.document = Document(docx_template_path)
+        self.temp_file_name = get_temp_filename()
+        self.document = xlsxwriter.Workbook(self.temp_file_name)
 
         self.page_width = width
         self.page_height = height
-        self.set_margins(0.5, 0.5, 0.5, 0.5)
 
-        self.map = {
+        self.map2 = {
             "body": self.body,
+            # "page": self.page,
             "p": self.p,
             "div": self.div,
             "h1": self.h1,
@@ -67,50 +66,40 @@ class DocxDc(BaseDc):
             "h5": self.h5,
             "h6": self.h6,
             "table": self.table,
-            "tr": self.tr,
-            "td": self.td,
             "img": self.image,
         }
+
+        self.map = {
+            #    "div": self.div,
+            "table": self.table,
+            "tr": self.tr,
+            "td": self.td,
+        }
+
         self.last_ = None
 
-    def set_margins(self, top, right, bottom, left):
-        current_section = self.document.sections[-1]
-        if top:
-            current_section.top_margin = Inches(top)
-        if right:
-            current_section.right_margin = Inches(right)
-        if bottom:
-            current_section.bottom_margin = Inches(bottom)
-        if left:
-            current_section.left_margin = Inches(left)
-        self.body_width = (
-            self.page_width
-            - current_section.left_margin.inches
-            - current_section.right_margin.inches
-        )
-        self.body_height = (
-            self.page_height
-            - current_section.top_margin.inches
-            - current_section.bottom_margin.inches
-        )
-
     def close(self):
-        if self.output_stream:
-            self.document.save(self.output_stream)
-        elif self.output_name:
-            self.document.save(self.output_name)
+        self.document.close()
+        with open(self.temp_file_name, "rb") as f_in:
+            if self.output_stream:
+                self.output_stream.write(f_in.read)
+            elif self.output_name:
+                with open(self.output_name, "wb") as f_out:
+                    f_out.write(f_in.read())
+        os.unlink(self.temp_file_name)
 
     def handle_html_child_tag(self, element, child):
         if element and child:
-            print("A1: ", element.tag, child.tag)
             if child.tag in self.map:
                 self.map[child.tag](child, element)
-        return True
+            return True
+        return False
 
     def handle_html_tag(self, element):
-        pass
         # if element.tag in self.map:
         #    self.map[element.tag](element)
+        print("B2: ", element.tag)
+        pass
 
     def _handle_width_and_height(self, element):
         width = None
@@ -268,19 +257,19 @@ class DocxDc(BaseDc):
         self._add_style(hh, element)
         self._process_atom_list(hh, element)
 
-    def p(self, element, parent):
+    def p(self, element):
         par = self.document.add_paragraph("")
         self._add_style(par, element)
         self._process_atom_list(par, element)
 
-    def div(self, element, parent):
+    def div(self, element):
         par = self.document.add_paragraph("")
         par.paragraph_format.left_indent = 0
         par.paragraph_format.right_indent = 0
         self._add_style(par, element)
         self._process_atom_list(par, element)
 
-    def image(self, element, parent):
+    def image(self, element):
         if element.img:
             img_stream = io.BytesIO(element.img)
             width, height = self._handle_width_and_height(element)
@@ -288,40 +277,62 @@ class DocxDc(BaseDc):
                 img_stream,
             )
 
-    def body(self, element, parent):
+    def body(self, element):
         pass
 
-    def h1(self, element, parent):
+    def h1(self, element):
         return self.h(element, 0)
 
-    def h2(self, element, parent):
+    def h2(self, element):
         return self.h(element, 1)
 
-    def h3(self, element, parent):
+    def h3(self, element):
         return self.h(element, 2)
 
-    def h4(self, element, parent):
+    def h4(self, element):
         return self.h(element, 3)
 
-    def h5(self, element, parent):
+    def h5(self, element):
         return self.h(element, 4)
 
-    def h6(self, element, parent):
+    def h6(self, element):
         return self.h(element, 5)
 
+    def table2(self, child, parent):
+        pass
+        # tr = element.tr_list
+        # if len(tr) > 0:
+        #    table = self.document.add_table(rows=len(tr), cols=len(tr[0]))
+        #    self._add_style(table, element)
+        #    i = 0
+        #    for row in tr:
+        #        j = 0
+        #        row_dest = table.rows[i].cells
+        #        for td in row:
+        #            c = row_dest[j]
+        #            p = c.add_paragraph(None)
+        #            self._process_atom_list(p, td)
+        #            j += 1
+        #        i += 1
+
+    def div(self, element, parent):
+        print("DIV!")
+
     def table(self, element, parent):
+        if not hasattr(parent, "worksheet"):
+            print(parent, element)
+            if "title" in parent.attrs:
+                parent.worksheet = self.document.add_worksheet(parent.attrs["title"])
+            else:
+                parent.worksheet = self.document.add_worksheet()
+
         tr = element.tr_list
         if len(tr) > 0:
-            table = self.document.add_table(rows=len(tr), cols=len(tr[0].td_list))
-            self._add_style(table, element)
             i = 0
             for row in tr:
                 j = 0
-                row_dest = table.rows[i].cells
                 for td in row.td_list:
-                    c = row_dest[j]
-                    p = c.add_paragraph(None)
-                    self._process_atom_list(p, td)
+                    parent.worksheet.write(i, j, "test")
                     j += 1
                 i += 1
 
@@ -332,7 +343,7 @@ class DocxDc(BaseDc):
         parent.td_list.append(element)
 
 
-class DocxDcinfo(BaseDcInfo):
+class XlsxDcinfo(BaseDcInfo):
     def __init__(self, dc):
         BaseDcInfo.__init__(self, dc)
 
