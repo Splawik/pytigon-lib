@@ -330,6 +330,7 @@ class DocxDc(BaseDc):
                 row_dest = table.rows[i].cells
                 for td in row.td_list:
                     c = row_dest[j]
+                    c._tc.clear_content()
                     p = c.add_paragraph(None)
                     self._process_atom_list(p, td)
                     j += 1

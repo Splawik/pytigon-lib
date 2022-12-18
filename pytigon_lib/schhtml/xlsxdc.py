@@ -86,15 +86,14 @@ class XlsxDc(BaseDc):
         if self.notify_callback:
             self.notify_callback(
                 "start",
-                {"dc": self },
+                {"dc": self},
             )
-
 
     def close(self):
         if self.notify_callback:
             self.notify_callback(
                 "end",
-                {"dc": self },
+                {"dc": self},
             )
         self.document.close()
         with open(self.temp_file_name, "rb") as f_in:
@@ -248,8 +247,8 @@ class XlsxDc(BaseDc):
             else:
                 element.worksheet = self.document.add_worksheet()
             element.status = [0, 0]
-        if "width" in element.attrs:
-            for col, value in enumerate(element.attrs["width"].split(";")):
+        if "cellwidth" in element.attrs:
+            for col, value in enumerate(element.attrs["cellwidth"].split(";")):
                 self._set_width(
                     element.worksheet,
                     col,
