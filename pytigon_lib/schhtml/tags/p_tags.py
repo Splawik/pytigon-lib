@@ -242,7 +242,7 @@ class ParArray(ParBase):
         self.parent.child_ready_to_render(self)
 
 
-class Li(ParBase):
+class Li(Par):
     def __init__(self, parent, parser, tag, attrs):
         ParBase.__init__(self, parent, parser, tag, attrs)
         if type(parent) == Ul:
@@ -408,6 +408,15 @@ class Div(Par):
         return True
 
 
+class Pre(Div):
+    def __init__(self, *argi, **argv):
+        super().__init__(*argi, **argv)
+        self.pre = True
+
+    def handle_data(self, data):
+        Par.handle_data(self, data)
+
+
 register_tag_map("p", Par)
 
 register_tag_map("h1", Par)
@@ -416,6 +425,8 @@ register_tag_map("h3", Par)
 register_tag_map("h4", Par)
 register_tag_map("h5", Par)
 register_tag_map("h6", Par)
+
+register_tag_map("blockquote", Par)
 
 register_tag_map("i", Par)
 register_tag_map("b", Par)
@@ -427,9 +438,10 @@ register_tag_map("sup", Div)
 register_tag_map("tt", Par)
 register_tag_map("span", Par)
 
-
 register_tag_map("ol", Ul)
 register_tag_map("ul", Ul)
 register_tag_map("li", Li)
 
 register_tag_map("div", Div)
+register_tag_map("pre", Pre)
+register_tag_map("code", Pre)

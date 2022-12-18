@@ -38,6 +38,7 @@ PAR_TAGS = [
     "h4",
     "h5",
     "h6",
+    "blockquote",
     "i",
     "b",
     "s",
@@ -51,6 +52,8 @@ PAR_TAGS = [
     "ul",
     "li",
     "div",
+    "pre",
+    "code",
 ]
 
 TABLE_TAGS = ["table", "caption", "tr", "td", "th"]
@@ -309,7 +312,7 @@ class BaseHtmlElemParser(object):
         pass
 
     def child_ready_to_render(self, child):
-        #if self.dc_info and self.dc_info.dc and self.dc_info.dc.handle_html_directly:
+        # if self.dc_info and self.dc_info.dc and self.dc_info.dc.handle_html_directly:
         #    if self.dc_info.dc.handle_html_child_tag(self, child):
         #        return
         self.rendered_children.append(child)
@@ -322,7 +325,7 @@ class BaseHtmlElemParser(object):
                 self.parent.child_ready_to_render(self)
 
     def render(self, dc):
-        dc.annotate("render_tag", {'element': self })
+        dc.annotate("render_tag", {"element": self})
         if dc.handle_html_directly:
             return 0
         else:

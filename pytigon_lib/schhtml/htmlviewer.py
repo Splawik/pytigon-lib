@@ -35,6 +35,12 @@ from pytigon_lib.schhttptools.httpclient import HttpClient
 from pytigon_lib.schhtml.pdfdc import PdfDc
 
 
+ALIAS_TAG = {
+    "em": "i",
+    "strong": "b",
+}
+
+
 class BaseRenderingLib:
     def accept(html, stream_type="pdf", base_url=None, info=None):
         return False
@@ -225,6 +231,9 @@ class HtmlViewerParser(HtmlModParser):
         return self._handle_starttag(tag, attrs)
 
     def _handle_starttag(self, tag, attrs):
+        if tag in ALIAS_TAG:
+            tag = ALIAS_TAG[tag]
+
         # if tag == "div":
         #    breakpoint()
         try:
@@ -274,6 +283,9 @@ class HtmlViewerParser(HtmlModParser):
         self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
+        if tag in ALIAS_TAG:
+            tag = ALIAS_TAG[tag]
+
         # if tag == "div":
         #    breakpoint()
         try:
