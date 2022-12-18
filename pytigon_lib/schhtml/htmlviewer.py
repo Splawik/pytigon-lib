@@ -260,6 +260,7 @@ class HtmlViewerParser(HtmlModParser):
                         self.lp += 1
                     self.tag_parser = obj
                     self.tag_parser.set_dc_info(self.dc_info)
+                    self.dc.annotate("start_tag", {"element": obj})
             else:
                 if tag.lower() == "html":
                     self.tag_parser = HtmlTag(None, self, tag.lower(), attrs)
@@ -283,6 +284,7 @@ class HtmlViewerParser(HtmlModParser):
                     self.print_obj(tag_parser, False)
                 self.tag_parser = obj
                 tag_parser.finish()
+                self.dc.annotate("end_tag", {"element": tag_parser})
         except:
             (exc_type, exc_value, exc_tb) = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_tb)

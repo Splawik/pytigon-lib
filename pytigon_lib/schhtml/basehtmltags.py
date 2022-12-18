@@ -309,9 +309,9 @@ class BaseHtmlElemParser(object):
         pass
 
     def child_ready_to_render(self, child):
-        if self.dc_info and self.dc_info.dc and self.dc_info.dc.handle_html_directly:
-            if self.dc_info.dc.handle_html_child_tag(self, child):
-                return
+        #if self.dc_info and self.dc_info.dc and self.dc_info.dc.handle_html_directly:
+        #    if self.dc_info.dc.handle_html_child_tag(self, child):
+        #        return
         self.rendered_children.append(child)
         if not (
             child
@@ -322,8 +322,8 @@ class BaseHtmlElemParser(object):
                 self.parent.child_ready_to_render(self)
 
     def render(self, dc):
+        dc.annotate("render_tag", {'element': self })
         if dc.handle_html_directly:
-            dc.handle_html_tag(self)
             return 0
         else:
             if len(self.rendered_children):

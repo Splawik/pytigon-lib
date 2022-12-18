@@ -72,8 +72,8 @@ class TdEmptyTag(object):
         return 0
 
     def render(self, dc):
+        dc.annotate("render_tag", {'element': self })
         if dc.handle_html_directly:
-            dc.handle_html_tag(self)
             return (0, False)
         return (0, False)
 
@@ -450,8 +450,9 @@ class TableTag(BaseHtmlAtomParser):
         self.reg_id(dc_parm)
         self.reg_end()
 
+        dc_parm.annotate("render_tag", {'element': self })
+
         if dc_parm.handle_html_directly:
-            dc_parm.handle_html_tag(self)
             return (0, False)
 
         if "border-color" in self.attrs:

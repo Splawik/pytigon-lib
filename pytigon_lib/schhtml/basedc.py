@@ -32,6 +32,7 @@ class BaseDc(object):
         output_name=None,
         output_stream=None,
         scale=1.0,
+        notify_callback=None,
     ):
         self.x = 0
         self.y = 0
@@ -61,6 +62,7 @@ class BaseDc(object):
         self._maxheight = 0
         self.last_style = "None"
         self.scale = scale
+        self.notify_callback = notify_callback
         self.handle_html_directly = False
 
     def close(self):
@@ -257,8 +259,12 @@ class BaseDc(object):
             self.pages.append(self.store)
             self.store = []
         self.last_style = "None"
-
+        if self.notify_callback:
+            self.notify_callback("start_page", { 'dc': self })
+    
     def end_page(self):
+        if self.notify_callback:
+            self.notify_callback("end_page", { 'dc': self })
         if len(self.store) > 0:
             self.pages.append(self.store)
             self.store = []

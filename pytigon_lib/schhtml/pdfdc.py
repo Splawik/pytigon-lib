@@ -95,9 +95,17 @@ class PdfDc(BaseDc):
         output_name=None,
         output_stream=None,
         scale=1.0,
+        notify_callback=None,
     ):
         BaseDc.__init__(
-            self, calc_only, width, height, output_name, output_stream, scale
+            self,
+            calc_only,
+            width,
+            height,
+            output_name,
+            output_stream,
+            scale,
+            notify_callback,
         )
         if self.width >= 0:
             width2 = self.width
@@ -142,9 +150,22 @@ class PdfDc(BaseDc):
         self._last_pen_color = (0, 0, 0, 255)
         self._last_line_width = -1
         self._last_brush_color = (255, 255, 255, 255)
+
+        if self.notify_callback:
+            self.notify_callback(
+                "start",
+                {"dc": self},
+            )
+
         self.start_page()
 
     def close(self):
+        if self.notify_callback:
+            self.notify_callback(
+                "end",
+                {"dc": self},
+            )
+
         if not self.calc_only:
             self.surf.save()
 
@@ -172,6 +193,12 @@ class PdfDc(BaseDc):
         BaseDc.start_page(self)
 
     def end_page(self):
+        if self.notify_callback:
+            self.notify_callback(
+                "end_page",
+                {"dc": self },
+            )
+
         BaseDc.end_page(self)
 
     def draw(self, preserve=False):

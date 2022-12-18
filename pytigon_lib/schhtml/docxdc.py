@@ -37,9 +37,12 @@ class DocxDc(BaseDc):
         output_name=None,
         output_stream=None,
         scale=1.0,
+        notify_callback=None,
         docx_template_path=None,
     ):
-        BaseDc.__init__(self, calc_only, -1, -1, output_name, output_stream, scale)
+        BaseDc.__init__(
+            self, calc_only, -1, -1, output_name, output_stream, scale, notify_callback
+        )
         self.dc_info = DocxDcinfo(self)
         self.type = None
 
@@ -73,6 +76,12 @@ class DocxDc(BaseDc):
         }
         self.last_ = None
 
+        if self.notify_callback:
+            self.notify_callback(
+                "start",
+                {"dc": self},
+            )
+
     def set_margins(self, top, right, bottom, left):
         current_section = self.document.sections[-1]
         if top:
@@ -95,22 +104,24 @@ class DocxDc(BaseDc):
         )
 
     def close(self):
+        if self.notify_callback:
+            self.notify_callback(
+                "end",
+                {"dc": self},
+            )
         if self.output_stream:
             self.document.save(self.output_stream)
         elif self.output_name:
             self.document.save(self.output_name)
 
-    def handle_html_child_tag(self, element, child):
-        if element and child:
-            print("A1: ", element.tag, child.tag)
-            if child.tag in self.map:
-                self.map[child.tag](child, element)
-        return True
-
-    def handle_html_tag(self, element):
-        pass
-        # if element.tag in self.map:
-        #    self.map[element.tag](element)
+    def annotate(self, what, data):
+        if what == "end_tag":
+            element = data["element"]
+            parent = element.parent
+            if element and parent:
+                print("A1: ", element.tag, parent.tag)
+                if element.tag in self.map:
+                    self.map[element.tag](element, parent)
 
     def _handle_width_and_height(self, element):
         width = None

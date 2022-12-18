@@ -108,8 +108,9 @@ class ParBase(BaseHtmlAtomParser):
             self.reg_action("class", dc)
         self.reg_end()
 
+        dc.annotate("render_tag", {"element": self})
+
         if dc.handle_html_directly:
-            dc.handle_html_tag(self)
             return (0, False)
 
         if dc.dx == -1:
@@ -214,8 +215,9 @@ class ParArray(ParBase):
 
     def render(self, dc_parm):
 
+        dc_parm.annotate("render_tag", {"element": self})
+
         if dc_parm.handle_html_directly:
-            dc_parm.handle_html_tag(self)
             return (0, False)
 
         if len(self.rendered_children) > 0:
