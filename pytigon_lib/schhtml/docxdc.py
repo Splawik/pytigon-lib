@@ -119,7 +119,6 @@ class DocxDc(BaseDc):
             element = data["element"]
             parent = element.parent
             if element and parent:
-                print("A1: ", element.tag, parent.tag)
                 if element.tag in self.map:
                     self.map[element.tag](element, parent)
 
