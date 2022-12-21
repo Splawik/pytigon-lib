@@ -183,11 +183,13 @@ class AtomList(object):
                 words[-1] = words[-1] + " "
                 if words[-1] == "  ":
                     words[-1] = " "
+
             if self.pre or (parent and parent.no_wrap):
                 if txt2 != "":
                     extents = self.dc_info.get_extents(txt2, style)
                     atom = Atom(
-                        superstrip(txt2),
+                        txt2,
+                        # superstrip(txt2),
                         extents[0],
                         extents[1],
                         extents[2],

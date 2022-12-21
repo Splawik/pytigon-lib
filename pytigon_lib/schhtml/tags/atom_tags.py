@@ -133,8 +133,9 @@ class ImgTag(AtomTag):
         self.dy = 0
 
     def close(self):
-        if self.width > 0 and self.height > 0:
+        if self.width > 0:
             self.dx = self.width
+        if self.height > 0:
             self.dy = self.height
 
         if self.src:
@@ -173,7 +174,16 @@ class ImgTag(AtomTag):
                 self.dx = self.width
                 self.dy = self.height
             else:
-                (self.dx, self.dy) = self.dc_info.get_img_size(self.img)
+                if self.width > 0:
+                    (dx, dy) = self.dc_info.get_img_size(self.img)
+                    self.dx = self.width
+                    self.dy = dy * self.width / dx
+                elif self.height > 0:
+                    (dx, dy) = self.dc_info.get_img_size(self.img)
+                    self.dx = dx * self.height / dy
+                    self.dy = self.height
+                else:
+                    (self.dx, self.dy) = self.dc_info.get_img_size(self.img)
 
             img_atom = Atom(
                 ImgDraw(self, self.img, self.dx, self.dy), self.dx, 0, self.dy, 0

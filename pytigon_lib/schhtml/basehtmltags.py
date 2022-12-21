@@ -487,6 +487,7 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
                 data2 = " " + data2
         else:
             data2 = data
+
         if data2 and len(data2) > 0:
             if not self.pre and data[-1] == " ":
                 data2 += " "

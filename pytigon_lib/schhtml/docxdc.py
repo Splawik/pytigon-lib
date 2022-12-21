@@ -23,7 +23,8 @@ import io
 from docx import Document
 from docx.shared import Inches
 from docx.text.run import Font
-from docx.shared import Pt
+from docx.shared import Pt, RGBColor
+
 import docx.enum.text
 
 
@@ -62,6 +63,8 @@ class DocxDc(BaseDc):
         self.map = {
             "body": self.body,
             "p": self.p,
+            #            "code": self.p,
+            #            "pre": self.p,
             "div": self.div,
             "h1": self.h1,
             "h2": self.h2,
@@ -72,7 +75,8 @@ class DocxDc(BaseDc):
             "table": self.table,
             "tr": self.tr,
             "td": self.td,
-            "img": self.image,
+            "th": self.th,
+            # "img": self.image,
         }
         self.last_ = None
 
@@ -171,7 +175,7 @@ class DocxDc(BaseDc):
         if "margin" in source_element.attrs:
             margin = source_element.attrs["margin"].split(" ")
 
-        if padding or margin:
+        if hasattr(dest_element, "paragraph_format") and (padding or margin):
             dest_element.paragraph_format.left_indent = Inches(0)
             dest_element.paragraph_format.right_indent = Inches(0)
             dest_element.paragraph_format.space_before = Inches(0)
@@ -241,6 +245,14 @@ class DocxDc(BaseDc):
             height=Inches(height) if height else None,
         )
 
+    def _any_parent_is_pre(self, element):
+        e = element
+        while e:
+            if hasattr(e, "tag") and e.tag == "pre":
+                return True
+            e = e.parent
+        return False
+
     def _process_atom_list(self, dest_element, source_element):
         if source_element.atom_list and source_element.atom_list.atom_list:
             for atom in source_element.atom_list.atom_list:
@@ -256,14 +268,20 @@ class DocxDc(BaseDc):
                     ) = style.split(";")
                 else:
                     style = None
-                if type(atom.data) == str:
-                    x = dest_element.add_run(atom.data)
+                if type(atom).__name__ == "BrAtom":
+                    dest_element.add_run("\n")
+                elif type(atom.data) == str:
+                    s = atom.data.replace("»", " ")
+                    x = dest_element.add_run(s)
                     if style:
                         if int(font_weight) > 0:
                             x.font.bold = True
                         if int(font_style) == 1:
                             x.font.italic = True
                         x.font.size = Pt(int(int(font_size) * 10 / 100))
+                        (r, g, b) = self.rgbfromhex(color)
+                        x.font.color.rgb = RGBColor(r, g, b)
+
                 elif type(atom.data).__name__ == "ImgDraw":
                     width, height = self._handle_width_and_height(atom.data.img_tag)
                     self._add_image(
@@ -272,6 +290,8 @@ class DocxDc(BaseDc):
                         width,
                         height,
                     )
+                else:
+                    self._process_atom_list(dest_element, atom.data)
 
     def h(self, element, level):
         hh = self.document.add_heading("", level)
@@ -290,13 +310,13 @@ class DocxDc(BaseDc):
         self._add_style(par, element)
         self._process_atom_list(par, element)
 
-    def image(self, element, parent):
-        if element.img:
-            img_stream = io.BytesIO(element.img)
-            width, height = self._handle_width_and_height(element)
-            self.document.add_picture(
-                img_stream,
-            )
+    # def image(self, element, parent):
+    #    if element.img:
+    #        img_stream = io.BytesIO(element.img)
+    #        width, height = self._handle_width_and_height(element)
+    #        self.document.add_picture(
+    #            img_stream,
+    #        )
 
     def body(self, element, parent):
         pass
@@ -329,17 +349,28 @@ class DocxDc(BaseDc):
                 j = 0
                 row_dest = table.rows[i].cells
                 for td in row.td_list:
-                    c = row_dest[j]
-                    c._tc.clear_content()
-                    p = c.add_paragraph(None)
-                    self._process_atom_list(p, td)
+                    try:
+                        c = row_dest[j]
+                        c._tc.clear_content()
+                        p = c.add_paragraph(None)
+                        self._add_style(p, td)
+                        self._process_atom_list(p, td)
+                    except:
+                        pass
                     j += 1
                 i += 1
+        element.tr_list = []
 
     def tr(self, element, parent):
-        parent.tr_list.append(element)
+        if parent.tag == "table":
+            parent.tr_list.append(element)
+        else:
+            parent.parent.tr_list.append(element)
 
     def td(self, element, parent):
+        parent.td_list.append(element)
+
+    def th(self, element, parent):
         parent.td_list.append(element)
 
 

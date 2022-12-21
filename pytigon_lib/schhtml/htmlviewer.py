@@ -152,15 +152,20 @@ class HtmlViewerParser(HtmlModParser):
             self.dc_info = self.dc.get_dc_info()
         self.css = Css()
         if init_css_str:
+            if init_css_str.startswith("@"):
+                with open(
+                    os.path.join(
+                        __file__.replace("htmlviewer.py", ""), "icss", init_css_str[1:]
+                    )
+                ) as f:
+                    init_css_str = f.read()
+                    css_type == "icss"
             if css_type == self.CSS_TYPE_STANDARD:
                 self.css.parse_str(init_css_str)
             else:
                 self.css.parse_indent_str(init_css_str)
         else:
-            if css_type == self.CSS_TYPE_STANDARD:
-                self.css.parse_str(INIT_CSS_STR_BASE)
-            else:
-                self.css.parse_indent_str(INIT_CSS_STR_BASE)
+            self.css.parse_str(INIT_CSS_STR_BASE)
 
         HtmlModParser.__init__(self, url)
 

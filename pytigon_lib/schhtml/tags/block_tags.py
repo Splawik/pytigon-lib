@@ -146,6 +146,9 @@ class BodyTag(ParBase):
     def get_client_height(self):
         if not self.dc_page:
             self.render_new_page()
+        # margins = self._get_pseudo_margins()
+        # print(margins)
+        # return self.dc_page.dy - margins[2] - margins[4]
         return self.dc_page.dy
 
     def close(self):
@@ -201,7 +204,7 @@ class BodyTag(ParBase):
     def child_ready_to_render(self, child):
         if self.dc_info.dc.handle_html_directly:
             return super().child_ready_to_render(child)
-        
+
         if self.parser.parse_only:
             return
 
@@ -226,7 +229,12 @@ class BodyTag(ParBase):
                     child.set_height(dy)
                     if (
                         not self.dc.paging
-                        or dy <= self.height - self.footer_height - self.y
+                        or dy
+                        <= self.height
+                        - self.footer_height
+                        - self.y
+                        - self.extra_space[2]
+                        - self.extra_space[3]
                         or self.new_page != 2
                     ):
                         (dy, cont) = child.render(

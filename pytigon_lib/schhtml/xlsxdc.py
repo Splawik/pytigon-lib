@@ -349,14 +349,15 @@ class XlsxDc(BaseDc):
         self.td(element, parent)
 
     def h(self, element, parent, level):
-        style = self._get_style(element)
-        txt = self._process_atom_list(element)
+        if hasattr(parent, "worksheet"):
+            style = self._get_style(element)
+            txt = self._process_atom_list(element)
 
-        parent.worksheet.write(parent.status[0], parent.status[1], txt, style)
+            parent.worksheet.write(parent.status[0], parent.status[1], txt, style)
 
-        self._set_height(parent.worksheet, parent.status[0], style.font_size + 4)
+            self._set_height(parent.worksheet, parent.status[0], style.font_size + 4)
 
-        parent.status[0] += 1
+            parent.status[0] += 1
 
     def p(self, element, parent):
         if parent.tag == "body":
