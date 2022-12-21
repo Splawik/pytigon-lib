@@ -279,6 +279,11 @@ class IndentMarkdownProcessor:
         return buf_out
 
 
+def imd2html(buf):
+    x = IndentMarkdownProcessor(output_format="html")
+    return x.convert(buf)
+
+
 if __name__ == "__main__":
 
     EXAMPLE = """
