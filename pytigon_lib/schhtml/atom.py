@@ -114,6 +114,23 @@ class AtomLine(object):
         if self.dy_down < atom.dy_down:
             self.dy_down = atom.dy_down
 
+    def justify(self, from_second=False):
+        dx = self.maxwidth - self.dx
+        d = 1 if from_second else 0
+        l = len(self.objs)
+        if l > 1 + d:
+            ddx = dx / (l - 1 - d)
+            objs = []
+            for i, obj in enumerate(self.objs):
+                objs.append(obj)
+                if i == 0 and from_second:
+                    continue
+                if i < len(self.objs) - 1:
+                    n = NullAtom()
+                    n.dx = ddx
+                    objs.append(n)
+            self.objs = objs
+
     def append(self, atom, force_append=False):
         if len(self.objs) > 0:
             if (
@@ -140,8 +157,16 @@ class AtomList(object):
         self.line_dy = dc_info.get_line_dy(line_dy)
         self.list_for_draw = None
         self.first_line_height = -1
+        self.first_line_offset = 0
         self.width = -1
         self.pre = pre
+        self.justify = False
+
+    def set_first_line_offset(self, offset):
+        self.first_line_offset = offset
+
+    def set_justify(self, justify=True):
+        self.justify = justify
 
     def set_line_dy(self, dy):
         self.line_dy = self.dc_info.get_line_dy(dy)
@@ -275,6 +300,16 @@ class AtomList(object):
             l.append(line)
             if self.first_line_height == -1:
                 self.first_line_height = line.get_height()
+
+        for i, line in enumerate(l):
+            if i == 0:
+                line.maxwidth -= self.first_line_offset
+            if self.justify and i < len(l) - 1:
+                if i == 0 and self.first_line_offset != 0:
+                    line.justify(from_second=True)
+                else:
+                    line.justify()
+
         self.list_for_draw = l
         self.width = width
 
@@ -301,6 +336,7 @@ class AtomList(object):
         else:
             y = 0
         if self.list_for_draw:
+            first = True
             for line in self.list_for_draw:
                 if len(line.objs) > 0:
                     if align == 0:
@@ -311,8 +347,11 @@ class AtomList(object):
                         else:
                             x = size[0] - line.dx + line.space
                     subdc = dc.subdc(x, y, size[0] - x, line.get_height())
-                    subdc.draw_atom_line(0, 0, line)
+                    subdc.draw_atom_line(
+                        self.first_line_offset if first else 0, 0, line
+                    )
                     y += line.get_height() + self.line_dy
+                    first = False
         return y - self.line_dy
 
     def to_txt(self):

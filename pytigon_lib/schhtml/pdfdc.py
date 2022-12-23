@@ -79,10 +79,12 @@ class PDFSurface:
 
     def save(self):
         if self.output_stream:
-            buf = self.pdf.output(dest="S")
-            self.output_stream.write(buf)
+            # buf = self.pdf.output(dest="S")
+            # self.output_stream.write(buf)
+            self.pdf.output(self.output_stream)
         else:
-            self.pdf.output(self.output_name, "F")
+            # self.pdf.output(self.output_name, "F")
+            self.pdf.output(self.output_name)
 
 
 class PdfDc(BaseDc):
@@ -196,7 +198,7 @@ class PdfDc(BaseDc):
         if self.notify_callback:
             self.notify_callback(
                 "end_page",
-                {"dc": self },
+                {"dc": self},
             )
 
         BaseDc.end_page(self)

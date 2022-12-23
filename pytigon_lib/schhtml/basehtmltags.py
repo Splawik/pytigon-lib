@@ -473,10 +473,14 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
             self.pre = True
         else:
             self.pre = False
+        if "line-spacing" in self.attrs:
+            self.atom_dy = float(self.attrs["line-spacing"])
 
     def make_atom_list(self):
         if not self.atom_list:
             self.atom_list = AtomList(self.dc_info, self.atom_dy, pre=self.pre)
+        if "text-align" in self.attrs and self.attrs["text-align"] == "justify":
+            self.atom_list.set_justify()
 
     def handle_data(self, data):
         if not self.pre:

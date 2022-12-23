@@ -35,6 +35,9 @@ from pytigon_lib.schhtml.render_helpers import (
 from pytigon_lib.schhtml.atom import Atom
 
 
+LI_INDENT = 20
+
+
 class ParBase(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
@@ -202,7 +205,7 @@ class ParArray(ParBase):
         self.end = False
 
     def get_width(self):
-        return self.parent.get_width()
+        return self.parent.get_client_width()
 
     def get_height(self):
         dy = 0
@@ -223,7 +226,10 @@ class ParArray(ParBase):
         if len(self.rendered_children) > 0:
             child = self.rendered_children[0]
             dc = dc_parm.subdc(
-                child.level * 20, 0, dc_parm.dx - child.level * 20, child.height
+                child.level * LI_INDENT,
+                0,
+                dc_parm.dx - child.level * LI_INDENT,
+                child.height,
             )
             dyy, cont2 = child.render(dc)
             self.rendered_children = self.rendered_children[1:]
@@ -251,6 +257,12 @@ class Li(Par):
             self.level = 0
         self.lp = -1
 
+        self.extra_space[0] += self.level * LI_INDENT
+
+    # def make_atom_list(self):
+    #    super().make_atom_list()
+    #    self.atom_list.set_first_line_offset(-20)
+
 
 class Ul(ParArray):
     def __init__(self, parent, parser, tag, attrs):
@@ -275,7 +287,10 @@ class Ul(ParArray):
             self.children.append(child)
             child.make_atom_list()
             child.atom_list.pre = True
-            child.atom_list.append_text(self._get_sym(child), self.get_style_id())
+            sym = self._get_sym(child)
+            offset = -1 * self.dc_info.get_text_width(sym, self.get_style_id())
+            child.atom_list.append_text(sym, self.get_style_id())
+            child.atom_list.set_first_line_offset(offset)
             atom = child.atom_list.atom_list[-1]
             del child.atom_list.atom_list[-1]
             child.atom_list.atom_list.insert(0, atom)

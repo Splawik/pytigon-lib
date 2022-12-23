@@ -397,3 +397,11 @@ div.codehilite pre code span.vm
 
 div.codehilite pre code span.il 
     color: #666666  
+
+body.wiki p
+    text-align: justify
+    line-spacing: 2
+
+body.wiki ul li, body.wiki ol li
+    text-align: justify
+    line-spacing: 2
