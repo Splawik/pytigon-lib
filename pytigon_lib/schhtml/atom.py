@@ -146,6 +146,16 @@ class AtomLine(object):
                 return True
             return False
 
+    def pop_if_one_char(self):
+        if len(self.objs) > 2:
+            a = self.objs[-1]
+            if a.is_txt:
+                if len(a.data) <= 2:
+                    self.dx -= a.dx
+                    self.objs = self.objs[:-1]
+                    return a
+        return None
+
     def get_height(self):
         return self.dy_up + self.dy_down
 
@@ -161,12 +171,16 @@ class AtomList(object):
         self.width = -1
         self.pre = pre
         self.justify = False
+        self.leave_single_char = True
 
     def set_first_line_offset(self, offset):
         self.first_line_offset = offset
 
     def set_justify(self, justify=True):
         self.justify = justify
+
+    def set_leave_single_char(self, leave=True):
+        self.leave_single_char = leave
 
     def set_line_dy(self, dy):
         self.line_dy = self.dc_info.get_line_dy(dy)
@@ -292,8 +306,14 @@ class AtomList(object):
                     test_append = False
             if test_append:
                 if not line.append(atom):
+                    if not self.leave_single_char:
+                        c = line.pop_if_one_char()
+                    else:
+                        c = None
                     l.append(line)
                     line = AtomLine(width)
+                    if c:
+                        line.append(c, force_append=True)
                     line.append(atom, force_append=True)
             last_atom = atom
         if len(line.objs) > 0:

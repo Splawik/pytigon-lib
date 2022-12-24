@@ -3,6 +3,11 @@ body
     font-size:120%
     padding:5
 
+p
+    cellpadding:2
+    border:0
+    width:100%
+
 b
     font-weight:bold
 i
@@ -20,6 +25,7 @@ h1
     font-size:300%
     font-weight:bold
     cellpadding:12 2 12 2
+    border-bottom:1
 
 h2
     font-size:240%
@@ -58,11 +64,6 @@ tt
 pre
     font-family: monospace
     white-space: pre
-
-p
-    cellpadding:2
-    border:0
-    width:100%
 
 a
     color:#0000ff
@@ -401,7 +402,9 @@ div.codehilite pre code span.il
 body.wiki p
     text-align: justify
     line-spacing: 2
+    not-leave-single-char: 1
+    padding: 1 0
 
 body.wiki ul li, body.wiki ol li
-    text-align: justify
     line-spacing: 2
+    not-leave-single-char: 1

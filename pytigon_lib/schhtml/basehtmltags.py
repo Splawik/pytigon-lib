@@ -481,6 +481,8 @@ class BaseHtmlAtomParser(BaseHtmlElemParser):
             self.atom_list = AtomList(self.dc_info, self.atom_dy, pre=self.pre)
         if "text-align" in self.attrs and self.attrs["text-align"] == "justify":
             self.atom_list.set_justify()
+        if "not-leave-single-char" in self.attrs:
+            self.atom_list.set_leave_single_char(False)
 
     def handle_data(self, data):
         if not self.pre:

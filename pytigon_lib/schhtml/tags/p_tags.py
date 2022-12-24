@@ -32,7 +32,8 @@ from pytigon_lib.schhtml.render_helpers import (
     RenderMargin,
     get_size,
 )
-from pytigon_lib.schhtml.atom import Atom
+
+from pytigon_lib.schhtml.atom import Atom, BrAtom
 
 
 LI_INDENT = 20
@@ -193,6 +194,8 @@ class Par(ParBase):
         if issubclass(type(self.parent), Par):
             if self.atom_list:
                 self.parent.append_atom_list(self.atom_list)
+                if self.tag == "p":
+                    self.parent.atom_list.append_atom(BrAtom())
         else:
             return BaseHtmlAtomParser.close(self)
 
@@ -259,9 +262,9 @@ class Li(Par):
 
         self.extra_space[0] += self.level * LI_INDENT
 
-    # def make_atom_list(self):
-    #    super().make_atom_list()
-    #    self.atom_list.set_first_line_offset(-20)
+        self.child_tags = (
+            ATOM_TAGS + PAR_TAGS + ["table", "form", "comment", "vimg", "ctr*"]
+        )
 
 
 class Ul(ParArray):
