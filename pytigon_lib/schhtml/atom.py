@@ -93,6 +93,7 @@ class AtomLine(object):
         self.dy_up = 0
         self.dy_down = 0
         self.objs = []
+        self.not_justify = False
 
     def _append(self, atom):
         atom = atom
@@ -115,10 +116,15 @@ class AtomLine(object):
             self.dy_down = atom.dy_down
 
     def justify(self, from_second=False):
+        if self.not_justify:
+            return
         dx = self.maxwidth - self.dx
         d = 1 if from_second else 0
         l = len(self.objs)
         if l > 1 + d:
+            for e in self.objs:
+                if type(e) == BrAtom:
+                    return
             ddx = dx / (l - 1 - d)
             objs = []
             for i, obj in enumerate(self.objs):
@@ -291,6 +297,7 @@ class AtomList(object):
                     line.dy_down = line.dy_down + line.get_height() * (
                         atom.cr_count - 1
                     )
+                line.not_justify = True
                 l.append(line)
                 line = AtomLine(width)
                 continue

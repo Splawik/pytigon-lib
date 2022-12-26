@@ -124,7 +124,12 @@ class BodyTag(ParBase):
     def print_footer(self):
         if self.footer:
             self.dc.paging = False
-            self.y = self.height - self.footer_height
+            self.y = (
+                self.height
+                - self.extra_space[2]
+                - self.extra_space[3]
+                - self.footer_height
+            )
             self.in_footer = True
             proxy = HtmlProxyParser(self)
             proxy.feed(self.footer)
@@ -252,6 +257,7 @@ class BodyTag(ParBase):
                     else:
                         self.render_new_page()
                         cont = True
+                        self.new_page = 1
                     if self.y > self._maxheight:
                         self._maxheight = self.y
 
