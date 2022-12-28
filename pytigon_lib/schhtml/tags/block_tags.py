@@ -37,13 +37,13 @@ from pytigon_lib.schhtml.render_helpers import (
     RenderMargin,
     get_size,
 )
-from .p_tags import ParBase
+from .p_tags import InlineElements
 from pytigon_lib.schhtml.htmltools import HtmlProxyParser
 
 
-class BodyTag(ParBase):
+class BodyTag(InlineElements):
     def __init__(self, parent, parser, tag, attrs):
-        ParBase.__init__(self, parent, parser, tag, attrs)
+        InlineElements.__init__(self, parent, parser, tag, attrs)
         self.child_tags += [
             "newpage",
             "page",
@@ -88,7 +88,7 @@ class BodyTag(ParBase):
         self.base_state = None
 
     def set_dc_info(self, dc_info):
-        ParBase.set_dc_info(self, dc_info)
+        InlineElements.set_dc_info(self, dc_info)
         self.get_style_id()
 
     def data_from_child(self, child, data):
@@ -197,7 +197,9 @@ class BodyTag(ParBase):
 
     def render_atom_list(self):
         if self.atom_list:
-            dy = ParBase.calc_height(self)
+            dy = InlineElements.calc_height(self)
+            if dy>0:
+                dy -= self.extra_space[2] + self.extra_space[3]
             if self.dc.paging and dy > self.height - self.footer_height - self.y:
                 self.render_new_page()
             render_helpers = self.render_helpers

@@ -379,6 +379,9 @@ class AtomList(object):
                     )
                     y += line.get_height() + self.line_dy
                     first = False
+        self.list_for_draw = []
+        self.atom_list = []
+
         return y - self.line_dy
 
     def to_txt(self):

@@ -39,7 +39,7 @@ from pytigon_lib.schhtml.atom import Atom, BrAtom
 LI_INDENT = 20
 
 
-class ParBase(BaseHtmlAtomParser):
+class InlineElements(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
         self.child_tags = (
@@ -124,6 +124,7 @@ class ParBase(BaseHtmlAtomParser):
             dc2 = dc
         for r in self.render_helpers:
             dc2 = r.render(dc2)
+
         if self.atom_list:
             if "align" in self.attrs:
                 attr = self.attrs["align"]
@@ -189,157 +190,9 @@ class ParBase(BaseHtmlAtomParser):
         return BaseHtmlAtomParser.close(self)
 
 
-class Par(ParBase):
-    def close(self):
-        if issubclass(type(self.parent), Par):
-            if self.atom_list:
-                self.parent.append_atom_list(self.atom_list)
-                if self.tag == "p":
-                    self.parent.atom_list.append_atom(BrAtom())
-        else:
-            return BaseHtmlAtomParser.close(self)
-
-
-class ParArray(ParBase):
+class AtomContainer(InlineElements):
     def __init__(self, parent, parser, tag, attrs):
-        self.lp = 1
-        ParBase.__init__(self, parent, parser, tag, attrs)
-        self.start = True
-        self.end = False
-
-    def get_width(self):
-        return self.parent.get_client_width()
-
-    def get_height(self):
-        dy = 0
-        for child in self.rendered_children:
-            child.set_width(self.width)
-            dyy = child.get_height()
-            child.set_height(dyy)
-            dy = dy + dyy
-        return dy
-
-    def render(self, dc_parm):
-
-        dc_parm.annotate("render_tag", {"element": self})
-
-        if dc_parm.handle_html_directly:
-            return (0, False)
-
-        if len(self.rendered_children) > 0:
-            child = self.rendered_children[0]
-            dc = dc_parm.subdc(
-                child.level * LI_INDENT,
-                0,
-                dc_parm.dx - child.level * LI_INDENT,
-                child.height,
-            )
-            dyy, cont2 = child.render(dc)
-            self.rendered_children = self.rendered_children[1:]
-            if len(self.rendered_children) > 0:
-                cont = True
-            else:
-                cont = False
-            self.start = False
-            return (dyy, cont)
-        else:
-            self.start = False
-            return (0, False)
-
-    def close(self):
-        self.end = True
-        self.parent.child_ready_to_render(self)
-
-
-class Li(Par):
-    def __init__(self, parent, parser, tag, attrs):
-        ParBase.__init__(self, parent, parser, tag, attrs)
-        if type(parent) == Ul:
-            self.level = parent.level
-        else:
-            self.level = 0
-        self.lp = -1
-
-        self.extra_space[0] += self.level * LI_INDENT
-
-        self.child_tags = (
-            ATOM_TAGS + PAR_TAGS + ["table", "form", "comment", "vimg", "ctr*"]
-        )
-
-
-class Ul(ParArray):
-    def __init__(self, parent, parser, tag, attrs):
-        ParArray.__init__(self, parent, parser, tag, attrs)
-        self.children = []
-        self.level = 1
-        p = parent
-        while p:
-            if type(p) == Ul:
-                self.level += 1
-            p = p.parent
-
-    def child_ready_to_render(self, child):
-        if self.dc_info.dc.handle_html_directly:
-            return super().child_ready_to_render(child)
-
-        if not child in self.children:
-            if child.lp < 0:
-                child.lp = self.lp
-                self.lp += 1
-            self.rendered_children.append(child)
-            self.children.append(child)
-            child.make_atom_list()
-            child.atom_list.pre = True
-            sym = self._get_sym(child)
-            offset = -1 * self.dc_info.get_text_width(sym, self.get_style_id())
-            child.atom_list.append_text(sym, self.get_style_id())
-            child.atom_list.set_first_line_offset(offset)
-            atom = child.atom_list.atom_list[-1]
-            del child.atom_list.atom_list[-1]
-            child.atom_list.atom_list.insert(0, atom)
-
-            if self.parent.tag == "li" and type(self.parent.parent) == Ul:
-                self.parent.parent.child_ready_to_render(self.parent)
-                for child in self.rendered_children:
-                    self.parent.parent.rendered_children.append(child)
-                    self.parent.parent.children.append(child)
-                self.rendered_children = []
-            else:
-                self.parent.child_ready_to_render(self)
-
-    def _get_sym(self, child):
-        if self.tag == "ol":
-            t = "1"
-            if "type" in self.attrs:
-                t = self.attrs["type"]
-            if t == "1":
-                return "%3d. " % child.lp
-            elif t == "a":
-                return "  " + chr(ord("a") + child.lp - 1) + ". "
-            elif t == "A":
-                return "  " + chr(ord("A") + child.lp - 1) + ". "
-            else:
-                return "%3d. " % child.lp
-        else:
-            t = "disc"
-            if "type" in self.attrs:
-                t = self.attrs["type"]
-            if t == "circle":
-                z = "●"
-            elif t == "square":
-                z = "■"
-            elif t == "none":
-                z = " "
-            else:
-                z = "•"
-                if child.level > 1:
-                    z = "○"
-            return "  " + z + " "
-
-
-class Div(Par):
-    def __init__(self, parent, parser, tag, attrs):
-        Par.__init__(self, parent, parser, tag, attrs)
+        InlineElements.__init__(self, parent, parser, tag, attrs)
 
         self.child_tags += [
             "div",
@@ -349,12 +202,12 @@ class Div(Par):
             "ctr*",
         ]
 
-        self.render_helpers = [
-            RenderMargin(self),
-            RenderBorder(self),
-            RenderBackground(self),
-            RenderPadding(self),
-        ]
+        # self.render_helpers = [
+        #    RenderMargin(self),
+        #    RenderBorder(self),
+        #    RenderBackground(self),
+        #    RenderPadding(self),
+        # ]
         self.extra_space = get_size(self.render_helpers)
         self.draw_txt = ""
         self.in_draw = False
@@ -425,6 +278,217 @@ class Div(Par):
         self.in_draw = False
         return True
 
+    def child_ready_to_render(self, child):
+        if self.subdiv:
+            self.make_atom_list()
+            # if child.atom_list:
+            #    self.atom_list.append_atom_list(child.atom_list)
+            # else:
+            #    self.atom_list.append_atom(child)
+
+            self.rendered_children.append(child)
+        else:
+            super().child_ready_to_render(child)
+
+
+class Par(InlineElements):
+    def close(self):
+        if issubclass(type(self.parent), Par) or issubclass(
+            type(self.parent), AtomContainer
+        ):
+            if self.atom_list:
+                self.parent.append_atom_list(self.atom_list)
+                if self.tag == "p":
+                    self.parent.atom_list.append_atom(BrAtom())
+        else:
+            return BaseHtmlAtomParser.close(self)
+
+
+class ParArray(AtomContainer):
+    def __init__(self, parent, parser, tag, attrs):
+        self.lp = 1
+        AtomContainer.__init__(self, parent, parser, tag, attrs)
+        self.start = True
+        self.end = False
+
+    def get_width(self):
+        return self.parent.get_client_width()
+
+    def get_height(self):
+        # dy = -1 * self.calc_height()
+        dy = 0
+        for child in self.rendered_children:
+            child.set_width(self.width)
+            dyy = child.get_height()
+            child.set_height(dyy)
+            dy = dy + dyy
+        return dy
+
+    def render(self, dc_parm):
+
+        dc_parm.annotate("render_tag", {"element": self})
+
+        if dc_parm.handle_html_directly:
+            return (0, False)
+
+        if len(self.rendered_children) > 0:
+            child = self.rendered_children[0]
+            dc = dc_parm.subdc(
+                child.level * LI_INDENT,
+                0,
+                dc_parm.dx - child.level * LI_INDENT,
+                child.height,
+            )
+            dyy, cont2 = child.render(dc)
+            self.rendered_children = self.rendered_children[1:]
+            if len(self.rendered_children) > 0:
+                cont = True
+            else:
+                cont = False
+            self.start = False
+            return (dyy, cont)
+        else:
+            self.start = False
+            return (0, False)
+
+    def draw_atom(self, dc, style, x, y, dx, dy):
+        if not self.subdiv:
+            return
+        if self.in_draw:
+            return False
+        self.in_draw = True
+        self.reg_id(dc)
+        self.reg_end()
+        dc2 = dc.subdc(x, y, dx, dy, True)
+        for r in self.render_helpers:
+            dc2 = r.render(dc2)
+
+        cont = True
+        self.y = 0
+        while cont:
+            (dyy, cont) = self.render(
+                dc2.subdc(0, self.y, self.get_client_width()[0], dy)
+            )
+            if dyy > 0:
+                self.y += dyy
+
+        # self.render(dc2)
+        # if self.atom_list:
+        #    self.atom_list.draw_atom_list(dc2)
+        self.in_draw = False
+        return True
+
+    def close(self):
+        self.end = True
+        self.parent.make_atom_list()
+        # self.parent.atom_list.append_atom(BrAtom())
+        super().close()
+        # self.parent.child_ready_to_render(self)
+
+
+class Li(InlineElements):
+    def __init__(self, parent, parser, tag, attrs):
+        InlineElements.__init__(self, parent, parser, tag, attrs)
+        if type(parent) == Ul:
+            self.level = parent.level
+        else:
+            self.level = 0
+        self.lp = -1
+
+        self.extra_space[0] += self.level * LI_INDENT
+
+        self.child_tags = (
+            ATOM_TAGS + PAR_TAGS + ["table", "form", "comment", "vimg", "ctr*"]
+        )
+
+    def child_ready_to_render(self, child):
+        self.make_atom_list()
+        if child.atom_list:
+            self.append_atom_list(child.atom_list)
+            if child.tag == "p":
+                self.atom_list.append_atom(BrAtom())
+
+
+class Ul(ParArray):
+    def __init__(self, parent, parser, tag, attrs):
+        ParArray.__init__(self, parent, parser, tag, attrs)
+        self.children = []
+        self.level = 1
+        p = parent
+        while p:
+            if type(p) == Ul:
+                self.level += 1
+            p = p.parent
+        self.subdiv = True
+
+    def child_ready_to_render(self, child):
+        if self.dc_info.dc.handle_html_directly:
+            return super().child_ready_to_render(child)
+
+        if not child in self.children:
+            if child.lp < 0:
+                child.lp = self.lp
+                self.lp += 1
+            self.rendered_children.append(child)
+            self.children.append(child)
+            child.make_atom_list()
+            child.atom_list.pre = True
+            sym = self._get_sym(child)
+            offset = -1 * self.dc_info.get_text_width(sym, self.get_style_id())
+            child.atom_list.append_text(sym, self.get_style_id())
+            child.atom_list.set_first_line_offset(offset)
+            atom = child.atom_list.atom_list[-1]
+            del child.atom_list.atom_list[-1]
+            child.atom_list.atom_list.insert(0, atom)
+
+            if self.parent.tag == "li" and type(self.parent.parent) == Ul:
+                self.parent.parent.child_ready_to_render(self.parent)
+                for child in self.rendered_children:
+                    self.parent.parent.rendered_children.append(child)
+                    self.parent.parent.children.append(child)
+                self.rendered_children = []
+            # else:
+            #    self.parent.child_ready_to_render(self)
+
+    def _get_sym(self, child):
+        if self.tag == "c":
+            t = "1"
+            if "type" in self.attrs:
+                t = self.attrs["type"]
+            if t == "1":
+                return "%3d. " % child.lp
+            elif t == "a":
+                return "  " + chr(ord("a") + child.lp - 1) + ". "
+            elif t == "A":
+                return "  " + chr(ord("A") + child.lp - 1) + ". "
+            else:
+                return "%3d. " % child.lp
+        else:
+            t = "disc"
+            if "type" in self.attrs:
+                t = self.attrs["type"]
+            if t == "circle":
+                z = "●"
+            elif t == "square":
+                z = "■"
+            elif t == "none":
+                z = " "
+            else:
+                z = "•"
+                if child.level > 1:
+                    z = "○"
+            return "  " + z + " "
+
+
+class Div(AtomContainer):
+    pass
+
+
+class Blockquote(AtomContainer):
+    def __init__(self, *argi, **argv):
+        super().__init__(*argi, **argv)
+        self.subdiv = True
+
 
 class Pre(Div):
     def __init__(self, *argi, **argv):
@@ -435,16 +499,21 @@ class Pre(Div):
         Par.handle_data(self, data)
 
 
+class H2(Par):
+    def close(self, *argi, **argv):
+        return super().close(*argi, **argv)
+
+
 register_tag_map("p", Par)
 
 register_tag_map("h1", Par)
-register_tag_map("h2", Par)
+register_tag_map("h2", H2)
 register_tag_map("h3", Par)
 register_tag_map("h4", Par)
 register_tag_map("h5", Par)
 register_tag_map("h6", Par)
 
-register_tag_map("blockquote", Par)
+register_tag_map("blockquote", Blockquote)
 
 register_tag_map("i", Par)
 register_tag_map("b", Par)

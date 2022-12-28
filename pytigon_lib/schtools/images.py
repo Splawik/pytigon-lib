@@ -80,9 +80,9 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
     else:
         if width or height:
             if not height:
-                height = drawing.height * width / drawing.width
+                height = int(drawing.height * width / drawing.width)
             if not width:
-                width = drawing.width * height / drawing.height
+                width = int(drawing.width * height / drawing.height)
             img = Image.open(io.BytesIO(drawing.asString("png")))
             img2 = spec_resize(img, width, height)
             output = io.BytesIO()
