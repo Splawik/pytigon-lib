@@ -21,6 +21,10 @@
 import collections
 
 
+from pytigon_lib.schindent.indent_style import ihtml_to_html_base
+from django.template import Template, Context
+
+
 class Html(object):
     def __init__(self, name, attr=None):
         self.name = name
@@ -67,3 +71,21 @@ def make_start_tag(tag, attrs):
             ret += " " + pos
     ret += ">"
     return ret
+
+
+class ITemplate:
+    def __init__(self, ihtml_str):
+        ihtml_str2 = (
+            ihtml_str.replace("[%]", "%")
+            .replace("[{", "{{")
+            .replace("}]", "}}")
+            .replace("[%", "{%")
+            .replace("%]", "%}")
+        )
+        self.html_str = ihtml_to_html_base(None, input_str=ihtml_str2, lang="en")
+        self.template = Template(self.html_str)
+
+    def gen(self, argv):
+        c = Context(argv)
+        ret = self.template.render(c)
+        return ret

@@ -82,6 +82,21 @@ class Atag(AtomTag):
         self.make_atom_list()
         return ret
 
+    def append_atom_list(self, atom_list):
+        if atom_list:
+            for atom in atom_list.atom_list:
+                atom.set_parent(self)
+                if not atom.is_txt:
+                    atom.set_parent(self)
+                    if atom.atom_list:
+                        for atom2 in atom.atom_list.atom_list:
+                            atom2.set_parent(self)
+        super().append_atom_list(atom_list)
+
+    def appened_atom(self, atom):
+        atom.set_parent(self)
+        super().append_atom(atom)
+
     def draw_atom(self, dc, style, x, y, dx, dy):
         self.reg_action("href", dc.subdc(x, y, dx, dy))
         return False
@@ -89,9 +104,9 @@ class Atag(AtomTag):
     def close(self):
         atom = NullAtom()
         self.atom_list.append_atom(atom)
-        for atom in self.atom_list.atom_list:
-            if not atom.parent:
-                atom.set_parent(self)
+        if len(self.atom_list.atom_list) > 1:
+            if not self.atom_list.atom_list[0].data.strip():
+                self.atom_list.atom_list = self.atom_list.atom_list[1:]
         self.parent.append_atom_list(self.atom_list)
 
     def __repr__(self):

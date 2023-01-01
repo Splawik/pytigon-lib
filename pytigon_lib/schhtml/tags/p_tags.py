@@ -293,8 +293,10 @@ class AtomContainer(InlineElements):
 
 class Par(InlineElements):
     def close(self):
-        if issubclass(type(self.parent), Par) or issubclass(
-            type(self.parent), AtomContainer
+        if (
+            issubclass(type(self.parent), Par)
+            or issubclass(type(self.parent), AtomContainer)
+            or type(self.parent).__name__=='Atag'
         ):
             if self.atom_list:
                 self.parent.append_atom_list(self.atom_list)
