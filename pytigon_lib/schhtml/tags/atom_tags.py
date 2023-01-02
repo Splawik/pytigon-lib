@@ -107,6 +107,11 @@ class Atag(AtomTag):
         if len(self.atom_list.atom_list) > 1:
             if not self.atom_list.atom_list[0].data.strip():
                 self.atom_list.atom_list = self.atom_list.atom_list[1:]
+
+        for atom in self.atom_list.atom_list:
+            if not atom.parent:
+                atom.set_parent(self)
+                
         self.parent.append_atom_list(self.atom_list)
 
     def __repr__(self):
