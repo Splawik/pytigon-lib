@@ -79,11 +79,8 @@ class PDFSurface:
 
     def save(self):
         if self.output_stream:
-            # buf = self.pdf.output(dest="S")
-            # self.output_stream.write(buf)
             self.pdf.output(self.output_stream)
         else:
-            # self.pdf.output(self.output_name, "F")
             self.pdf.output(self.output_name)
 
 
@@ -135,7 +132,7 @@ class PdfDc(BaseDc):
                     name = output_name.lower()
                     self.surf = PDFSurface(output_name, output_stream, width2, height2)
                 else:
-                    self.surf = PDFSurface(None, None, width2, height2)
+                    self.surf = PDFSurface(None, output_stream, width2, height2)
 
                 self.dc = self.surf.get_dc()
 

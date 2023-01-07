@@ -24,6 +24,8 @@ import email.generator
 import zipfile
 import hashlib
 
+from django.core.files.storage import default_storage
+
 from pytigon_lib.schdjangoext.tools import gettempdir
 
 
@@ -300,3 +302,87 @@ class Cmp(object):
         if self.key_filter(file_name) and self.masks_filter(file_name):
             return True
         return False
+
+
+def automount(path):
+    lpath = path.lower()
+    if lpath.endswith(".zip") or ".zip/" in lpath:
+        id = lpath.find(".zip")
+        pp = path[: id + 4]
+
+        syspath = default_storage.fs.getsyspath(pp, allow_none=True)
+        if syspath:
+            zip_name = "zip://" + default_storage.fs.getsyspath(pp)
+            # default_storage.fs.mountdir(pp[1:], fsopendir(zip_name))
+            default_storage.fs.add_fs(pp[1:], OSFS(zip_name))
+    return path
+
+
+# input formats: ihtml, html, imd, md
+# output formats: html, pdf, xlsx, docx
+
+
+def convert_file(
+    filename_or_stream_in, filename_or_stream_out, input_format=None, output_format=None
+):
+
+    from pytigon_lib.schhtml.pdfdc import PdfDc
+    from pytigon_lib.schhtml.cairodc import CairoDc
+    from pytigon_lib.schhtml.docxdc import DocxDc
+    from pytigon_lib.schhtml.xlsxdc import XlsxDc
+    from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
+    from pytigon_lib.schindent.indent_style import ihtml_to_html_base
+    from pytigon_lib.schindent.indent_markdown import markdown_to_html
+
+    from pytigon_lib.schindent.indent_markdown import (
+        IndentMarkdownProcessor,
+        REG_OBJ_RENDERER,
+    )
+
+    i_f = input_format
+    o_f = output_format
+    if type(filename_or_stream_in) == str:
+        fin = default_storage.fs.open(automount(filename_or_stream_in), "rt")
+        if not i_f:
+            i_f = filename_or_stream_in.split(".")[-1].lower()
+    else:
+        fin = filename_or_stream_in
+
+    if type(filename_or_stream_out) == str:
+        fout = default_storage.fs.open(automount(filename_or_stream_out), "wb")
+        if not o_f:
+            o_f = filename_or_stream_out.split(".")[-1].lower()
+    else:
+        fout = filename_or_stream_out
+
+    if i_f == "imd":
+        x = IndentMarkdownProcessor(output_format="html")
+        buf = x.convert(fin.read())
+    elif i_f == "md":
+        buf = markdown_to_html(fin.read())
+    elif i_f == "ihtml":
+        buf = ihtml_to_html_base(None, input_str=fin.read())
+    if o_f == "html":
+        fout.write(buf.encode("utf-8"))
+        return True
+
+    if o_f == "pdf":
+        dc = PdfDc(output_stream=fout)
+        dc.set_paging(True)
+    elif o_f == "docx":
+        dc = DocxDc(
+            output_stream=fout,
+        )
+    elif o_f == "xlsx":
+        dc = XlsxDc(output_stream=fout)
+
+    p = HtmlViewerParser(dc=dc, calc_only=False)
+    p.feed(buf)
+    p.close()
+    dc.end_page()
+
+    if type(filename_or_stream_in) == str:
+        fin.close()
+    if type(filename_or_stream_out) == str:
+        fout.close()
+    return True

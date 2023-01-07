@@ -24,39 +24,25 @@ import sys
 import gettext
 import uuid
 import functools
+import io
 
 import fs.path
 from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.http import HttpResponse
 
-# from fs.opener import fsopendir
 from fs.osfs import OSFS
 
-from pytigon_lib.schfs.vfstools import norm_path
+from pytigon_lib.schfs.vfstools import norm_path, automount, convert_file
 from pytigon_lib.schtable.table import Table
 
-# from pytigon_lib.schtasks.task import get_process_manager
 from pytigon_lib.schtools import schjson
 from pytigon_lib.schtools.tools import bencode, bdecode, is_null
+
 
 from django_q.tasks import async_task, result
 
 _ = gettext.gettext
-
-
-def automount(path):
-    lpath = path.lower()
-    if lpath.endswith(".zip") or ".zip/" in lpath:
-        id = lpath.find(".zip")
-        pp = path[: id + 4]
-
-        syspath = default_storage.fs.getsyspath(pp, allow_none=True)
-        if syspath:
-            zip_name = "zip://" + default_storage.fs.getsyspath(pp)
-            # default_storage.fs.mountdir(pp[1:], fsopendir(zip_name))
-            default_storage.fs.add_fs(pp[1:], OSFS(zip_name))
-    return path
 
 
 def str_cmp(x, y, ts):
@@ -372,9 +358,38 @@ def vfssave(request, file):
             plik = default_storage.fs.open(automount(file2), "w")
             plik.write(data)
             plik.close()
+            x = file2.split("/")[-1].split(".")
+            if len(x) > 2:
+                if x[-1].lower() in ("imd", "md", "ihtml", "html"):
+                    if x[-2].lower() in ("html", "pdf", "docx", "xlsx"):
+                        file3 = file2.replace("." + x[-1], "")
+                        convert_file(file2, file3)
             buf = "OK"
         except:
             buf = "ERROR: " + str(sys.exc_info()[0])
             if plik:
                 plik.close()
     return HttpResponse(buf)
+
+
+def vfsview(request, file):
+    buf = "ERROR"
+    # try:
+    if True:
+        file2 = bdecode(file)
+        if file2.endswith(".ithm") or file2.endswith(".imd") or file2.endswith(".md"):
+            return vfsconvert(request, file, "html")
+        with default_storage.fs.open(automount(file2), "r") as f:
+            buf = f.read()
+    # except:
+    #    buf = "ERROR: " + str(sys.exc_info()[0])
+    return buf
+
+
+# input formats: ihtml, html, imd, md
+# output formats: html, pdf, xlsx, docx
+def vfsconvert(request, file, output_format="pdf"):
+    file2 = bdecode(file)
+    output_stream = io.BytesIO()
+    convert_file(file2, output_stream, output_format=output_format)
+    return output_stream.getvalue()
