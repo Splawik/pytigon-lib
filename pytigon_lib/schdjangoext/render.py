@@ -102,6 +102,18 @@ def render_doc(context):
         ret_content = pdf_stream.getvalue()
         return ret_attr, ret_content
 
+    elif doc_type == "spdf":
+        t = loader.select_template(templates)
+        content = "" + t.render(context)
+        ret_attr["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(
+            templates[0]
+        ).replace(".html", "").replace("_pdf", ".spdf")
+        ret_attr["Content-Type"] = "application/spdf"
+        pdf_stream = stream_from_html(content, stream_type="spdf", base_url="file://")
+        ret_content = pdf_stream.getvalue()
+        return ret_attr, ret_content
+
+
     elif doc_type == "txt":
         ret_attr["Content-Disposition"] = "attachment; filename=%s" % os.path.basename(
             templates[0]

@@ -398,11 +398,53 @@ def stream_from_html(
         result_buf = NamedTemporaryFile(delete=False)
         pdf_name = result_buf.name
         result_buf.close()
-        dc = PdfDc(calc_only=False, width=width2, height=height2, output_name=pdf_name)
-    else:
-        from pytigon_lib.schhtml.cairodc import CairoDc
 
-        dc = CairoDc(calc_only=False, width=width2, height=height2)
+        def notify_callback(event_name, data):
+            if event_name == 'end"':
+                dc = data["dc"]
+                dc.surf.set_subject(html2)
+
+        dc = PdfDc(
+            calc_only=False,
+            width=width2,
+            height=height2,
+            output_name=pdf_name,
+            notify_callback=notify_callback,
+        )
+
+    elif stream_type == "spdf":
+        print("SAVE:")
+
+        result_buf = NamedTemporaryFile(delete=False)
+        pdf_name = result_buf.name
+        result_buf.close()
+
+        def notify_callback(event_name, data):
+            if event_name == "end":
+                dc = data["dc"]
+                if dc.output_name:
+                    dc.save(dc.output_name)
+                else:
+                    result_buf = NamedTemporaryFile(delete=False)
+                    spdf_name = result_buf.name
+                    result_buf.close()
+
+                    dc.save(spdf_name)
+                    with open(spdf_name, "rb") as f:
+                        dc.ouput_stream.write(f.read())
+
+        dc = PdfDc(
+            calc_only=True,
+            width=width2,
+            height=height2,
+            output_name=pdf_name,
+            notify_callback=notify_callback,
+        )
+
+    else:
+        from pytigon_lib.schhtml.basedc import BaseDc
+
+        dc = BaseDc(calc_only=False, width=width2, height=height2)
 
     dc.set_paging(True)
     p = HtmlViewerParser(dc=dc, calc_only=False, base_url=base_url)

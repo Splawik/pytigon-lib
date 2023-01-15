@@ -24,6 +24,9 @@ import email.generator
 import zipfile
 import hashlib
 
+from tempfile import NamedTemporaryFile
+
+
 from django.core.files.storage import default_storage
 
 from pytigon_lib.schdjangoext.tools import gettempdir
@@ -326,6 +329,7 @@ def convert_file(
     filename_or_stream_in, filename_or_stream_out, input_format=None, output_format=None
 ):
 
+    from pytigon_lib.schhtml.basedc import BaseDc
     from pytigon_lib.schhtml.pdfdc import PdfDc
     from pytigon_lib.schhtml.cairodc import CairoDc
     from pytigon_lib.schhtml.docxdc import DocxDc
@@ -367,7 +371,33 @@ def convert_file(
         return True
 
     if o_f == "pdf":
-        dc = PdfDc(output_stream=fout)
+
+        def notify_callback(event_name, data):
+            if event_name == "end":
+                dc = data["dc"]
+                dc.surf.pdf.set_subject(buf)
+
+        dc = PdfDc(output_stream=fout, notify_callback=notify_callback)
+        dc.set_paging(True)
+    elif o_f == "spdf":
+
+        def notify_callback(event_name, data):
+            if event_name == "end":
+                print("SAVE:")
+                dc = data["dc"]
+                if dc.output_name:
+                    dc.save(dc.output_name)
+                else:
+                    result_buf = NamedTemporaryFile(delete=False)
+                    spdf_name = result_buf.name
+                    result_buf.close()
+
+                    dc.save(spdf_name)
+
+                    with open(spdf_name, "rb") as f:
+                        dc.ouput_stream.write(f.read())
+
+        dc = PdfDc(output_stream=fout, calc_only=True, notify_callback=notify_callback)
         dc.set_paging(True)
     elif o_f == "docx":
         dc = DocxDc(

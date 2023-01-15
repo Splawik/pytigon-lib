@@ -25,6 +25,7 @@ import gettext
 import uuid
 import functools
 import io
+import mimetypes
 
 import fs.path
 from django.core.cache import cache
@@ -329,7 +330,38 @@ def vfsopen(request, file):
         plik.close()
     except:
         buf = ""
-    return HttpResponse(buf)
+
+    headers = {}
+    if file2.endswith(".pdf"):
+        headers = {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="file.pdf"',
+        }
+    elif file2.endswith(".spdf"):
+        headers = {
+            "Content-Type": "application/spdf",
+            "Content-Disposition": 'attachment; filename="file.spdf"',
+        }
+    elif file2.endswith(".docx"):
+        headers = {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "Content-Disposition": 'attachment; filename="file.docx"',
+        }
+    elif file2.endswith(".xlsx"):
+        headers = {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": 'attachment; filename="file.xlsx"',
+        }
+    else:
+        ext = "." + file2.split(".")[-1]
+        if ext in mimetypes.types_map:
+            mt = mimetypes.types_map[ext]
+            headers = {
+                "Content-Type": mt,
+                "Content-Disposition": 'attachment; filename="file' + ext + '"',
+            }
+
+    return HttpResponse(buf, headers=headers)
 
 
 def vfsopen_page(request, file, page):
@@ -361,7 +393,7 @@ def vfssave(request, file):
             x = file2.split("/")[-1].split(".")
             if len(x) > 2:
                 if x[-1].lower() in ("imd", "md", "ihtml", "html"):
-                    if x[-2].lower() in ("html", "pdf", "docx", "xlsx"):
+                    if x[-2].lower() in ("html", "pdf", "spdf", "docx", "xlsx"):
                         file3 = file2.replace("." + x[-1], "")
                         convert_file(file2, file3)
             buf = "OK"

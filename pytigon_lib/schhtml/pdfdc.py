@@ -245,12 +245,12 @@ class PdfDc(BaseDc):
         style_tab = self.dc_info.styles[style].split(";")
         self.last_style_tab = style_tab
 
-        style = ""
+        style2 = ""
 
         if style_tab[3] == "1":
-            style += "I"
+            style2 += "I"
         if style_tab[4] == "1":
-            style += "B"
+            style2 += "B"
 
         if style_tab[1] in self.surf.fonts_map:
             font_name = self.surf.fonts_map[style_tab[1]]
@@ -258,7 +258,7 @@ class PdfDc(BaseDc):
             font_name = "sans-serif"
         self.dc.set_font(
             font_name,
-            style,
+            style2,
             int((self.scale * self.base_font_size * int(style_tab[2])) / 100),
         )
         (r, g, b) = self.rgbfromhex(style_tab[0])

@@ -37,7 +37,7 @@ class BaseDc(object):
         self.x = 0
         self.y = 0
         self.gparent = None
-        self.dc_info = None
+        self.dc_info = BaseDcInfo(self)
 
         self.store = []
         self.rec = True
@@ -185,7 +185,7 @@ class BaseDc(object):
             buf = io.BytesIO()
             for rec in page:
                 try:
-                    buf.write(json.dumps(rec))
+                    buf.write(json.dumps(rec).encode("utf-8"))
                 except:
                     print("basedc:", rec.__class__, rec)
                 buf.write(b"\n")

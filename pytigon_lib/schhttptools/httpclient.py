@@ -23,10 +23,12 @@
 
 import base64
 import os
+import mimetypes
 
 from django.conf import settings
 from django.core.files.storage import default_storage
 import asyncio
+
 from threading import Thread
 
 from pytigon_lib.schfs.vfstools import norm_path
@@ -571,10 +573,16 @@ class HttpClient:
                 ).replace("/site_media", "")
 
             try:
+                ext = '.' + path.split('.')[-1]
+                if ext in mimetypes.types_map:
+                    mt = mimetypes.types_map[ext]
+                else:
+                    mt = "text/html"
+
                 return HttpResponse(
                     adr,
                     content=default_storage.open(path).read(),
-                    ret_content_type="text/html",
+                    ret_content_type=mt,
                 )
             except:
                 print("Static file load error: ", path)

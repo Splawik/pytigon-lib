@@ -43,6 +43,7 @@ from pytigon_lib.schparser.html_parsers import SimpleTabParserBase
 
 DOC_TYPES = (
     "pdf",
+    "spdf",
     "ods",
     "odt",
     "odp",
@@ -157,6 +158,16 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     else:
                         template2.append(pos.replace(".html", "_pdf.html"))
                 template2.append("schsys/table_pdf.html")
+            elif context and "view" in context and context["view"].doc_type() == "spdf":
+                template2 = []
+                if "template_name" in context:
+                    template2.append(context["template_name"] + ".html")
+                for pos in template:
+                    if "_spdf.html" in pos:
+                        template2.append(pos)
+                    else:
+                        template2.append(pos.replace(".html", "_spdf.html"))
+                template2.append("schsys/table_spdf.html")
             elif context and "view" in context and context["view"].doc_type() == "txt":
                 template2 = []
                 if "template_name" in context:
@@ -317,33 +328,41 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         else:
             ret = TemplateResponse.render(self)
             if self.context_data["view"].doc_type() == "pdf":
-                if self._request.META["HTTP_USER_AGENT"].startswith("Py"):
-                    self["Content-Type"] = "application/zip"
-                    self[
-                        "Content-Disposition"
-                    ] = 'attachment; filename="somefilename.zip"'
-                    zip_stream = stream_from_html(
-                        self.content, stream_type="zip", base_url="file://"
-                    )
-                    self.content = zip_stream.getvalue()
+                self["Content-Type"] = "application/pdf"
+                if type(self.template_name) == str:
+                    tname = self.template_name
                 else:
-                    self["Content-Type"] = "application/pdf"
-                    if type(self.template_name) == str:
-                        tname = self.template_name
-                    else:
-                        tname = self.template_name[0]
-                    self[
-                        "Content-Disposition"
-                    ] = "attachment; filename=%s" % tname.split("/")[-1].replace(
-                        ".html", ".pdf"
-                    )
-                    pdf_stream = stream_from_html(
-                        self.content,
-                        stream_type="pdf",
-                        base_url="file://",
-                        info={"template_name": self.template_name},
-                    )
-                    self.content = pdf_stream.getvalue()
+                    tname = self.template_name[0]
+                self[
+                    "Content-Disposition"
+                ] = "attachment; filename=%s" % tname.split("/")[-1].replace(
+                    ".html", ".pdf"
+                )
+                pdf_stream = stream_from_html(
+                    self.content,
+                    stream_type="pdf",
+                    base_url="file://",
+                    info={"template_name": self.template_name},
+                )
+                self.content = pdf_stream.getvalue()
+            elif self.context_data["view"].doc_type() == "spdf":
+                self["Content-Type"] = "application/spdf"
+                if type(self.template_name) == str:
+                    tname = self.template_name
+                else:
+                    tname = self.template_name[0]
+                self[
+                    "Content-Disposition"
+                ] = "attachment; filename=%s" % tname.split("/")[-1].replace(
+                    ".html", ".spdf"
+                )
+                spdf_stream = stream_from_html(
+                    self.content,
+                    stream_type="spdf",
+                    base_url="file://",
+                    info={"template_name": self.template_name},
+                )
+                self.content = spdf_stream.getvalue()
             elif self.context_data["view"].doc_type() == "json":
                 self["Content-Type"] = "application/json"
 
@@ -565,6 +584,20 @@ def dict_to_pdf(template_name):
             c = RequestContext(request, v)
             return render_to_response_ext(
                 request, template_name, c.flatten(), doc_type="pdf"
+            )
+
+        return inner
+
+    return _dict_to_template
+
+
+def dict_to_pdf(template_name):
+    def _dict_to_template(func):
+        def inner(request, *args, **kwargs):
+            v = func(request, *args, **kwargs)
+            c = RequestContext(request, v)
+            return render_to_response_ext(
+                request, template_name, c.flatten(), doc_type="spdf"
             )
 
         return inner

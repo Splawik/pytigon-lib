@@ -98,7 +98,7 @@ class XlsxDc(BaseDc):
         self.document.close()
         with open(self.temp_file_name, "rb") as f_in:
             if self.output_stream:
-                self.output_stream.write(f_in.read)
+                self.output_stream.write(f_in.read())
             elif self.output_name:
                 with open(self.output_name, "wb") as f_out:
                     f_out.write(f_in.read())
