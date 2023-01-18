@@ -16,3 +16,16 @@
 # copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
 # license: "LGPL 3.0"
 # version: "0.1a"
+
+from pytigon_lib.schfs.vfstools import (
+    open_file,
+    open_and_create_dir,
+    get_unique_filename,
+    get_temp_filename,
+    extractall,
+)
+from django.core.files.storage import default_storage
+
+
+def get_vfs():
+    return default_storage.fs

@@ -19,7 +19,7 @@
 
 import os
 import sys
-from pytigon_lib.schfs.vfstools import extractall
+from pytigon_lib.schfs import extractall
 import zipfile
 from distutils.dir_util import copy_tree
 import configparser

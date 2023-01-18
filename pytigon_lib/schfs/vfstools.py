@@ -28,6 +28,7 @@ from tempfile import NamedTemporaryFile
 
 
 from django.core.files.storage import default_storage
+from django.conf import settings
 
 from pytigon_lib.schdjangoext.tools import gettempdir
 
@@ -62,19 +63,30 @@ def norm_path(url):
         return ""
 
 
-def open_and_create_dir(filename, mode):
+def open_file(filename, mode, for_vfs=False):
+    if for_vfs:
+        return default_storage.fs.open(filename, mode)
+    else:
+        return open(filename, mode)
+
+
+def open_and_create_dir(filename, mode, for_vfs=False):
     """Open file - if path doesn't exist - path is created
 
     Args:
         filename - path and name of file
         mode - see mode for standard python function: open
     """
-    if not os.path.exists(os.path.dirname(filename)):
-        os.makedirs(os.path.dirname(filename))
-    return open(filename, mode)
+    if for_vfs:
+        if not default_storage.fs.exists(default_storage.fs.path.dirname(filename)):
+            default_storage.fs.makedirs(default_storage.fs.path.dirname(filename))
+    else:
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+    return open(filename, mode, for_vfs)
 
 
-def get_temp_filename(base_name=None):
+def get_unique_filename(base_name=None, ext=None):
     """Get temporary file name
 
     Args:
@@ -82,9 +94,22 @@ def get_temp_filename(base_name=None):
     """
     boundary = email.generator._make_boundary()
     if base_name:
-        return os.path.join(gettempdir(), boundary + "_" + base_name)
+        boundary += "_" + base_name
+    if ext:
+        boundary += "." + ext
+    return boundary
+
+
+def get_temp_filename(base_name=None, ext=None, for_vfs=False):
+    """Get temporary file name
+
+    Args:
+        base_name - if not Null returning name contains base_name
+    """
+    if for_vfs:
+        return "/temp/" + get_unique_filename(base_name, ext)
     else:
-        return os.path.join(gettempdir(), boundary)
+        return os.path.join(settings.TEMP_PATH, get_unique_filename(base_name, ext))
 
 
 def delete_from_zip(zip_name, del_file_names):

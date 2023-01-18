@@ -26,7 +26,6 @@ import os
 import mimetypes
 
 from django.conf import settings
-from django.core.files.storage import default_storage
 import asyncio
 
 from threading import Thread
@@ -573,17 +572,20 @@ class HttpClient:
                 ).replace("/site_media", "")
 
             try:
-                ext = '.' + path.split('.')[-1]
+                ext = "." + path.split(".")[-1]
                 if ext in mimetypes.types_map:
                     mt = mimetypes.types_map[ext]
                 else:
                     mt = "text/html"
 
-                return HttpResponse(
-                    adr,
-                    content=default_storage.open(path).read(),
-                    ret_content_type=mt,
-                )
+                with open(path) as f:
+                    ret = HttpResponse(
+                        adr,
+                        content=f.read(),
+                        ret_content_type=mt,
+                    )
+
+                return ret
             except:
                 print("Static file load error: ", path)
                 return HttpResponse(adr, 400, content=b"", ret_content_type="text/html")
@@ -592,10 +594,11 @@ class HttpClient:
             file_name = adr[7:]
             if file_name[0] == "/" and file_name[2] == ":":
                 file_name = file_name[1:]
-            f = default_storage.open(file_name)
-            return HttpResponse(
-                adr, content=f.read(), ret_content_type="text/html charset=utf-8"
-            )
+            with open(file_name) as f:
+                ret = HttpResponse(
+                    adr, content=f.read(), ret_content_type="text/html charset=utf-8"
+                )
+            return ret
 
         if parm == None:
             parm = {}
