@@ -30,6 +30,7 @@ import asyncio
 
 from threading import Thread
 
+from pytigon_lib.schfs import open_file, get_vfs
 from pytigon_lib.schfs.vfstools import norm_path
 from pytigon_lib.schtools.schjson import json_loads
 from pytigon_lib.schtools.platform_info import platform_name
@@ -492,6 +493,7 @@ class HttpClient:
         post_request=False,
         json_data=False,
         callback=None,
+        for_vfs=True,
     ):
         """Prepare get request to the http server
 
@@ -564,12 +566,7 @@ class HttpClient:
             and ("/static/" in adr or "/site_media" in adr)
             and not "?" in adr
         ):
-            if "/static/" in adr:
-                path = adr.replace("http://127.0.0.2", "")
-            else:
-                path = settings.MEDIA_ROOT + adr.replace(
-                    "http://127.0.0.2", ""
-                ).replace("/site_media", "")
+            path = adr.replace("http://127.0.0.2", "")
 
             try:
                 ext = "." + path.split(".")[-1]
@@ -578,7 +575,7 @@ class HttpClient:
                 else:
                     mt = "text/html"
 
-                with open(path) as f:
+                with open_file(path, "rb", for_vfs=for_vfs) as f:
                     ret = HttpResponse(
                         adr,
                         content=f.read(),
@@ -587,16 +584,26 @@ class HttpClient:
 
                 return ret
             except:
-                print("Static file load error: ", path)
+                if for_vfs:
+                    print("Static file load error: ", get_vfs().getsyspath(path))
+                else:
+                    print("Static file load error: ", path)
                 return HttpResponse(adr, 400, content=b"", ret_content_type="text/html")
 
         if adr.startswith("file://"):
             file_name = adr[7:]
             if file_name[0] == "/" and file_name[2] == ":":
                 file_name = file_name[1:]
-            with open(file_name) as f:
+
+            ext = "." + file_name.split(".")[-1]
+            if ext in mimetypes.types_map:
+                mt = mimetypes.types_map[ext]
+            else:
+                mt = "text/html"
+
+            with open_file(file_name, "rb", for_vfs=for_vfs) as f:
                 ret = HttpResponse(
-                    adr, content=f.read(), ret_content_type="text/html charset=utf-8"
+                    adr, content=f.read(), ret_content_type=mt
                 )
             return ret
 
