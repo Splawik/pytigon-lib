@@ -22,6 +22,8 @@ import zipfile
 import io
 import json
 
+from pytigon_lib.schtools.schjson import loads, dumps
+
 
 class BaseDc(object):
     def __init__(
@@ -33,6 +35,7 @@ class BaseDc(object):
         output_stream=None,
         scale=1.0,
         notify_callback=None,
+        record=False,
     ):
         self.x = 0
         self.y = 0
@@ -40,7 +43,7 @@ class BaseDc(object):
         self.dc_info = BaseDcInfo(self)
 
         self.store = []
-        self.rec = True
+        self.rec = record
         self.calc_only = calc_only
 
         self.default_width = int(210 * 72 / 25.4)
@@ -170,7 +173,7 @@ class BaseDc(object):
         for buf in str.split("\n"):
             buf = buf.strip()
             if buf != "":
-                pos = json.loads(buf)
+                pos = loads(buf)
                 fun = getattr(self, pos[0])
                 if pos[1]:
                     fun(*pos[1])
@@ -179,15 +182,16 @@ class BaseDc(object):
 
     def save(self, zip_name):
         zf = zipfile.ZipFile(zip_name, mode="w", compression=zipfile.ZIP_DEFLATED)
-        zf.writestr("set.dat", json.dumps(self.state()))
+        zf.writestr("set.dat", dumps(self.state()))
         i = 1
         for page in self.pages:
             buf = io.BytesIO()
             for rec in page:
-                try:
-                    buf.write(json.dumps(rec).encode("utf-8"))
-                except:
-                    print("basedc:", rec.__class__, rec)
+                # try:
+                if True:
+                    buf.write(dumps(rec).encode("utf-8"))
+                # except:
+                #    print("basedc:", rec.__class__, rec)
                 buf.write(b"\n")
             zf.writestr("page_%d" % i, buf.getvalue())
             i += 1
@@ -195,7 +199,7 @@ class BaseDc(object):
 
     def load(self, zip_name):
         zf = zipfile.ZipFile(zip_name, mode="r")
-        parm = json.loads(zf.read("set.dat").decode("utf-8"))
+        parm = loads(zf.read("set.dat").decode("utf-8"))
         count = parm[0]
         self.pages = []
         self.width = parm[1]
@@ -211,10 +215,10 @@ class BaseDc(object):
             data = zf.read("page_%d" % i).decode("utf-8")
             for line in data.split("\n"):
                 if len(line) > 1:
-                    buf = json.loads(line)
+                    buf = loads(line)
                     rec.append(buf)
             self.pages.append(rec)
-            self.rec = rec
+            # self.rec = rec
         zf.close()
 
     def _scale_image(self, x, y, dx, dy, scale, image_w, image_h):
@@ -521,7 +525,7 @@ class SubDc(object):
                     if attr == "":
                         attr = None
                     else:
-                        attr = json.loads("[" + attr + "]")
+                        attr = loads("[" + attr + "]")
                     fun = getattr(self, name)
                     if attr:
                         fun(*attr)

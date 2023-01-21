@@ -18,6 +18,7 @@
 # version: "0.1a"
 
 from pytigon_lib.schtools.images import svg_to_png, spec_resize
+from django.core.files.storage import default_storage
 
 import PIL
 
@@ -61,8 +62,8 @@ class RenderBackground(RenderBase):
         )
 
     def background(self, dc, bgcolor, image_url, repeat, attachment, x, y):
-        if dc.calc_only:
-            return
+        # if dc.calc_only:
+        #    return
         if bgcolor:
             (r, g, b) = dc.rgbfromhex(bgcolor)
             dc.set_color(r, g, b)
@@ -91,11 +92,19 @@ class RenderBackground(RenderBase):
             # try:
             if True:
                 http = self.parent.parser.get_http_object()
-                response = http.get(self, image_url)
+                #print(image_url)
+                #print(default_storage.fs.getsyspath(image_url.replace("file://", "")))
+                response = http.get(
+                    self,
+                    "file://"
+                    + default_storage.fs.getsyspath(image_url.replace("file://", "")),
+                )
                 if response.ret_code == 404:
                     img = None
                 else:
                     img = response.ptr()
+                    if type(img) == str:
+                        img = img.encode("utf-8")
             # except:
             #    img = None
 

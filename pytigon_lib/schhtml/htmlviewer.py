@@ -322,6 +322,7 @@ class HtmlViewerParser(HtmlModParser):
     def close(self):
         """Close conected to this class device context"""
         if self.dc:
+            self.dc.end_document()
             self.dc.close()
 
     def get_max_sizes(self):

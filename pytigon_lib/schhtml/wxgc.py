@@ -33,6 +33,7 @@ class GraphicsContextDc(BaseDc):
         output_stream=None,
         scale=1.0,
         notify_callback=None,
+        record=False,
     ):
         BaseDc.__init__(
             self,
@@ -43,6 +44,7 @@ class GraphicsContextDc(BaseDc):
             output_stream,
             scale,
             notify_callback,
+            record,
         )
         self.dc_info = GraphicsContextDcinfo(self)
         self.type = None

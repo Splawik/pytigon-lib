@@ -33,6 +33,7 @@ class DcDc(BaseDc):
         output_stream=None,
         scale=1.0,
         notify_callback=None,
+        record=False,
     ):
         BaseDc.__init__(
             self,
@@ -43,6 +44,7 @@ class DcDc(BaseDc):
             output_stream,
             scale,
             notify_callback,
+            record,
         )
         self.dc_info = DcDcinfo(self)
         if self.width >= 0:
@@ -190,33 +192,44 @@ class DcDc(BaseDc):
         style_tab = self.dc_info.styles[style].split(";")
         self.last_style_tab = style_tab
         font = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
-        if style_tab[3] == "1":
-            slant = wx.ITALIC
-            font.SetStyle(wx.ITALIC)
+        if style_tab[1] == "serif":
+            font_style = wx.ROMAN
+            font.SetFamily(wx.ROMAN)
+            face_name = "DejaVu Serif"
+        elif style_tab[1] == "sans-serif":
+            font_style = wx.SWISS
+            font.SetFamily(wx.SWISS)
+            face_name = "DejaVu Sans"
+        elif style_tab[1] == "monospace":
+            font_style = wx.MODERN
+            font.SetFamily(wx.MODERN)
+            face_name = "DejaVu Sans Mono"
+        elif style_tab[1] == "cursive":
+            font_style = wx.SCRIPT
+            font.SetFamily(wx.SCRIPT)
+            face_name = "DejaVu Serif"
+        elif style_tab[1] == "fantasy":
+            font_style = wx.DECORATIVE
+            font.SetFamily(wx.DECORATIVE)
+            face_name = "DejaVu Serif"
         else:
-            slant = wx.NORMAL
+            font_style = wx.DEFAULT
+            face_name = "DejaVu Serif"
+
         if style_tab[4] == "1":
             weight = wx.BOLD
             font.SetWeight(wx.BOLD)
         else:
             weight = wx.FONTWEIGHT_NORMAL
-        if style_tab[1] == "serif":
-            font_style = wx.ROMAN
-            font.SetFamily(wx.ROMAN)
-        elif style_tab[1] == "sans-serif":
-            font_style = wx.SWISS
-            font.SetFamily(wx.SWISS)
-        elif style_tab[1] == "monospace":
-            font_style = wx.MODERN
-            font.SetFamily(wx.MODERN)
-        elif style_tab[1] == "cursive":
-            font_style = wx.SCRIPT
-            font.SetFamily(wx.SCRIPT)
-        elif style_tab[1] == "fantasy":
-            font_style = wx.DECORATIVE
-            font.SetFamily(wx.DECORATIVE)
+
+        if style_tab[3] == "1":
+            slant = wx.ITALIC
+            font.SetStyle(wx.ITALIC)
         else:
-            font_style = wx.DEFAULT
+            slant = wx.NORMAL
+
+        font.SetFaceName(face_name)
+
         font.SetPointSize(
             int(
                 (self.scale * (self.base_font_size * 72) * int(style_tab[2]))
@@ -338,17 +351,18 @@ class DcDc(BaseDc):
         scale,
         png_data,
     ):
+        # print("draw_image: ", x, y, dx, dy, scale)
         png_stream = io.BytesIO(png_data)
         image = wx.ImageFromStream(png_stream)
         w = image.GetWidth()
         h = image.GetHeight()
         (x_scale, y_scale) = self._scale_image(x, y, dx, dy, scale, w, h)
         if scale < 4:
-            image.Rescale(w * x_scale, h * y_scale)
+            image.Rescale(int(w * x_scale * self.scale), int(h * y_scale * self.scale))
             bmp = image.ConvertToBitmap()
             w = image.GetWidth()
             h = image.GetHeight()
-            self.dc.DrawBitmap(bmp, x, y)
+            self.dc.DrawBitmap(bmp, int(x * self.scale), int(y * self.scale))
         else:
             delta_x = 0
             delta_y = 0
@@ -356,6 +370,10 @@ class DcDc(BaseDc):
                 if scale == 4 and delta_y > 0:
                     break
                 delta_x = 0
+                if self.scale != 1:
+                    image.Rescale(
+                        int(image.width * self.scale), int(image.height * self.scale)
+                    )
                 bmp = image.ConvertToBitmap()
                 while delta_x < dx:
                     if scale == 5 and delta_x > 0:

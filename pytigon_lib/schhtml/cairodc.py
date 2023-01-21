@@ -45,6 +45,7 @@ class CairoDc(BaseDc):
         output_stream=None,
         scale=1.0,
         notify_callback=None,
+        record=False,
     ):
         BaseDc.__init__(
             self,
@@ -55,6 +56,7 @@ class CairoDc(BaseDc):
             output_stream,
             scale,
             notify_callback,
+            record=False,
         )
         if self.width >= 0:
             width2 = self.width

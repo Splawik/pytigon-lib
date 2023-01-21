@@ -18,6 +18,9 @@
 # version: "0.1a"
 
 import io
+import PIL
+
+from django.core.files.storage import default_storage
 
 from pytigon_lib.schhtml.basehtmltags import (
     BaseHtmlAtomParser,
@@ -37,8 +40,6 @@ from pytigon_lib.schhtml.render_helpers import (
 )
 
 from pytigon_lib.schtools.images import svg_to_png, spec_resize
-
-import PIL
 
 
 class AtomTag(BaseHtmlAtomParser):
@@ -111,7 +112,7 @@ class Atag(AtomTag):
         for atom in self.atom_list.atom_list:
             if not atom.parent:
                 atom.set_parent(self)
-                
+
         self.parent.append_atom_list(self.atom_list)
 
     def __repr__(self):
@@ -145,7 +146,12 @@ class ImgTag(AtomTag):
         AtomTag.__init__(self, parent, parser, tag, attrs)
 
         if "src" in attrs:
-            self.src = attrs["src"]
+            if "file://" in attrs["src"]:
+                self.src = "file://" + default_storage.fs.getsyspath(
+                    attrs["src"].replace("file://", "")
+                )
+            else:
+                self.src = attrs["src"]
         else:
             self.src = None
         self.img = None
@@ -160,14 +166,17 @@ class ImgTag(AtomTag):
 
         if self.src:
             http = self.parser.get_http_object()
-            try:
+            # try:
+            if True:
                 response = http.get(self, self.src)
                 if response.ret_code == 404:
                     img = None
                 else:
                     img = response.ptr()
-            except:
-                img = None
+                    if type(img) == str:
+                        img = img.encode("utf-8")
+            # except:
+            #    img = None
             if img:
                 img_name = self.src.lower()
                 if ".png" in img_name:

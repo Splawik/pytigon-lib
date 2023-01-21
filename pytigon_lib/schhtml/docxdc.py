@@ -40,9 +40,18 @@ class DocxDc(BaseDc):
         scale=1.0,
         notify_callback=None,
         docx_template_path=None,
+        record=False,
     ):
         BaseDc.__init__(
-            self, calc_only, -1, -1, output_name, output_stream, scale, notify_callback
+            self,
+            calc_only,
+            -1,
+            -1,
+            output_name,
+            output_stream,
+            scale,
+            notify_callback,
+            record,
         )
         self.dc_info = DocxDcinfo(self)
         self.type = None
