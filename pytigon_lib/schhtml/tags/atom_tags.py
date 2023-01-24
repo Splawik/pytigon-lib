@@ -166,8 +166,7 @@ class ImgTag(AtomTag):
 
         if self.src:
             http = self.parser.get_http_object()
-            # try:
-            if True:
+            try:
                 response = http.get(self, self.src)
                 if response.ret_code == 404:
                     img = None
@@ -175,8 +174,9 @@ class ImgTag(AtomTag):
                     img = response.ptr()
                     if type(img) == str:
                         img = img.encode("utf-8")
-            # except:
-            #    img = None
+            except:
+                img = None
+                print("Image %s not loaded!", self.src)
             if img:
                 img_name = self.src.lower()
                 if ".png" in img_name:

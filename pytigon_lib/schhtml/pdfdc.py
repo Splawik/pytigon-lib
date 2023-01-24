@@ -95,7 +95,7 @@ class PdfDc(BaseDc):
         output_stream=None,
         scale=1.0,
         notify_callback=None,
-        record=False
+        record=False,
     ):
         BaseDc.__init__(
             self,
@@ -106,7 +106,7 @@ class PdfDc(BaseDc):
             output_stream,
             scale,
             notify_callback,
-            record
+            record,
         )
         if self.width >= 0:
             width2 = self.width
@@ -120,9 +120,9 @@ class PdfDc(BaseDc):
         self.type = None
         if self.calc_only:
             self.surf = PDFSurface(None, None, 10, 10)
-            if width < 0:
+            if not width or width < 0:
                 self.width = -1
-            if height < 0:
+            if not height or height < 0:
                 self.height = 1000000000
             self.dc = self.surf.get_dc()
         else:
@@ -132,7 +132,7 @@ class PdfDc(BaseDc):
             else:
                 if output_name:
                     name = output_name.lower()
-                    self.surf = PDFSurface(output_name, output_stream, width2, height2)
+                    self.surf = PDFSurface(output_name, None, width2, height2)
                 else:
                     self.surf = PDFSurface(None, output_stream, width2, height2)
 

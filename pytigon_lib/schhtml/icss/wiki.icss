@@ -1,12 +1,16 @@
 body
     font-family:sans-serif
     font-size:120%
-    padding:5
+    padding: 25
 
 p
     cellpadding:2
     border:0
     width:100%
+    text-align: justify
+    line-spacing: 2
+    not-leave-single-char: 1
+    padding: 1 0
 
 b
     font-weight:bold
@@ -414,13 +418,8 @@ div.codehilite pre code span.vm
 div.codehilite pre code span.il 
     color: #666666  
 
-body.wiki p
-    text-align: justify
-    line-spacing: 2
-    not-leave-single-char: 1
-    padding: 1 0
 
-body.wiki ul li, body.wiki ol li
+ul li, ol li
     line-spacing: 2
     not-leave-single-char: 1
 

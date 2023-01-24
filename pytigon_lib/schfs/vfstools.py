@@ -347,7 +347,9 @@ def automount(path):
 
 
 # input formats: ihtml, html, imd, md
-# output formats: html, pdf, xlsx, docx
+# output formats: html, spdf, pdf, xpdf, xlsx, docx
+# xpdf - pdf with source text in subject field
+# spdf - recorded BaseDc operation to zip file format renamed to spdf
 
 
 def convert_file(
@@ -391,18 +393,23 @@ def convert_file(
         buf = markdown_to_html(fin.read())
     elif i_f == "ihtml":
         buf = ihtml_to_html_base(None, input_str=fin.read())
+    else:
+        buf = fin.read()
     if o_f == "html":
         fout.write(buf.encode("utf-8"))
         return True
 
-    if o_f == "pdf":
+    if o_f in ("pdf", "xpdf"):
 
         def notify_callback(event_name, data):
             if event_name == "end":
                 dc = data["dc"]
                 dc.surf.pdf.set_subject(buf)
 
-        dc = PdfDc(output_stream=fout, notify_callback=notify_callback)
+        if o_f == "xpdf":
+            dc = PdfDc(output_stream=fout, notify_callback=notify_callback)
+        else:
+            dc = PdfDc(output_stream=fout)
         dc.set_paging(True)
     elif o_f == "spdf":
 
@@ -420,9 +427,17 @@ def convert_file(
                     dc.save(spdf_name)
 
                     with open(spdf_name, "rb") as f:
-                        dc.ouput_stream.write(f.read())
+                        dc.output_stream.write(f.read())
 
-        dc = PdfDc(output_stream=fout, calc_only=True, notify_callback=notify_callback)
+        (width, height) = (595, 842)
+        dc = PdfDc(
+            output_stream=fout,
+            calc_only=True,
+            width=width,
+            height=height,
+            notify_callback=notify_callback,
+            record=True,
+        )
         dc.set_paging(True)
     elif o_f == "docx":
         dc = DocxDc(
@@ -431,13 +446,16 @@ def convert_file(
     elif o_f == "xlsx":
         dc = XlsxDc(output_stream=fout)
 
-    p = HtmlViewerParser(dc=dc, calc_only=False)
+    p = HtmlViewerParser(
+        dc=dc, calc_only=False, init_css_str="@wiki.icss", css_type=1, use_tag_maps=True
+    )
     p.feed(buf)
     p.close()
-    dc.end_page()
 
     if type(filename_or_stream_in) == str:
-        fin.close()
+        if fin:
+            fin.close()
     if type(filename_or_stream_out) == str:
-        fout.close()
+        if fout:
+            fout.close()
     return True

@@ -436,13 +436,16 @@ class HttpResponse:
 class HttpClient:
     """Http client class"""
 
-    def __init__(self, address):
+    def __init__(self, address=""):
         """Constructor
 
         Args:
             address: base address for http requests
         """
-        self.base_address = address
+        if address:
+            self.base_address = address
+        else:
+            self.base_address = "http://127.0.0.2"
         self.http_cache = {}
         self.app = None
 
@@ -602,9 +605,7 @@ class HttpClient:
                 mt = "text/html"
 
             with open_file(file_name, "rb", for_vfs=for_vfs) as f:
-                ret = HttpResponse(
-                    adr, content=f.read(), ret_content_type=mt
-                )
+                ret = HttpResponse(adr, content=f.read(), ret_content_type=mt)
             return ret
 
         if parm == None:

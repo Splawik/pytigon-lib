@@ -49,7 +49,7 @@ def spec_resize(image, width=0, height=0):
     return dst
 
 
-# image_type: "simple" or "frame"
+# image_type: "simple", "simple_min" or "frame"
 def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
     from svglib.svglib import svg2rlg
     from reportlab.graphics import renderPM
@@ -57,7 +57,7 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
     svg_io = io.BytesIO(svg_str)
     drawing = svg2rlg(svg_io)
 
-    if image_type == "simple":
+    if image_type in ("simple", "simple_min"):
         scale_x = 0
         scale_y = 0
 
@@ -71,6 +71,12 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
             scale_x = scale_y
         elif not scale_x and not scale_y:
             scale_x = scale_y = 1
+
+        if image_type == "simple_min":
+            if scale_x and scale_x < scale_y:
+                scale_y = scale_x
+            elif scale_y:
+                scale_x = scale_y
 
         drawing.width *= scale_x
         drawing.height *= scale_y

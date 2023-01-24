@@ -105,6 +105,7 @@ class HtmlViewerParser(HtmlModParser):
         parse_only=False,
         init_css_str=None,
         css_type=CSS_TYPE_STANDARD,
+        use_tag_maps=True,
     ):
         """Constructor
 
@@ -124,6 +125,7 @@ class HtmlViewerParser(HtmlModParser):
         self.url = url
         self.base_url = base_url
         self.parse_only = parse_only
+        self.use_tag_maps = use_tag_maps
         self.obj_id_dict = {}
         self.obj_action_dict = {}
         self.parent_window = None
@@ -258,7 +260,10 @@ class HtmlViewerParser(HtmlModParser):
             # if tag2 in tmap:
             #    (tag2, attrs) = tmap[tag2](self.tag_parser, attrs)
 
-            handler = tmap.get_handler(tag)
+            if self.use_tag_maps:
+                handler = tmap.get_handler(tag)
+            else:
+                handler = None
             if handler:
                 attrs["_tag"] = tag
                 (tag2, attrs) = handler(self.tag_parser, attrs)

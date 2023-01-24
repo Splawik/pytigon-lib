@@ -89,24 +89,18 @@ class RenderBackground(RenderBase):
                 else:
                     style = 6
 
-            # try:
-            if True:
+            try:
                 http = self.parent.parser.get_http_object()
-                #print(image_url)
-                #print(default_storage.fs.getsyspath(image_url.replace("file://", "")))
-                response = http.get(
-                    self,
-                    "file://"
-                    + default_storage.fs.getsyspath(image_url.replace("file://", "")),
-                )
+                response = http.get(self, image_url)
+
                 if response.ret_code == 404:
                     img = None
                 else:
                     img = response.ptr()
                     if type(img) == str:
                         img = img.encode("utf-8")
-            # except:
-            #    img = None
+            except:
+                img = None
 
             if img:
                 img_name = image_url.lower()
