@@ -22,7 +22,7 @@ import zipfile
 import io
 import json
 
-from pytigon_lib.schtools.schjson import loads, dumps
+from pytigon_lib.schtools.schjson import json_loads, json_dumps
 
 
 class BaseDc(object):
@@ -160,20 +160,32 @@ class BaseDc(object):
         rec = self.rec
         self.rec = False
         if page >= 0:
-            self.store = self.pages[page]
-        for pos in self.store:
-            fun = getattr(self, pos[0])
-            if pos[1]:
-                fun(*pos[1])
+            # self.store = self.pages[page]
+            pages = [
+                self.pages[page],
+            ]
+        else:
+            pages = self.pages
+        first = True
+        for store in pages:
+            if first:
+                first = False
             else:
-                fun()
+                self.start_page()
+            for pos in store:
+                fun = getattr(self, pos[0])
+                if pos[1]:
+                    fun(*pos[1])
+                else:
+                    fun()
+            self.end_page()
         self.rec = rec
 
     def play_str(self, str):
         for buf in str.split("\n"):
             buf = buf.strip()
             if buf != "":
-                pos = loads(buf)
+                pos = json_loads(buf)
                 fun = getattr(self, pos[0])
                 if pos[1]:
                     fun(*pos[1])
@@ -181,15 +193,21 @@ class BaseDc(object):
                     fun()
 
     def save(self, zip_name):
-        zf = zipfile.ZipFile(zip_name, mode="w", compression=zipfile.ZIP_DEFLATED)
-        zf.writestr("set.dat", dumps(self.state()))
+        try:
+            zf = zipfile.ZipFile(zip_name, mode="w", compression=zipfile.ZIP_BZIP2)
+        except:
+            zf = zipfile.ZipFile(
+                zip_name, mode="w", compression=zipfile.ZIP_BZIP2ZIP_DEFLATED
+            )
+
+        zf.writestr("set.dat", json_dumps(self.state()))
         i = 1
         for page in self.pages:
             buf = io.BytesIO()
             for rec in page:
                 # try:
                 if True:
-                    buf.write(dumps(rec).encode("utf-8"))
+                    buf.write(json_dumps(rec).encode("utf-8"))
                 # except:
                 #    print("basedc:", rec.__class__, rec)
                 buf.write(b"\n")
@@ -199,7 +217,7 @@ class BaseDc(object):
 
     def load(self, zip_name):
         zf = zipfile.ZipFile(zip_name, mode="r")
-        parm = loads(zf.read("set.dat").decode("utf-8"))
+        parm = json_loads(zf.read("set.dat").decode("utf-8"))
         count = parm[0]
         self.pages = []
         self.width = parm[1]
@@ -215,7 +233,7 @@ class BaseDc(object):
             data = zf.read("page_%d" % i).decode("utf-8")
             for line in data.split("\n"):
                 if len(line) > 1:
-                    buf = loads(line)
+                    buf = json_loads(line)
                     rec.append(buf)
             self.pages.append(rec)
             # self.rec = rec
@@ -525,7 +543,7 @@ class SubDc(object):
                     if attr == "":
                         attr = None
                     else:
-                        attr = loads("[" + attr + "]")
+                        attr = json_loads("[" + attr + "]")
                     fun = getattr(self, name)
                     if attr:
                         fun(*attr)

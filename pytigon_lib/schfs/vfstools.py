@@ -26,7 +26,6 @@ import hashlib
 
 from tempfile import NamedTemporaryFile
 
-
 from django.core.files.storage import default_storage
 from django.conf import settings
 
@@ -346,14 +345,19 @@ def automount(path):
     return path
 
 
-# input formats: ihtml, html, imd, md
+# input formats: ihtml, html, imd, md, spdf
 # output formats: html, spdf, pdf, xpdf, xlsx, docx
 # xpdf - pdf with source text in subject field
 # spdf - recorded BaseDc operation to zip file format renamed to spdf
 
 
 def convert_file(
-    filename_or_stream_in, filename_or_stream_out, input_format=None, output_format=None
+    filename_or_stream_in,
+    filename_or_stream_out,
+    input_format=None,
+    output_format=None,
+    for_vfs_input=True,
+    for_vfs_output=True,
 ):
 
     from pytigon_lib.schhtml.basedc import BaseDc
@@ -364,6 +368,7 @@ def convert_file(
     from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
     from pytigon_lib.schindent.indent_style import ihtml_to_html_base
     from pytigon_lib.schindent.indent_markdown import markdown_to_html
+    from pytigon_lib.schfs import open_file
 
     from pytigon_lib.schindent.indent_markdown import (
         IndentMarkdownProcessor,
@@ -373,14 +378,20 @@ def convert_file(
     i_f = input_format
     o_f = output_format
     if type(filename_or_stream_in) == str:
-        fin = default_storage.fs.open(automount(filename_or_stream_in), "rt")
+        if for_vfs_input:
+            fin = default_storage.fs.open(automount(filename_or_stream_in), "rt")
+        else:
+            fin = open(filename_or_stream_in, "rb")
         if not i_f:
             i_f = filename_or_stream_in.split(".")[-1].lower()
     else:
         fin = filename_or_stream_in
 
     if type(filename_or_stream_out) == str:
-        fout = default_storage.fs.open(automount(filename_or_stream_out), "wb")
+        if for_vfs_output:
+            fout = default_storage.fs.open(automount(filename_or_stream_out), "wb")
+        else:
+            fout = open(filename_or_stream_out, "wb")
         if not o_f:
             o_f = filename_or_stream_out.split(".")[-1].lower()
     else:
@@ -393,6 +404,8 @@ def convert_file(
         buf = markdown_to_html(fin.read())
     elif i_f == "ihtml":
         buf = ihtml_to_html_base(None, input_str=fin.read())
+    elif i_f == "spdf":
+        buf = None
     else:
         buf = fin.read()
     if o_f == "html":
@@ -449,7 +462,11 @@ def convert_file(
     p = HtmlViewerParser(
         dc=dc, calc_only=False, init_css_str="@wiki.icss", css_type=1, use_tag_maps=True
     )
-    p.feed(buf)
+    if i_f == "spdf":
+        dc.load(filename_or_stream_in)
+        dc.play()
+    else:
+        p.feed(buf)
     p.close()
 
     if type(filename_or_stream_in) == str:
