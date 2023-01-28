@@ -25,7 +25,12 @@ setup(
     author_email="slawomir.cholaj@gmail.com",
     license="LGPLv3",
     packages=find_packages(),
-    package_data={"": extra_files},
+    package_data={
+        "": extra_files,
+        "pytigon_lib": [
+            "schhtml/icss/wiki.icss",
+        ],
+    },
     include_package_data=True,
     install_requires=install_requires,
     dependency_links=dependency_links,
