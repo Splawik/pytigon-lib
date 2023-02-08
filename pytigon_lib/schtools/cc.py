@@ -68,16 +68,16 @@ def install_tcc(path):
             os.makedirs(prg_path)
 
         if platform.system() == "Windows":
-            if sys.maxsize > 2 ** 32:
+            if sys.maxsize > 2**32:
                 url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win64-bin.zip"
             else:
                 url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win32-bin.zip"
-            r = httpx.get(url, allow_redirects=True)
+            r = httpx.get(url, follow_redirects=True)
             with zipfile.ZipFile(io.BytesIO(r.content)) as zfile:
                 zfile.extractall(prg_path)
         else:
             url = "http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27.tar.bz2"
-            r = httpx.get(url, allow_redirects=True)
+            r = httpx.get(url, follow_redirects=True)
             with tarfile.open(fileobj=io.BytesIO(r.content), mode="r:bz2") as tar:
                 tar.extractall(prg_path)
             os.rename(os.path.join(prg_path, "tcc-0.9.27"), path)
@@ -92,7 +92,7 @@ def install_tcc(path):
     if not os.path.exists(h_path):
         info = sys.version_info
         url2 = f"https://www.python.org/ftp/python/{info.major}.{info.minor}.{info.micro}/Python-{info.major}.{info.minor}.{info.micro}.tgz"
-        r = httpx.get(url2, allow_redirects=True)
+        r = httpx.get(url2, follow_redirects=True)
         with tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz") as tar:
             extract_tar_folder(
                 tar, f"Python-{info.major}.{info.minor}.{info.micro}/Include/", h_path
