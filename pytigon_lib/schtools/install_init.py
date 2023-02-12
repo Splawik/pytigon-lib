@@ -90,6 +90,10 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             os.makedirs(os.path.join(media_path, "filer_private"))
             os.makedirs(os.path.join(media_path, "filer_public_tumbnails"))
             os.makedirs(os.path.join(media_path, "filer_private_thumbnails"))
+        if not os.path.exists(os.path.join(_data_path, "doc")):
+            doc_path = os.path.join(os.path.join(_data_path, "doc"))
+            os.makedirs(doc_path)
+
         prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
 
         tmp = os.getcwd()

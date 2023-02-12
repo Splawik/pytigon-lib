@@ -333,11 +333,9 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     tname = self.template_name
                 else:
                     tname = self.template_name[0]
-                self[
-                    "Content-Disposition"
-                ] = "attachment; filename=%s" % tname.split("/")[-1].replace(
-                    ".html", ".pdf"
-                )
+                self["Content-Disposition"] = "attachment; filename=%s" % tname.split(
+                    "/"
+                )[-1].replace(".html", ".pdf")
                 pdf_stream = stream_from_html(
                     self.content,
                     stream_type="pdf",
@@ -351,11 +349,9 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     tname = self.template_name
                 else:
                     tname = self.template_name[0]
-                self[
-                    "Content-Disposition"
-                ] = "attachment; filename=%s" % tname.split("/")[-1].replace(
-                    ".html", ".spdf"
-                )
+                self["Content-Disposition"] = "attachment; filename=%s" % tname.split(
+                    "/"
+                )[-1].replace(".html", ".spdf")
                 spdf_stream = stream_from_html(
                     self.content,
                     stream_type="spdf",

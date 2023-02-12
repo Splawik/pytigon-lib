@@ -725,7 +725,13 @@ class GenericRows(object):
                 context["rel_field"] = self.rel_field
                 context["filter"] = self.kwargs["filter"]
                 context["model"] = self.model
-                context["target"] = self.kwargs["target"]
+                if "__" in self.kwargs["target"]:
+                    x = self.kwargs["target"].split("__", 1)
+                    context["target"] = x[0]
+                    context["version"] = x[1]
+                else:
+                    context["target"] = self.kwargs["target"]
+                    context["version"] = ""
                 context["sort"] = self.sort
                 context["order"] = self.order
                 parent_class.table_paths_to_context(self, context)
@@ -937,6 +943,15 @@ class GenericRows(object):
                             ".html", self.kwargs["target"][3:] + ".html"
                         ),
                     )
+                if "version" in self.request.GET:
+                    v = self.request.GET["version"]
+                    if "__" in v:
+                        x = v.split("__", 1)
+                        y = self.template_name.split("/")
+                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                    else:
+                        template2 = self.template_name.replace(".html", v + ".html")
+                    names.insert(0, template2)
                 return names
 
             def get_context_data(self, **kwargs):
@@ -1024,6 +1039,15 @@ class GenericRows(object):
                             ".html", self.kwargs["target"][3:] + ".html"
                         ),
                     )
+                if "version" in self.request.GET:
+                    v = self.request.GET["version"]
+                    if "__" in v:
+                        x = v.split("__", 1)
+                        y = self.template_name.split("/")
+                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                    else:
+                        template2 = self.template_name.replace(".html", v + ".html")
+                    names.insert(0, template2)
                 return names
 
             def get_context_data(self, **kwargs):
@@ -1183,6 +1207,16 @@ class GenericRows(object):
                             ".html", self.kwargs["target"][3:] + ".html"
                         ),
                     )
+                if "version" in self.request.GET:
+                    v = self.request.GET["version"]
+                    if "__" in v:
+                        x = v.split("__", 1)
+                        y = self.template_name.split("/")
+                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                    else:
+                        template2 = self.template_name.replace(".html", v + ".html")
+                    names.insert(0, template2)
+
                 return names
 
             def get_success_url(self):
@@ -1420,6 +1454,26 @@ class GenericRows(object):
                 #            context['prj'] = app.split('.')[0]
                 #        break
                 return context
+
+            def get_template_names(self):
+                names = super().get_template_names()
+                if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
+                    names.insert(
+                        0,
+                        self.template_name.replace(
+                            ".html", self.kwargs["target"][3:] + ".html"
+                        ),
+                    )
+                if "version" in self.request.GET:
+                    v = self.request.GET["version"]
+                    if "__" in v:
+                        x = v.split("__", 1)
+                        y = self.template_name.split("/")
+                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                    else:
+                        template2 = self.template_name.replace(".html", v + ".html")
+                    names.insert(0, template2)
+                return names
 
         VIEWS_REGISTER["delete"][self.base_model] = DeleteView
 
