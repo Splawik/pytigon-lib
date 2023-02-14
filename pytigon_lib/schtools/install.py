@@ -109,7 +109,7 @@ def install():
                 "auto", "auto@pytigon.com", "anawa"
             )
 
-    ret = make(data_path, prj_path)
+    ret = make(data_path, prj_path, prj_name)
     if ret:
         for pos in ret:
             print(pos)

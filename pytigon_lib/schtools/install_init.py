@@ -157,7 +157,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if not prjlib in sys.path:
             sys.path.append(prjlib)
         if test1 or test2 or test3:
-            ret = make(_data_path, os.path.join(_prj_path, prj))
+            ret = make(_data_path, os.path.join(_prj_path, prj), prj)
             if ret:
                 for pos in ret:
                     print(pos)
