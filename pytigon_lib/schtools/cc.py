@@ -38,7 +38,16 @@ from pytigon_lib.schtools.process import run, py_run
 from pytigon_lib.schtools.main_paths import get_main_paths, get_python_version
 
 
-os.environ["PY_ZIG"] = sys.executable + " -m ziglang"
+COMPILER_INITIALIZED = False
+
+
+def init_compiler():
+    global COMPILER_INITIALIZED
+    if not COMPILER_INITIALIZED:
+        import ziglang
+
+        os.environ["PY_ZIG"] = os.path.join(ziglang.__path__[0], "zig")
+        COMPILER_INITIALIZED = True
 
 
 def compile(build_zig, output_file_name=None):
@@ -53,8 +62,6 @@ def compile(build_zig, output_file_name=None):
         "../../",
     ]
     base_path = os.path.dirname(build_zig)
-    print(base_path)
-    print(cmd)
     cwd = os.getcwd()
     os.chdir(base_path)
     (ret_code, output, err) = run(cmd)
@@ -73,6 +80,7 @@ def make(data_path, files_path, prj_name=None):
 
     fl = p.glob("**/build.zig")
     for pos in fl:
+        init_compiler()
         c_filename = p.joinpath(pos).as_posix()
         if os.path.exists(c_filename):
             (ret_code, output, err) = compile(c_filename)
@@ -85,13 +93,42 @@ def make(data_path, files_path, prj_name=None):
                 for pos2 in err:
                     ret_errors.append(pos2)
 
-    fl = p.glob("**/setup.py")
+    fl = p.glob("**/build.py")
     for pos in fl:
+        init_compiler()
         c_filename = p.joinpath(pos).as_posix()
         if os.path.exists(c_filename):
             if prj_name:
-                cmd = [sys.executablem, "-m", "pip_" % prj_name, ".", "install"]
-                base_path = os.path.dirname(build_zig)
+                cmd = [sys.executable, "build.py"]
+                base_path = os.path.dirname(pos)
+                cwd = os.getcwd()
+                os.chdir(base_path)
+                (ret_code, output, err) = run(cmd)
+                os.chdir(cwd)
+
+                if ret_code:
+                    ret = ret_code
+                if output:
+                    for pos2 in output:
+                        ret_output.append(pos2)
+                if err:
+                    for pos2 in err:
+                        ret_errors.append(pos2)
+
+    fl = p.glob("**/setup.py")
+    for pos in fl:
+        init_compiler()
+        c_filename = p.joinpath(pos).as_posix()
+        if os.path.exists(c_filename):
+            if prj_name:
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "pytigon.ptig",
+                    "pip_%s" % prj_name,
+                    "install",
+                ]
+                base_path = os.path.dirname(pos)
                 cwd = os.getcwd()
                 os.chdir(base_path)
                 (ret_code, output, err) = run(cmd)
