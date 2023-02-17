@@ -2,9 +2,22 @@ from django.urls import path
 from django.db.models import Model
 
 from rest_framework import serializers, generics
+from rest_framework.permissions import IsAuthenticated
+from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
 
 
-def create_api_for_models(models, urlpatterns, include=None, exclude=None):
+def create_api_for_models(
+    models,
+    urlpatterns,
+    include=None,
+    exclude=None,
+    permission_classes_list_create=[
+        IsAuthenticated | TokenHasReadWriteScope,
+    ],
+    permission_classes_update_destroy=[
+        IsAuthenticated | TokenHasReadWriteScope,
+    ],
+):
     for model_name in dir(models):
         model = getattr(models, model_name)
         model2 = model
@@ -29,12 +42,16 @@ def create_api_for_models(models, urlpatterns, include=None, exclude=None):
                 )
 
                 class _ModelListCreate(generics.ListCreateAPIView):
+                    if permission_classes_list_create:
+                        permission_classes = permission_classes_list_create
                     queryset = model.objects.all()
                     serializer_class = serializer
 
                 class _ModelRetrieveUpdateDestroy(
                     generics.RetrieveUpdateDestroyAPIView
                 ):
+                    if permission_classes_update_destroy:
+                        permission_classes = permission_classes_update_destroy
                     queryset = model.objects.all()
                     serializer_class = serializer
 
