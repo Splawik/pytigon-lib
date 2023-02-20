@@ -17,19 +17,21 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-"""
-Form example in string format
-Co to jest?
-Nazwisko
-Nazwisko2::*
-imie//Imię!::*
-Opis::_
-Data::####.##.##
-Wiek::0
-Kwota!::9.99
-Wybierz::[opcja1;opcja2
-opcja3]
-"""
+# Form example in string format
+# """
+# What is this?
+# Name
+# Second name::*
+# name//Name!::*
+# Description::_
+# Date::####.##.##
+# Quantity::0
+# Amount!::9.99
+# Choose::[option1;option2
+# option3]
+# Age::000
+# Code::****
+# """
 
 from django import forms
 from pytigon_lib.schdjangoext import fields as ext_fields
@@ -106,7 +108,7 @@ def _read_form_line(line):
                         pos,
                         pos,
                     )
-                    for pos in frm[1:-1].replace(',',';').split(";")
+                    for pos in frm[1:-1].replace(",", ";").split(";")
                     if pos
                 ]
             )

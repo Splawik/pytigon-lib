@@ -37,7 +37,7 @@ from pytigon_lib.schtools.platform_info import platform_name
 
 if platform_name() != "Emscripten":
     import httpx
-from pytigon_lib.schhttptools.wsgi_bridge import get_or_post as wsgi_get_or_post
+
 from pytigon_lib.schhttptools.asgi_bridge import get_or_post, websocket
 from pytigon_lib.schtools.platform_info import platform_name
 from django.core.wsgi import get_wsgi_application
