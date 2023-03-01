@@ -265,7 +265,12 @@ class OOXmlDocTransform(OdfDocTransform):
                     elif s.startswith(":0"):
                         pos.remove(v)
                         pos.attrib["t"] = "n"
-                        pos.append(etree.XML("<v>%s</v>" % escape(s[2:])))
+                        if s[2:]:
+                            l = s[2:].replace(',', '.')
+                        else:
+                            l = s[2:]
+                        #pos.append(etree.XML("<v>%s</v>" % escape(s[2:])))
+                        pos.append(etree.XML("<v>%s</v>" % escape(l)))
                     elif s.startswith(":*"):
                         pos.attrib["t"] = "inlineStr"
                         pos.remove(v)
