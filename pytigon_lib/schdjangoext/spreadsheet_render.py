@@ -47,14 +47,18 @@ template_dirs = getattr(settings, "TEMPLATES")[0]["DIRS"]
 class OdfDocTemplateTransform(OdfDocTransform):
     def process_template(self, doc_str, context):
         return Template(
-            "{% load exsyntax %}{% load exfiltry %}{% load expr %}" + doc_str
+            "{% load exsyntax %}{% load exfiltry %}{% load expr %}{% load l10n %}{% localize off %}"
+            + doc_str
+            + "{% endlocalize %}"
         ).render(context)
 
 
 class OOXmlDocTemplateTransform(OOXmlDocTransform):
     def process_template(self, doc_str, context):
         return Template(
-            "{% load exsyntax %}{% load exfiltry %}{% load expr %}" + doc_str
+            "{% load exsyntax %}{% load exfiltry %}{% load expr %}{% load l10n %}{% localize off %}"
+            + doc_str
+            + "{% endlocalize %}"
         ).render(context)
 
 
