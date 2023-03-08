@@ -3,7 +3,7 @@ lxml
 httpx
 fs
 Django
-django-environ-2
+django-environ
 pyexcel
 pyexcel-xlsx
 pyexcel-ods3
