@@ -191,10 +191,13 @@ class ImgTag(AtomTag):
                     else:
                         self.img = None
                 else:
-                    image = PIL.Image.open(io.BytesIO(img))
-                    output = io.BytesIO()
-                    image.save(output, "PNG")
-                    self.img = output.getvalue()
+                    try:
+                        image = PIL.Image.open(io.BytesIO(img))
+                        output = io.BytesIO()
+                        image.save(output, "PNG")
+                        self.img = output.getvalue()
+                    except:
+                        pass
             else:
                 self.img = None
 
