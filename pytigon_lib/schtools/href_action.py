@@ -315,17 +315,20 @@ class Action:
                 standard_web_browser, action2, "target", "_blank"
             )
 
-        btn_size = settings.BOOTSTRAP_BUTTON_SIZE_CLASS
+        if "btn_size" in context:
+            btn_size = context["btn_size"]
+        else:
+            btn_size = settings.BOOTSTRAP_BUTTON_SIZE_CLASS
 
         if not self.tag_class:
             self.tag_class = get_action_parm(
                 standard_web_browser, action2, "class"
-            ).replace("{{btn_size}}", "btn_size")
+            ).replace("{{btn_size}}", btn_size)
         else:
             if self.tag_class.startswith("+"):
                 self.tag_class = (
                     get_action_parm(standard_web_browser, action2, "class").replace(
-                        "{{btn_size}}", "btn_size"
+                        "{{btn_size}}", btn_size
                     )
                     + " "
                     + self.tag_class[1:]
@@ -338,12 +341,12 @@ class Action:
         if not self.attrs:
             self.attrs = get_action_parm(
                 standard_web_browser, action2, "attrs"
-            ).replace("{{btn_size}}", "btn_size")
+            ).replace("{{btn_size}}", btn_size)
         else:
             if self.attrs.startswith("+"):
                 self.attrs = (
                     get_action_parm(standard_web_browser, action2, "attrs").replace(
-                        "{{btn_size}}", "btn_size"
+                        "{{btn_size}}", btn_size
                     )
                     + " "
                     + self.attrs[1:]
