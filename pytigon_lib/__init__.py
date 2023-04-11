@@ -91,5 +91,10 @@ def init_paths(prj_name=None, env_path=None):
     if not p3 in sys.path:
         sys.path.append(p3)
 
+    if prj_name:
+        prjlib_path = os.path.join(cfg["DATA_PATH"], prj_name, "prjlib")
+        if not prjlib_path in sys.path:
+            sys.path.append(prjlib_path)
+
 
 #    environ['LD_LIBRARY_PATH'] = os.path.join(cfg['DATA_PATH'], "ext_prg", "tcc")

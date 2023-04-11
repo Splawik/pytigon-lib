@@ -25,6 +25,7 @@ from distutils.dir_util import copy_tree
 import configparser
 from pytigon_lib.schtools.process import py_manage
 from pytigon_lib.schtools.cc import make
+from pytigon_lib.schtools.process import py_run
 
 
 def _mkdir(path, ext=None):
@@ -56,7 +57,40 @@ def upgrade_test(zip_path, out_path):
     return False
 
 
+def pip_install(pip_str, prjlib, confirm=False):
+    packages = [x.strip() for x in pip_str.split(" ") if x]
+    print("pip install: ", pip_str)
+    exit_code, output_tab, err_tab = py_run(
+        [
+            "-m",
+            "pip",
+            "--disable-pip-version-check",
+            "install",
+            f"--target={prjlib}",
+            "--upgrade",
+        ]
+        + packages
+    )
+    success = False
+    if output_tab:
+        for pos in output_tab:
+            if pos:
+                print("pip info: ", pos)
+            if "Successfully installed" in pos:
+                success = True
+    if err_tab:
+        for pos in err_tab:
+            if pos:
+                print("pip error: ", pos)
+
+    if success and confirm:
+        with open(os.path.join(prjlib, "install.txt"), "wt") as f:
+            f.write("OK")
+
+
 def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
+    if prj == "_schall":
+        return
     _root_path = os.path.normpath(root_path)
     _data_path = os.path.normpath(data_path)
     _prj_path = os.path.normpath(prj_path)
@@ -152,7 +186,21 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         for p in paths:
             _mkdir(p)
 
-    prjlib = os.path.join(os.path.join(_prj_path, prj), "prjlib")
+    prjlib = os.path.join(_data_path, prj, "prjlib")
+    if not os.path.exists(prjlib) or not os.path.exists(
+        os.path.join(prjlib, "install.txt")
+    ):
+        if not os.path.exists(prjlib):
+            os.mkdir(prjlib)
+        config_file = os.path.join(prj_path, prj, "install.ini")
+        if os.path.exists(config_file):
+            config = configparser.ConfigParser()
+            config.read(config_file)
+            if "DEFAULT" in config:
+                pip_str = config["DEFAULT"].get("PIP", "")
+                if pip_str:
+                    pip_install(pip_str, prjlib, confirm=True)
+
     if os.path.exists(prjlib):
         if not prjlib in sys.path:
             sys.path.append(prjlib)
