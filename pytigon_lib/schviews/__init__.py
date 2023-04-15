@@ -171,18 +171,43 @@ def view_editor(
             # if type(buf)==str:
             #    buf = buf.encode('utf-8')
             obj = model.objects.get(id=pk)
-            setattr(obj, field_edit_name, buf)
+            if "fragment" in request.GET:
+                buf2 = getattr(obj, field_edit_name)
+                if request.GET["fragment"] == "header":
+                    if "$$$" in buf2:
+                        buf = buf + "$$$" + buf2.split("$$$")[1]
+                elif request.GET["fragment"] == "footer":
+                    buf = buf2.split("$$$")[0] + "$$$" + buf
+                setattr(obj, field_edit_name, buf)
+            else:
+                setattr(obj, field_edit_name, buf)
             save(obj, request, "editor", {"field": field_edit_name})
             return HttpResponse("OK")
     else:
         obj = model.objects.get(id=pk)
         table_name = model._meta.object_name
         txt = getattr(obj, field_edit_name)
+        if "fragment" in request.GET:
+            if request.GET["fragment"] == "header":
+                txt = txt.split("$$$")[0]
+            elif request.GET["fragment"] == "footer":
+                if "$$$" in txt:
+                    txt = txt.split("$$$")[1]
+                else:
+                    txt = ""
+
         f = None
         for field in obj._meta.fields:
             if field.name == field_edit_name:
                 f = field
                 break
+
+        x = request.get_full_path().split("?", 1)
+        if len(x) > 1:
+            get_param = "?" + x[1]
+        else:
+            get_param = ""
+
         if field_name:
             save_path = (
                 app
@@ -197,6 +222,7 @@ def view_editor(
                 + "/"
                 + field_edit_name
                 + "/py/editor/"
+                + get_param
             )
         else:
             save_path = (
@@ -208,6 +234,7 @@ def view_editor(
                 + "/"
                 + field_edit_name
                 + "/py/editor/"
+                + get_param
             )
         c = {
             "app": app,
