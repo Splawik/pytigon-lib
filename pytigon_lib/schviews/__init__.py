@@ -173,6 +173,8 @@ def view_editor(
             obj = model.objects.get(id=pk)
             if "fragment" in request.GET:
                 buf2 = getattr(obj, field_edit_name)
+                if buf2 == None:
+                    buf2 = ""
                 if request.GET["fragment"] == "header":
                     if "$$$" in buf2:
                         buf = buf + "$$$" + buf2.split("$$$")[1]
@@ -187,6 +189,8 @@ def view_editor(
         obj = model.objects.get(id=pk)
         table_name = model._meta.object_name
         txt = getattr(obj, field_edit_name)
+        if txt == None:
+            txt = ""
         if "fragment" in request.GET:
             if request.GET["fragment"] == "header":
                 txt = txt.split("$$$")[0]
