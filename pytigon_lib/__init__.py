@@ -83,6 +83,8 @@ def init_paths(prj_name=None, env_path=None):
     p1 = os.path.join(cfg["ROOT_PATH"], "ext_lib")
     p2 = os.path.join(cfg["ROOT_PATH"], "appdata", "plugins")
     p3 = os.path.join(cfg["DATA_PATH"], "plugins")
+    if prj_name:
+        p4 = os.path.join(cfg["DATA_PATH"], prj_name, "syslib")
 
     if not p1 in sys.path:
         sys.path.append(p1)
@@ -90,6 +92,8 @@ def init_paths(prj_name=None, env_path=None):
         sys.path.append(p2)
     if not p3 in sys.path:
         sys.path.append(p3)
+    if prj_name and not p4 in sys.path:
+        sys.path.append(p4)
 
     if prj_name:
         prjlib_path = os.path.join(cfg["DATA_PATH"], prj_name, "prjlib")

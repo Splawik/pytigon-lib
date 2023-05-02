@@ -3,6 +3,7 @@ import types
 import os
 import importlib.abc
 from importlib.machinery import ModuleSpec
+from django.conf import settings
 
 
 class DBModuleLoader(importlib.abc.SourceLoader):
@@ -52,3 +53,40 @@ class DBFinder(importlib.abc.MetaPathFinder):
 
 
 sys.meta_path.insert(0, DBFinder())
+
+
+class ModuleStruct:
+    def __init__(self, globals_dict, locals_dict):
+        self.__dict__.update(globals_dict)
+        self.__dict__.update(locals_dict)
+
+
+def run_code_from_db_field(
+    src_name, obj, field_name, function_name, locals_dict, globals_dict, **argv
+):
+    field = getattr(obj, field_name)
+    if field:
+        gen_path = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "syslib")
+        gen_name = src_name.format(**(locals_dict | globals_dict))
+
+        src_file_path = os.path.join(gen_path, gen_name)
+
+        if os.path.exists(src_file_path):
+            field_utf = field.encode("utf-8")
+            file_stats = os.stat(src_file_path)
+            if file_stats.st_size != len(field_utf):
+                with open(src_file_path, "wb") as f:
+                    f.write(field_utf)
+        else:
+            os.makedirs(gen_path, exist_ok=True)
+            with open(src_file_path, "wb") as f:
+                f.write(field.encode("utf-8"))
+
+        x = __import__(gen_name.replace(".py", ""))
+        fun = getattr(x, function_name)
+        return fun(**argv)
+
+        # exec(field, globals(), locals())
+        # return locals()["function_name"](**argv)
+    else:
+        return None

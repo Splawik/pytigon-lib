@@ -124,15 +124,24 @@ def _read_form_line(line):
     return name, field_type, title, required, kwargs
 
 
-def form_from_str(input_str, init_data={}, base_form_class=forms.Form, prefix=""):
+def form_from_str(
+    input_str,
+    init_data={},
+    base_form_class=forms.Form,
+    prefix="",
+    globals_dict=globals(),
+    locals_dict=locals(),
+):
     if "base_form" in input_str:
         make_form_str = (
             "def make_form_class(base_form, init_data):\n"
             + "\n".join(["    " + pos for pos in input_str.split("\n")])
             + "\n"
         )
-        exec(make_form_str)
-        _Form = locals()["make_form_class"](base_form_class, init_data)
+        d = globals_dict | locals_dict
+        l = {}
+        exec(make_form_str, d, l)
+        _Form = l["make_form_class"](base_form_class, init_data)
         return _Form
     else:
 

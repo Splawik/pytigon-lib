@@ -209,3 +209,8 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             if ret:
                 for pos in ret:
                     print(pos)
+    syslib = os.path.join(_data_path, prj, "syslib")
+    if not os.path.exists(syslib):
+        os.makedirs(syslib)
+        with open(os.path.join(syslib, "__init__.py"), "wt") as f:
+            f.write(" ")
