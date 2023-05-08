@@ -57,7 +57,7 @@ def upgrade_test(zip_path, out_path):
     return False
 
 
-def pip_install(pip_str, prjlib, confirm=False):
+def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
     packages = [x.strip() for x in pip_str.split(" ") if x]
     print("pip install: ", pip_str)
     exit_code, output_tab, err_tab = py_run(
@@ -67,8 +67,14 @@ def pip_install(pip_str, prjlib, confirm=False):
             "--disable-pip-version-check",
             "install",
             f"--target={prjlib}",
-            "--upgrade",
         ]
+        + (
+            [
+                "--upgrade",
+            ]
+            if upgrade
+            else []
+        )
         + packages
     )
     success = False
@@ -86,6 +92,20 @@ def pip_install(pip_str, prjlib, confirm=False):
     if success and confirm:
         with open(os.path.join(prjlib, "install.txt"), "wt") as f:
             f.write("OK")
+
+
+def upgrade_local_libs():
+    from django.conf import settings
+
+    prjlib = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "prjlib")
+    config_file = os.path.join(settings.PRJ_PATH, settings.PRJ_NAME, "install.ini")
+    if os.path.exists(config_file):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        if "DEFAULT" in config:
+            pip_str = config["DEFAULT"].get("PIP", "")
+            if pip_str:
+                pip_install(pip_str, prjlib, confirm=True, upgrade=True)
 
 
 def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
