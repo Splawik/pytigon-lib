@@ -188,7 +188,6 @@ if (
 
         return func
 
-
 else:
 
     class OverwritableCallable:

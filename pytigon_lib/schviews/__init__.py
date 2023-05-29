@@ -809,7 +809,11 @@ class GenericRows(object):
                     #    else:
                     #        context['parent_obj'] = None
 
-                return transform_extra_context(context, self.extra_context)
+                context["kwargs"] = self.kwargs
+                context["GET"] = self.request.GET
+                context["POST"] = self.request.POST
+                ret = transform_extra_context(context, self.extra_context)
+                return ret
 
             def get_queryset(self):
                 ret = None
@@ -818,7 +822,7 @@ class GenericRows(object):
                     parent = None
                     c = self._context_for_tree()
                     if hasattr(self.model, "filter"):
-                        ret = self.model.filter(filter)
+                        ret = self.model.filter(filter, self, self.request)
                     else:
                         if self.queryset:
                             ret = self.queryset
@@ -857,7 +861,7 @@ class GenericRows(object):
                             filter = self.kwargs["filter"]
                             if filter and filter != "-":
                                 if hasattr(self.model, "filter"):
-                                    ret = self.model.filter(filter)
+                                    ret = self.model.filter(filter, self, self.request)
                                 else:
                                     ret = self.model.objects.all()
                             else:
@@ -1118,7 +1122,6 @@ class GenericRows(object):
                 #    if not form:
                 #        form = self.get_form(form_class)
                 # else:
-
                 form = self.get_form(self.form_class)
 
                 if form:
@@ -1268,9 +1271,17 @@ class GenericRows(object):
                         try:
                             self.object.parent = self.pmodel.objects.get(id=ppk)
                         except:
-                            self.object.parent = self.pmodel.__bases__[0].objects.get(
-                                id=ppk
-                            )
+                            try:
+                                self.object.parent = self.pmodel.__bases__[
+                                    0
+                                ].objects.get(id=ppk)
+                            except:
+                                self.object.parent = (
+                                    self.pmodel.__bases__[0]
+                                    .__bases__[0]
+                                    .objects.get(id=ppk)
+                                )
+
                 if hasattr(self.model, "init_new"):
                     if kwargs["add_param"] and kwargs["add_param"] != "-":
                         self.init_form = self.object.init_new(
