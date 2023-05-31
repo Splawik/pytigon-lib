@@ -822,7 +822,9 @@ class GenericRows(object):
                     filter = self.kwargs["filter"]
                     parent = None
                     c = self._context_for_tree()
-                    if hasattr(self.model, "filter"):
+                    if hasattr(self.model, "filter") and not (
+                        type(filter) == str and filter.isdigit()
+                    ):
                         ret = self.model.filter(filter, self, self.request)
                     else:
                         if self.queryset:
