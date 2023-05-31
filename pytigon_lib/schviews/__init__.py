@@ -626,6 +626,7 @@ class GenericRows(object):
                         names.insert(
                             0, self.template_name.replace(".html", target2 + ".html")
                         )
+                print(names)
                 return names
 
             def get_paginate_by(self, queryset):
@@ -1268,19 +1269,26 @@ class GenericRows(object):
                 if self.field:
                     ppk = int(kwargs["parent_pk"])
                     if ppk > 0:
-                        try:
-                            self.object.parent = self.pmodel.objects.get(id=ppk)
-                        except:
+                        m = self.pmodel
+                        while m:
                             try:
-                                self.object.parent = self.pmodel.__bases__[
-                                    0
-                                ].objects.get(id=ppk)
+                                self.object.parent = m.objects.get(id=ppk)
+                                m = None
                             except:
-                                self.object.parent = (
-                                    self.pmodel.__bases__[0]
-                                    .__bases__[0]
-                                    .objects.get(id=ppk)
-                                )
+                                m = m.__bases__[0]
+                        # try:
+                        #    self.object.parent = self.pmodel.objects.get(id=ppk)
+                        # except:
+                        #    try:
+                        #        self.object.parent = self.pmodel.__bases__[
+                        #            0
+                        #        ].objects.get(id=ppk)
+                        #    except:
+                        #        self.object.parent = (
+                        #            self.pmodel.__bases__[0]
+                        #            .__bases__[0]
+                        #            .objects.get(id=ppk)
+                        #        )
 
                 if hasattr(self.model, "init_new"):
                     if kwargs["add_param"] and kwargs["add_param"] != "-":
