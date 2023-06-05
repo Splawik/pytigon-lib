@@ -31,6 +31,21 @@ from pytigon_lib.schtools.schjson import ComplexEncoder, ComplexDecoder
 from pytigon_lib.schdjangoext.fastform import form_from_str
 
 
+class CallProxy:
+    def __init__(self, obj, parameters):
+        self.obj = obj
+        x = parameters.split("__")
+        self.fun = getattr(obj, x[0])
+        if len(x) > 0:
+            self.parameters = x[1:]
+
+    def call(self, *args):
+        if self.parameters:
+            return self.fun(*(self.args + args))
+        else:
+            return self.fun(*args)
+
+
 class JSONModel(models.Model):
     class Meta:
         abstract = True
@@ -49,6 +64,8 @@ class JSONModel(models.Model):
             if self.jsondata and name[5:] in self.jsondata:
                 return self.jsondata[name[5:]]
             return None
+        elif name.startswith("call__"):
+            return CallProxy(self, name[6:])
         return super().__getattribute__(name)
 
     def __setattr__(self, name, value):

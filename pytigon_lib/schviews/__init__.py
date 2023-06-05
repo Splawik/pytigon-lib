@@ -869,7 +869,6 @@ class GenericRows(object):
                                     ret = self.model.objects.all()
                             else:
                                 ret = self.model.objects.all()
-
                     ret = filter_by_permissions(self, self.model, ret, self.request)
                     if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
                         try:
