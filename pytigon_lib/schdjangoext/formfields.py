@@ -28,24 +28,32 @@ class ModelMultipleChoiceFieldWithIcon(forms.ModelMultipleChoiceField):
 
 class Select2Field(forms.ChoiceField):
     def __init__(self, choices=(), attrs={}, **kwargs):
+        if not "data-minimum-input-length" in attrs:
+            attrs["data-minimum-input-length"] = 0
         widget = Select2Widget(attrs=attrs, choices=choices)
         super().__init__(choices=choices, widget=widget, **kwargs)
 
 
 class Select2MultipleField(forms.MultipleChoiceField):
     def __init__(self, choices=(), attrs={}, **kwargs):
+        if not "data-minimum-input-length" in attrs:
+            attrs["data-minimum-input-length"] = 0
         widget = Select2MultipleWidget(attrs=attrs, choices=choices)
         super().__init__(choices=choices, widget=widget, **kwargs)
 
 
 class HeavySelect2Field(forms.ChoiceField):
     def __init__(self, data_url, attrs={}, **kwargs):
+        if not "data-minimum-input-length" in attrs:
+            attrs["data-minimum-input-length"] = 0
         widget = HeavySelect2Widget(data_url=data_url, attrs=attrs)
         super().__init__(widget=widget, **kwargs)
 
 
 class HeavySelect2MultipleField(forms.MultipleChoiceField):
     def __init__(self, data_url, attrs={}, **kwargs):
+        if not "data-minimum-input-length" in attrs:
+            attrs["data-minimum-input-length"] = 0
         widget = HeavySelect2MultipleWidget(data_url=data_url, attrs=attrs)
         super().__init__(widget=widget, **kwargs)
 
@@ -60,6 +68,8 @@ class ModelSelect2Field(forms.ChoiceField):
         empty_label="-----",
         **kwargs
     ):
+        if not "data-minimum-input-length" in attrs:
+            attrs["data-minimum-input-length"] = 0
         widget = ModelSelect2Widget(
             model=model,
             queryset=queryset,
@@ -80,6 +90,8 @@ class ModelSelect2MultipleField(forms.MultipleChoiceField):
         empty_label="-----",
         **kwargs
     ):
+        if not "data-minimum-input-length" in attrs:
+            attrs["data-minimum-input-length"] = 0
         widget = ModelSelect2MultipleWidget(
             model=model,
             queryset=queryset,

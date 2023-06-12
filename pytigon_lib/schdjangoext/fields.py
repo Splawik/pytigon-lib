@@ -39,7 +39,9 @@ from pytigon_lib.schdjangoext.formfields import (
 class ModelSelect2WidgetExt(ModelSelect2Widget):
     input_type = "select2"
 
-    def __init__(self, href1=None, href2=None, label="", *argi, **argv):
+    def __init__(
+        self, href1=None, href2=None, label="", minimum_input_length=0, **argv
+    ):
         if href1:
             if "attrs" in argv:
                 argv["attrs"]["href1"] = href1
@@ -50,10 +52,25 @@ class ModelSelect2WidgetExt(ModelSelect2Widget):
                 argv["attrs"]["href2"] = href2
             else:
                 argv["attrs"] = {"href2": href2}
-        ModelSelect2Widget.__init__(self, *argi, label=label, **argv)
+        if "attrs" in argv:
+            argv["attrs"]["data-minimum-input-length"] = minimum_input_length
+            argv["attrs"]["class"] = "form-control"
+        else:
+            argv["attrs"] = {"data-minimum-input-length": minimum_input_length}
+            argv["attrs"]["class"] = "form-control"
+        ModelSelect2Widget.__init__(self, label=label, **argv)
 
 
 class ModelSelect2MultipleWidgetExt(ModelSelect2MultipleWidget):
+    def __init__(self, label="", minimum_input_length=0, **argv):
+        if "attrs" in argv:
+            argv["attrs"]["data-minimum-input-length"] = minimum_input_length
+            argv["attrs"]["class"] = "form-control"
+        else:
+            argv["attrs"] = {"data-minimum-input-length": minimum_input_length}
+            argv["attrs"]["class"] = "form-control"
+        ModelSelect2MultipleWidget.__init__(self, label=label, **argv)
+
     input_type = "select2"
 
 
@@ -68,6 +85,11 @@ class ForeignKey(models.ForeignKey):
             del kwargs["search_fields"]
         else:
             self.search_fields = None
+        if "filter" in kwargs:
+            self.filter = kwargs["filter"]
+            del kwargs["filter"]
+        else:
+            self.filter = "-"
         if "query" in kwargs:
             self.query = kwargs["query"]
             del kwargs["query"]
@@ -83,11 +105,21 @@ class ForeignKey(models.ForeignKey):
             del kwargs["can_add"]
         else:
             self.can_add = False
+        if "minimum_input_length" in kwargs:
+            self.minimum_input_length = kwargs["minimum_input_length"]
+            del kwargs["minimum_input_length"]
+        else:
+            self.minimum_input_length = 0
+        if "app_template" in kwargs:
+            self.app_template = kwargs["app_template"]
+            del kwargs["app_template"]
+        else:
+            self.app_template = ""
 
         super().__init__(*args, **kwargs)
+
         if len(args) > 0:
             self.to = args[0]
-        self.filter = "-"
 
     def formfield(self, **kwargs):
         if type(self.to) == str:
@@ -97,8 +129,13 @@ class ForeignKey(models.ForeignKey):
 
         if self.show_form:
             href1 = make_href(
-                "/%s/table/%s/%s/form/get/"
-                % (to._meta.app_label, to._meta.object_name, self.filter)
+                "/%s/table/%s/%s/form%s/get/"
+                % (
+                    to._meta.app_label,
+                    to._meta.object_name,
+                    self.filter,
+                    "__" + self.app_template if self.app_template else "",
+                )
             )
         else:
             href1 = None
@@ -112,13 +149,14 @@ class ForeignKey(models.ForeignKey):
 
         field = self
 
-        if self.search_fields:
+        if self.search_fields or self.query:
             _search_fields = self.search_fields
             _query = self.query
+            _minimum_input_length = self.minimum_input_length
 
             class _Field(forms.ModelChoiceField):
                 def __init__(self, queryset, *argi, **argv):
-                    nonlocal _query, _search_fields
+                    nonlocal _query, _search_fields, _minimum_input_length
                     if _query:
                         if "Q" in _query:
                             queryset = queryset.filter(_query["Q"])
@@ -127,15 +165,18 @@ class ForeignKey(models.ForeignKey):
                         if "limmit" in _query:
                             queryset = queryset[: _query["limit"]]
 
-                    widget = ModelSelect2WidgetExt(
-                        href1,
-                        href2,
-                        field.verbose_name,
-                        queryset=queryset,
-                        search_fields=_search_fields,
-                    )
-                    widget.attrs["style"] = "width:400px;"
-                    argv["widget"] = widget
+                    if _search_fields:
+                        widget = ModelSelect2WidgetExt(
+                            href1,
+                            href2,
+                            field.verbose_name,
+                            queryset=queryset,
+                            search_fields=_search_fields,
+                            minimum_input_length=_minimum_input_length,
+                        )
+                        # widget.attrs["style"] = "width:400px;"
+                        widget.attrs["style"] = "width:100%;"
+                        argv["widget"] = widget
                     forms.ModelChoiceField.__init__(self, queryset, *argi, **argv)
 
             defaults = {
@@ -145,6 +186,10 @@ class ForeignKey(models.ForeignKey):
             defaults = {}
         defaults.update(**kwargs)
         return super().formfield(**defaults)
+
+    def set(self, parameters):
+        for key, value in parameters.items():
+            setattr(self, key, value)
 
 
 class ManyToManyField(models.ManyToManyField):
@@ -163,22 +208,26 @@ class ManyToManyField(models.ManyToManyField):
             del kwargs["query"]
         else:
             self.query = None
-        if False:
-            if "show_form" in kwargs:
-                self.show_form = kwargs["show_form"]
-                del kwargs["show_form"]
-            else:
-                self.show_form = True
-            if "can_add" in kwargs:
-                self.can_add = kwargs["can_add"]
-                del kwargs["can_add"]
-            else:
-                self.can_add = False
+        if "filter" in kwargs:
+            self.filter = kwargs["filter"]
+            del kwargs["filter"]
+        else:
+            self.filter = "-"
+        if "minimum_input_length" in kwargs:
+            self.minimum_input_length = kwargs["minimum_input_length"]
+            del kwargs["minimum_input_length"]
+        else:
+            self.minimum_input_length = 0
+        if "app_template" in kwargs:
+            self.app_template = kwargs["app_template"]
+            del kwargs["app_template"]
+        else:
+            self.app_template = ""
 
         super().__init__(*args, **kwargs)
+
         if len(args) > 0:
             self.to = args[0]
-        self.filter = "-"
 
     def formfield(self, **kwargs):
         if type(self.to) == str:
@@ -188,13 +237,14 @@ class ManyToManyField(models.ManyToManyField):
 
         field = self
 
-        if self.search_fields:
+        if self.search_fields or self.query:
             _search_fields = self.search_fields
             _query = self.query
+            _minimum_input_length = self.minimum_input_length
 
             class _Field(forms.ModelMultipleChoiceField):
                 def __init__(self, queryset, *argi, **argv):
-                    nonlocal _query, _search_fields
+                    nonlocal _query, _search_fields, _minimum_input_length
                     if _query:
                         if "Q" in _query:
                             queryset = queryset.filter(_query["Q"])
@@ -203,13 +253,16 @@ class ManyToManyField(models.ManyToManyField):
                         if "limmit" in _query:
                             queryset = queryset[: _query["limit"]]
 
-                    widget = ModelSelect2MultipleWidgetExt(
-                        label=field.verbose_name,
-                        queryset=queryset,
-                        search_fields=_search_fields,
-                    )
-                    widget.attrs["style"] = "width:400px;"
-                    argv["widget"] = widget
+                    if _search_fields:
+                        widget = ModelSelect2MultipleWidgetExt(
+                            label=field.verbose_name,
+                            queryset=queryset,
+                            search_fields=_search_fields,
+                            minimum_input_length=_minimum_input_length,
+                        )
+                        widget.attrs["style"] = "width:100%;"
+                        argv["widget"] = widget
+
                     forms.ModelMultipleChoiceField.__init__(
                         self, queryset, *argi, **argv
                     )
@@ -222,6 +275,10 @@ class ManyToManyField(models.ManyToManyField):
         defaults.update(**kwargs)
         return super().formfield(**defaults)
 
+    def set(self, parameters):
+        for key, value in parameters.items():
+            setattr(self, key, value)
+
 
 class HiddenForeignKey(models.ForeignKey):
     """Version of django models.ForeignKey class with hidden widget."""
@@ -231,10 +288,6 @@ class HiddenForeignKey(models.ForeignKey):
         field.widget = HiddenInput()
         field.widget.choices = None
         return field
-
-
-# class ManyToManyField(models.ManyToManyField):
-#    pass
 
 
 class ManyToManyFieldWithIcon(models.ManyToManyField):
