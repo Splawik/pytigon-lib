@@ -732,7 +732,24 @@ class GenericRows(object):
                     self.kwargs["page"] = int(int(offset) / 64) + 1
 
                 views_module = self.base_class.table.views_module
-                form_name = "_FilterForm" + self.model._meta.object_name
+
+                form_name = None
+                if "target" in self.kwargs and "__" in self.kwargs["target"]:
+                    template_name = self.kwargs["target"].split("__")[-1]
+                    form_name = (
+                        "_FilterForm"
+                        + self.model._meta.object_name
+                        + "_"
+                        + template_name
+                    )
+                    if not hasattr(views_module, form_name):
+                        print(dir(views_module))
+                        print(form_name, views_module)
+                        form_name = None
+                if not form_name:
+                    form_name = "_FilterForm" + self.model._meta.object_name
+                    form_name_alt = None
+
                 if hasattr(views_module, form_name):
                     if request.method == "POST":
                         self.form = getattr(views_module, form_name)(request.POST)
