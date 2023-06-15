@@ -31,6 +31,7 @@ except:
     from urllib import quote_plus, unquote_plus
 
 import datetime
+from decimal import Decimal
 
 
 class ComplexEncoder(json.JSONEncoder):
