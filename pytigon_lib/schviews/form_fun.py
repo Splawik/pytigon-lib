@@ -64,10 +64,16 @@ def form(
     #            prj = app.split('.')[0]
     #        break
 
-    if request.POST or request.FILES:
-        f = form_class(request.POST, request.FILES)
-    else:
-        f = form_class()
+    f = None
+    if hasattr(form_class, "get_form_arguments"):
+        argv = form_class.get_form_arguments(request)
+        if argv != None:
+            f = form_class(**argv)
+    if f == None:
+        if request.POST or request.FILES:
+            f = form_class(request.POST, request.FILES)
+        else:
+            f = form_class()
 
     if hasattr(f, "preprocess_request"):
         post = f.preprocess_request(request)

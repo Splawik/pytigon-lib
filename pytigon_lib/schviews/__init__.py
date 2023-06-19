@@ -626,7 +626,6 @@ class GenericRows(object):
                         names.insert(
                             0, self.template_name.replace(".html", target2 + ".html")
                         )
-                print(names)
                 return names
 
             def get_paginate_by(self, queryset):
@@ -963,7 +962,6 @@ class GenericRows(object):
                 model = self.base_model
 
             template_name = self.template_name
-
             title = self.title
             response_class = ExtTemplateResponse
 

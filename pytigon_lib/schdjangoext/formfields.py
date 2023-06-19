@@ -58,7 +58,7 @@ class HeavySelect2MultipleField(forms.MultipleChoiceField):
         super().__init__(widget=widget, **kwargs)
 
 
-class ModelSelect2Field(forms.ChoiceField):
+class ModelSelect2Field(forms.ModelChoiceField):
     def __init__(
         self,
         model=None,
@@ -77,10 +77,10 @@ class ModelSelect2Field(forms.ChoiceField):
             empty_label=empty_label,
             attrs=attrs,
         )
-        super().__init__(widget=widget, **kwargs)
+        super().__init__(widget=widget, queryset=queryset, **kwargs)
 
 
-class ModelSelect2MultipleField(forms.MultipleChoiceField):
+class ModelSelect2MultipleField(forms.ModelMultipleChoiceField):
     def __init__(
         self,
         model=None,
@@ -99,4 +99,4 @@ class ModelSelect2MultipleField(forms.MultipleChoiceField):
             empty_label=empty_label,
             attrs=attrs,
         )
-        super().__init__(widget=widget, **kwargs)
+        super().__init__(widget=widget, queryset=queryset, **kwargs)

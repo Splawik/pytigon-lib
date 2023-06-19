@@ -147,6 +147,8 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         context["template"] = template
         if context and "view" in context and context["view"]:
             template2 = self._get_model_template(context, context["view"].doc_type())
+            if template2 and len(template2) == 1 and template2[0] in template:
+                template2 = None
         if not template2:
             if context and "view" in context and context["view"].doc_type() == "pdf":
                 template2 = []
