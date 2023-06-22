@@ -174,7 +174,6 @@ class ForeignKey(models.ForeignKey):
                             search_fields=_search_fields,
                             minimum_input_length=_minimum_input_length,
                         )
-                        # widget.attrs["style"] = "width:400px;"
                         widget.attrs["style"] = "width:100%;"
                         argv["widget"] = widget
                     forms.ModelChoiceField.__init__(self, queryset, *argi, **argv)

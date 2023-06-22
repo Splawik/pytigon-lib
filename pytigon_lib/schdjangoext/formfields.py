@@ -77,6 +77,7 @@ class ModelSelect2Field(forms.ModelChoiceField):
             empty_label=empty_label,
             attrs=attrs,
         )
+        widget.attrs["style"] = "width:100%;"
         super().__init__(widget=widget, queryset=queryset, **kwargs)
 
 
