@@ -12,7 +12,7 @@
 
 # Pytigon - wxpython and django application framework
 
-# author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"
+# author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"dd
 # copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
 # license: "LGPL 3.0"
 # version: "0.1a"

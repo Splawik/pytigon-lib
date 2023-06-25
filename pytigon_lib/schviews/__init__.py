@@ -49,7 +49,7 @@ from .viewtools import (
     DOC_TYPES,
 )
 from .form_fun import form_with_perms
-from .perms import make_perms_test_fun, filter_by_permissions
+from .perms import make_perms_test_fun, filter_by_permissions, default_block
 
 
 # url:  /table/TableName/filter/target/list url width field:
@@ -71,6 +71,13 @@ make_path_lazy = lazy(make_path, str)
 def _isinstance(field, instances):
     for instance in instances:
         if isinstance(field, instance):
+            return True
+    return False
+
+
+def is_in_rules(model, rules):
+    for rule in rules:
+        if rule["subject"] == model:
             return True
     return False
 
@@ -162,6 +169,15 @@ def view_editor(
             value = request.POST["value"]
             pk = request.POST["pk"]
             obj = model.objects.get(id=pk)
+
+            if (
+                obj
+                and hasattr(settings, "CANCAN")
+                and is_in_rules(type(obj), self.request.ability.access_rules.rules)
+            ):
+                if not self.request.ability.can("editor_%s" % field_edit_name, obj):
+                    return default_block(request)
+
             setattr(obj, field_edit_name, value)
             obj.save()
             return HttpResponse("OK")
@@ -171,6 +187,15 @@ def view_editor(
             # if type(buf)==str:
             #    buf = buf.encode('utf-8')
             obj = model.objects.get(id=pk)
+
+            if (
+                obj
+                and hasattr(settings, "CANCAN")
+                and is_in_rules(type(obj), self.request.ability.access_rules.rules)
+            ):
+                if not self.request.ability.can("editor_%s" % field_edit_name, obj):
+                    return default_block(request)
+
             if "fragment" in request.GET:
                 buf2 = getattr(obj, field_edit_name)
                 if buf2 == None:
@@ -187,6 +212,15 @@ def view_editor(
             return HttpResponse("OK")
     else:
         obj = model.objects.get(id=pk)
+
+        if (
+            obj
+            and hasattr(settings, "CANCAN")
+            and is_in_rules(type(obj), self.request.ability.access_rules.rules)
+        ):
+            if not self.request.ability.can("editor_%s" % field_edit_name, obj):
+                return default_block(request)
+
         table_name = model._meta.object_name
         txt = getattr(obj, field_edit_name)
         if txt == None:
@@ -846,7 +880,14 @@ class GenericRows(object):
                         if self.queryset:
                             ret = self.queryset
                         else:
-                            ret = self.model.objects.all()
+                            if hasattr(settings, "CANCAN") and is_in_rules(
+                                self.model, self.request.ability.access_rules.rules
+                            ):
+                                ret = self.request.ability.queryset_for(
+                                    "view", self.model
+                                )
+                            else:
+                                ret = self.model.objects.all()
                         if not "pk" in self.request.GET:
                             if c["parent_pk"]:
                                 if c["parent_pk"] > 0:
@@ -882,9 +923,24 @@ class GenericRows(object):
                                 if hasattr(self.model, "filter"):
                                     ret = self.model.filter(filter, self, self.request)
                                 else:
-                                    ret = self.model.objects.all()
+                                    if hasattr(settings, "CANCAN") and is_in_rules(
+                                        self.model,
+                                        self.request.ability.access_rules.rules,
+                                    ):
+                                        ret = self.request.ability.queryset_for(
+                                            "view", self.model
+                                        )
+                                    else:
+                                        ret = self.model.objects.all()
                             else:
-                                ret = self.model.objects.all()
+                                if hasattr(settings, "CANCAN") and is_in_rules(
+                                    self.model, self.request.ability.access_rules.rules
+                                ):
+                                    ret = self.request.ability.queryset_for(
+                                        "view", self.model
+                                    )
+                                else:
+                                    ret = self.model.objects.all()
                     ret = filter_by_permissions(self, self.model, ret, self.request)
                     if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
                         try:
@@ -1018,6 +1074,17 @@ class GenericRows(object):
 
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object()
+
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("detail", self.object):
+                        return default_block(request)
+
                 if self.kwargs["vtype"] == "row_action":
                     if hasattr(self.object, "row_action"):
                         ret = getattr(self.model, "row_action")(
@@ -1121,6 +1188,17 @@ class GenericRows(object):
 
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object()
+
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("change", self.object):
+                        return default_block(request)
+
                 if self.object and hasattr(self.object, "redirect_href"):
                     href = self.object.redirect_href(self, request)
                     if href:
@@ -1150,6 +1228,16 @@ class GenericRows(object):
 
             def post(self, request, *args, **kwargs):
                 self.object = self.get_object()
+
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("change", self.object):
+                        return default_block(request)
 
                 if "init" in kwargs:
                     kwargs["init"](self)
@@ -1331,7 +1419,19 @@ class GenericRows(object):
                 return form
 
             def get(self, request, *args, **kwargs):
+
                 form = self._get_form(request, *args, **kwargs)
+
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("add", self.object):
+                        return default_block(request)
+
                 if form:
                     for field in form.fields:
                         if hasattr(form.fields[field].widget, "py_client"):
@@ -1346,6 +1446,16 @@ class GenericRows(object):
 
             def post(self, request, *args, **kwargs):
                 form = self._get_form(request, *args, **kwargs)
+
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("add", self.object):
+                        return default_block(request)
 
                 if self.model and hasattr(self.model, "is_form_valid"):
 
@@ -1540,6 +1650,34 @@ class GenericRows(object):
                         template2 = self.template_name.replace(".html", v + ".html")
                     names.insert(0, template2)
                 return names
+
+            def get(self, request, *args, **kwargs):
+                self.object = self.get_object(self.queryset)
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("delete", self.object):
+                        return default_block(request)
+
+                return super().get(*args, **kwargs)
+
+            def post(self, request, *args, **kwargs):
+                self.object = self.get_object(self.queryset)
+                if (
+                    self.object
+                    and hasattr(settings, "CANCAN")
+                    and is_in_rules(
+                        type(self.object), self.request.ability.access_rules.rules
+                    )
+                ):
+                    if not self.request.ability.can("delete", self.object):
+                        return default_block(request)
+
+                return super().post(*args, **kwargs)
 
         VIEWS_REGISTER["delete"][self.base_model] = DeleteView
 

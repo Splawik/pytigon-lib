@@ -54,7 +54,9 @@ def get_anonymous():
 
 
 def default_block(request):
-    return render_to_response("schsys/no_perm.html", context={}, request=request)
+    return render_to_response(
+        "schsys/no_perm.html", context={}, request=request, status=401
+    )
 
 
 def make_perms_url_test_fun(app_name, fun, if_block_view=default_block):

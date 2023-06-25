@@ -36,6 +36,7 @@ def get_environ(path=None):
             PWA=(bool, False),
             GRAPHQL=(bool, False),
             REST=(bool, False),
+            CANCAN_ENABLED=(bool, False),
             COMPRESS_ENABLED=(bool, False),
             SECRET_KEY=(str, ""),
             CHANNELS_REDIS=(str, ""),
