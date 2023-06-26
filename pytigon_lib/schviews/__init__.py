@@ -1663,7 +1663,7 @@ class GenericRows(object):
                     if not self.request.ability.can("delete", self.object):
                         return default_block(request)
 
-                return super().get(*args, **kwargs)
+                return super().get(request, *args, **kwargs)
 
             def post(self, request, *args, **kwargs):
                 self.object = self.get_object(self.queryset)
@@ -1677,7 +1677,7 @@ class GenericRows(object):
                     if not self.request.ability.can("delete", self.object):
                         return default_block(request)
 
-                return super().post(*args, **kwargs)
+                return super().post(request, *args, **kwargs)
 
         VIEWS_REGISTER["delete"][self.base_model] = DeleteView
 
