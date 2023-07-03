@@ -173,9 +173,9 @@ def view_editor(
             if (
                 obj
                 and hasattr(settings, "CANCAN")
-                and is_in_rules(type(obj), self.request.ability.access_rules.rules)
+                and is_in_rules(type(obj), request.ability.access_rules.rules)
             ):
-                if not self.request.ability.can("editor_%s" % field_edit_name, obj):
+                if not request.ability.can("editor_%s" % field_edit_name, obj):
                     return default_block(request)
 
             setattr(obj, field_edit_name, value)
@@ -191,9 +191,9 @@ def view_editor(
             if (
                 obj
                 and hasattr(settings, "CANCAN")
-                and is_in_rules(type(obj), self.request.ability.access_rules.rules)
+                and is_in_rules(type(obj), request.ability.access_rules.rules)
             ):
-                if not self.request.ability.can("editor_%s" % field_edit_name, obj):
+                if not request.ability.can("editor_%s" % field_edit_name, obj):
                     return default_block(request)
 
             if "fragment" in request.GET:
@@ -216,9 +216,9 @@ def view_editor(
         if (
             obj
             and hasattr(settings, "CANCAN")
-            and is_in_rules(type(obj), self.request.ability.access_rules.rules)
+            and is_in_rules(type(obj), request.ability.access_rules.rules)
         ):
-            if not self.request.ability.can("editor_%s" % field_edit_name, obj):
+            if not request.ability.can("editor_%s" % field_edit_name, obj):
                 return default_block(request)
 
         table_name = model._meta.object_name
