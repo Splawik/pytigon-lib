@@ -776,8 +776,6 @@ class GenericRows(object):
                         + template_name
                     )
                     if not hasattr(views_module, form_name):
-                        print(dir(views_module))
-                        print(form_name, views_module)
                         form_name = None
                 if not form_name:
                     form_name = "_FilterForm" + self.model._meta.object_name

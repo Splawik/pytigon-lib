@@ -54,10 +54,10 @@ class ModelSelect2WidgetExt(ModelSelect2Widget):
                 argv["attrs"] = {"href2": href2}
         if "attrs" in argv:
             argv["attrs"]["data-minimum-input-length"] = minimum_input_length
-            argv["attrs"]["class"] = "form-control"
+            argv["attrs"]["class"] = "form-control" + (" show-form-btn" if href1 else "")
         else:
             argv["attrs"] = {"data-minimum-input-length": minimum_input_length}
-            argv["attrs"]["class"] = "form-control"
+            argv["attrs"]["class"] = "form-control" + (" show-form-btn" if href1 else "")
         ModelSelect2Widget.__init__(self, label=label, **argv)
 
 
