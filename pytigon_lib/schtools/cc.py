@@ -127,6 +127,8 @@ def make(data_path, files_path, prj_name=None):
                     "pytigon.ptig",
                     "pip_%s" % prj_name,
                     "install",
+                    "-e",
+                    c_filename,
                 ]
                 base_path = os.path.dirname(pos)
                 cwd = os.getcwd()
