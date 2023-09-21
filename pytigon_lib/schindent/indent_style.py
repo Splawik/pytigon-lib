@@ -103,14 +103,13 @@ def iter_lines(f, f_name, lang):
             except:
                 t = None
             try:
-                p = open(os.path.join(base_path, "translate.py"), "rt")
-                for line in p.readlines():
-                    fr = line.split('_("')
-                    if len(fr) > 1:
-                        fr = fr[1].split('")')
-                        if len(fr) == 2:
-                            tab_translate.append(fr[0])
-                p.close()
+                with open(os.path.join(base_path, "translate.py"), "rt", encoding="utf-8") as p:
+                    for line in p.readlines():
+                        fr = line.split('_("')
+                        if len(fr) > 1:
+                            fr = fr[1].split('")')
+                            if len(fr) == 2:
+                                tab_translate.append(fr[0])
             except:
                 tab_translate = []
 
@@ -196,10 +195,9 @@ def iter_lines(f, f_name, lang):
         yield line2
     yield "."
     if len(tab_translate) > 0:
-        p = open(os.path.join(base_path, "translate.py"), "wt")
-        for word in tab_translate:
-            p.write('_("' + word + '")\n')
-        p.close()
+        with open(os.path.join(base_path, "translate.py"), "wt", encoding="utf-8") as p:
+            for word in tab_translate:
+                p.write('_("' + word + '")\n')
 
 
 class ConwertToHtml:
@@ -664,7 +662,7 @@ class ConwertToHtml:
             output = ""
             if beauty:
                 if len(self.output) > 0:
-                    for (line, nextline) in list_with_next_generator(self.output):
+                    for line, nextline in list_with_next_generator(self.output):
                         if line[0] >= 0 and (line[2] == 0 or line[2] == 3):
                             output = output + " " * int(line[0] / 2)
                         if line[1]:
@@ -676,7 +674,7 @@ class ConwertToHtml:
                 ret = output.replace("|||", "\n")
             else:
                 if len(self.output) > 0:
-                    for (line, nextline) in list_with_next_generator(self.output):
+                    for line, nextline in list_with_next_generator(self.output):
                         if line[0] >= 0 and line[2] == 3:
                             output = output + " " * int(line[0] / 2)
                         if line[1]:
