@@ -334,7 +334,7 @@ class PdfDc(BaseDc):
         )
         if scale < 4:
             if scale != 0 and x_scale < 0.25 and y_scale < 0.25:
-                image.thumbnail((4 * w * x_scale, 4 * h * y_scale), PIL.Image.ANTIALIAS)
+                image.thumbnail((4 * w * x_scale, 4 * h * y_scale), PIL.Image.LANCZOS)
             file_name = get_temp_filename("temp.png")
             image.save(file_name, "PNG")
             self.dc.image(file_name, x, y, w * x_scale, h * y_scale)
