@@ -1,9 +1,33 @@
 import sys
 import types
 import os
+import datetime
 import importlib.abc
 from importlib.machinery import ModuleSpec
 from django.conf import settings
+
+CACHE = {}
+
+
+def in_cache(key):
+    global CACHE
+    if key in CACHE and (
+        (not settings.EXECUTE_DB_CODE_CACHE_TIMEOUT)
+        or (datetime.datetime.now() - CACHE[key][1]).total_seconds()
+        < settings.EXECUTE_DB_CODE_CACHE_TIMEOUT
+    ):
+        return True
+    return False
+
+
+def add_to_cache(key, value):
+    global CACHE
+    CACHE[key] = (value, datetime.datetime.now())
+
+
+def get_from_cache(key):
+    global CACHE
+    return CACHE[key][0]
 
 
 class DBModuleLoader(importlib.abc.SourceLoader):
@@ -61,32 +85,59 @@ class ModuleStruct:
         self.__dict__.update(locals_dict)
 
 
+def get_fun_from_db_field(
+    src_name, obj, field_name, function_name, locals_dict, globals_dict
+):
+    gen_name = src_name.format(**(locals_dict | globals_dict))
+    if settings.EXECUTE_DB_CODE in ("import_and_cache", "exec_and_cache") and in_cache(
+        gen_name
+    ):
+        return get_from_cache(gen_name)
+    field = getattr(obj, field_name)
+    if field:
+        if settings.EXECUTE_DB_CODE in ("import", "import_and_cache"):
+            gen_path = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "syslib")
+            src_file_path = os.path.join(gen_path, gen_name)
+            from_cache = False
+            if os.path.exists(src_file_path):
+                field_utf = field.encode("utf-8")
+                file_stats = os.stat(src_file_path)
+                if file_stats.st_size != len(field_utf):
+                    from_cache = False
+                    with open(src_file_path, "wb") as f:
+                        f.write(field_utf)
+            else:
+                from_cache = False
+                os.makedirs(gen_path, exist_ok=True)
+                with open(src_file_path, "wb") as f:
+                    f.write(field.encode("utf-8"))
+            if from_cache and in_cache(gen_name):
+                return get_from_cache(gen_name)
+            else:
+                imp_name = gen_name.replace(".py", "")
+                if imp_name in sys.modules:
+                    del sys.modules[imp_name]
+                x = __import__(imp_name)
+                fun = getattr(x, function_name)
+                add_to_cache(gen_name, fun)
+                return fun
+        elif settings.EXECUTE_DB_CODE == "exec_and_cache":
+            exec(field, globals(), locals())
+            add_to_cache(gen_name, locals()[function_name])
+            return locals()[function_name]
+        else:
+            exec(field, globals(), locals())
+            return locals()[function_name]
+    else:
+        return None
+
+
 def run_code_from_db_field(
     src_name, obj, field_name, function_name, locals_dict, globals_dict, **argv
 ):
-    field = getattr(obj, field_name)
-    if field:
-        gen_path = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "syslib")
-        gen_name = src_name.format(**(locals_dict | globals_dict))
-
-        src_file_path = os.path.join(gen_path, gen_name)
-
-        if os.path.exists(src_file_path):
-            field_utf = field.encode("utf-8")
-            file_stats = os.stat(src_file_path)
-            if file_stats.st_size != len(field_utf):
-                with open(src_file_path, "wb") as f:
-                    f.write(field_utf)
-        else:
-            os.makedirs(gen_path, exist_ok=True)
-            with open(src_file_path, "wb") as f:
-                f.write(field.encode("utf-8"))
-
-        x = __import__(gen_name.replace(".py", ""))
-        fun = getattr(x, function_name)
+    fun = get_fun_from_db_field(
+        src_name, obj, field_name, function_name, locals_dict, globals_dict
+    )
+    if fun != None:
         return fun(**argv)
-
-        # exec(field, globals(), locals())
-        # return locals()["function_name"](**argv)
-    else:
-        return None
+    return None

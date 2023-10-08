@@ -133,7 +133,7 @@ def gen_row_action(table, action, fun, extra_context=None):
 
 def transform_extra_context(context1, context2):
     if context2:
-        for (key, value) in context2.items():
+        for key, value in context2.items():
             if isinstance(value, collections.abc.Callable):
                 context1[key] = value()
             else:
@@ -225,6 +225,7 @@ def view_editor(
         txt = getattr(obj, field_edit_name)
         if txt == None:
             txt = ""
+
         if "fragment" in request.GET:
             if request.GET["fragment"] == "header":
                 txt = txt.split("$$$")[0]
@@ -274,6 +275,12 @@ def view_editor(
                 + "/py/editor/"
                 + get_param
             )
+
+        if not txt and hasattr(obj, "get_" + field_edit_name + "_if_empty"):
+            txt = getattr(obj, "get_" + field_edit_name + "_if_empty")(
+                request, template_name, ext, extra_context, target
+            )
+
         c = {
             "app": app,
             "tab": table_name,
@@ -579,7 +586,6 @@ class GenericRows(object):
         parent_class = self
 
         class ListView(generic.ListView):
-
             model = self.base_model
             queryset = self.queryset
             paginate_by = 64
@@ -1003,7 +1009,6 @@ class GenericRows(object):
         parent_class = self
 
         class DetailView(generic.DetailView):
-
             queryset = self.queryset
 
             if self.field:
@@ -1417,7 +1422,6 @@ class GenericRows(object):
                 return form
 
             def get(self, request, *args, **kwargs):
-
                 form = self._get_form(request, *args, **kwargs)
 
                 if (
