@@ -30,6 +30,19 @@ def get_from_cache(key):
     return CACHE[key][0]
 
 
+def func_from_func_content(func_name, content, argv):
+    x = "def %s(" % func_name
+    if argv:
+        for key in argv:
+            x += key + ","
+        x = x[:-1] + "):\n"
+    else:
+        x += "):\n"
+    for line in content.split("\n"):
+        x += "    " + line + "\n"
+    return x
+
+
 class DBModuleLoader(importlib.abc.SourceLoader):
     def get_filename(self, path):
         return path.replace(".", os.sep) + ".dbpy"
@@ -86,15 +99,20 @@ class ModuleStruct:
 
 
 def get_fun_from_db_field(
-    src_name, obj, field_name, function_name, locals_dict, globals_dict
+    src_name, obj, field_name, function_name, locals_dict, globals_dict, argv=None
 ):
     gen_name = src_name.format(**(locals_dict | globals_dict))
     if settings.EXECUTE_DB_CODE in ("import_and_cache", "exec_and_cache") and in_cache(
         gen_name
     ):
         return get_from_cache(gen_name)
-    field = getattr(obj, field_name)
-    if field:
+    f = getattr(obj, field_name)
+    if f:
+        if "def " in f or "\ndef " in f:
+            field = f
+        else:
+            field = func_from_func_content(function_name, f, argv)
+
         if settings.EXECUTE_DB_CODE in ("import", "import_and_cache"):
             gen_path = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "syslib")
             src_file_path = os.path.join(gen_path, gen_name)
@@ -136,7 +154,7 @@ def run_code_from_db_field(
     src_name, obj, field_name, function_name, locals_dict, globals_dict, **argv
 ):
     fun = get_fun_from_db_field(
-        src_name, obj, field_name, function_name, locals_dict, globals_dict
+        src_name, obj, field_name, function_name, locals_dict, globals_dict, argv
     )
     if fun != None:
         return fun(**argv)
