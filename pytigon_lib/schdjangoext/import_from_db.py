@@ -99,14 +99,23 @@ class ModuleStruct:
 
 
 def get_fun_from_db_field(
-    src_name, obj, field_name, function_name, locals_dict, globals_dict, argv=None
+    src_name,
+    base_object,
+    field_name,
+    function_name=None,
+    locals_dict={},
+    globals_dict={},
+    argv=None,
 ):
+    if not function_name:
+        function_name = field_name
+         
     gen_name = src_name.format(**(locals_dict | globals_dict))
     if settings.EXECUTE_DB_CODE in ("import_and_cache", "exec_and_cache") and in_cache(
         gen_name
     ):
         return get_from_cache(gen_name)
-    f = getattr(obj, field_name)
+    f = getattr(base_object, field_name)
     if f:
         if "def " in f or "\ndef " in f:
             field = f
@@ -151,10 +160,22 @@ def get_fun_from_db_field(
 
 
 def run_code_from_db_field(
-    src_name, obj, field_name, function_name, locals_dict, globals_dict, **argv
+    src_name,
+    base_object,
+    field_name,
+    function_name=None,
+    locals_dict={},
+    globals_dict={},
+    **argv
 ):
     fun = get_fun_from_db_field(
-        src_name, obj, field_name, function_name, locals_dict, globals_dict, argv
+        src_name,
+        base_object,
+        field_name,
+        function_name,
+        locals_dict,
+        globals_dict,
+        argv,
     )
     if fun != None:
         return fun(**argv)
