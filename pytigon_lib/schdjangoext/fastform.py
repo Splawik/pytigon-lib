@@ -17,24 +17,41 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-# Form example in string format
-# """
-# What is this?
-# Name
-# Second name::*
-# name//Name!::*
-# Description::_
-# Date::####.##.##
-# Quantity::0
-# Amount!::9.99
-# Choose::[option1;option2
-# option3]
-# Age::000
-# Code::****
-# """
 
 from django import forms
 from pytigon_lib.schdjangoext import fields as ext_fields
+
+FAST_FORM_EXAMPLE = """#Example
+
+#Syntax 1 - string format:
+
+What is this?
+Name
+Second name::*
+name//Name!::*
+Description::_
+Date::####.##.##
+Quantity::0
+Amount!::9.99
+Choose::[option1;option2
+option3]
+Age::000
+Code::****
+
+#Syntax 2 - code:
+from django import forms
+    
+def make_form_class(base_form, init_data):
+    class form_class(base_form):
+        class Meta(base_form.Meta):
+            widgets = {
+                "description": form_fields.Textarea(attrs={"cols": 80, "rows": 3}),
+            }
+    additional_field1 = forms.ImageField(label='label 1', required=False, widget=ImgFileInput)
+    additional_field2 = forms.BooleanField(label='label 2, required=False)
+
+    return form_class
+"""
 
 
 def _scan_lines(input_str):
@@ -132,17 +149,11 @@ def form_from_str(
     globals_dict=globals(),
     locals_dict=locals(),
 ):
-    if "base_form" in input_str:
-        make_form_str = (
-            "def make_form_class(base_form, init_data):\n"
-            + "\n".join(["    " + pos for pos in input_str.split("\n")])
-            + "\n"
-        )
+    if "make_form_class" in input_str:
         d = globals_dict | locals_dict
         l = {}
-        exec(make_form_str, d, l)
-        _Form = l["make_form_class"](base_form_class, init_data)
-        return _Form
+        exec(input_str, d, l)
+        return l["make_form_class"](base_form_class, init_data)
     else:
 
         class _Form(base_form_class):
@@ -164,7 +175,7 @@ def form_from_str(
                                 label=title,
                                 required=required,
                                 initial=init_data[name],
-                                **form_kwargs
+                                **form_kwargs,
                             )
                         else:
                             self.fields[prefix + name] = field_type(
