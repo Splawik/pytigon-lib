@@ -424,7 +424,6 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
 
 
 class ExtTemplateView(generic.TemplateView):
-
     response_class = ExtTemplateResponse
 
     def post(self, request, *args, **kwargs):

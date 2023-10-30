@@ -666,6 +666,16 @@ class GenericRows(object):
                         names.insert(
                             0, self.template_name.replace(".html", target2 + ".html")
                         )
+                if "version" in self.request.GET:
+                    v = self.request.GET["version"]
+                    if "__" in v:
+                        x = v.split("__", 1)
+                        y = self.template_name.split("/")
+                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                    else:
+                        template2 = self.template_name.replace(".html", v + ".html")
+                    names.insert(0, template2)
+
                 return names
 
             def get_paginate_by(self, queryset):
@@ -818,6 +828,8 @@ class GenericRows(object):
                 else:
                     context["target"] = self.kwargs["target"]
                     context["version"] = ""
+                if "version" in self.request.GET:
+                    context["version"] = self.request.GET["version"]
                 context["sort"] = self.sort
                 context["order"] = self.order
                 parent_class.table_paths_to_context(self, context)
@@ -1070,6 +1082,8 @@ class GenericRows(object):
                 context = super(DetailView, self).get_context_data(**kwargs)
                 context["view"] = self
                 context["title"] = self.title + " - " + str(_("element information"))
+                if "version" in self.request.GET:
+                    context["version"] = self.request.GET["version"]
 
                 parent_class.table_paths_to_context(self, context)
 
@@ -1177,6 +1191,9 @@ class GenericRows(object):
                 context = super(UpdateView, self).get_context_data(**kwargs)
                 context["view"] = self
                 context["title"] = self.title + " - " + str(_("update element"))
+                if "version" in self.request.GET:
+                    context["version"] = self.request.GET["version"]
+
                 # context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
@@ -1251,7 +1268,6 @@ class GenericRows(object):
                     self.form_class = self.get_form_class()
 
                 form = self.get_form(self.form_class)
-
                 if self.model and hasattr(self.model, "is_form_valid"):
 
                     def vfun():
@@ -1276,7 +1292,6 @@ class GenericRows(object):
                         _data[key[5:]] = value
 
                 self.object = form.save(commit=False)
-
                 if _data:
                     self.object._data = _data
 
@@ -1562,6 +1577,9 @@ class GenericRows(object):
                 context["title"] = self.title + " - " + str(_("new element"))
                 context["object"] = self.object
                 context["add_param"] = self.kwargs["add_param"]
+                if "version" in self.request.GET:
+                    context["version"] = self.request.GET["version"]
+
                 # context['prj'] = ""
 
                 parent_class.table_paths_to_context(self, context)
@@ -1621,6 +1639,8 @@ class GenericRows(object):
                 context = super(DeleteView, self).get_context_data(**kwargs)
                 context["view"] = self
                 context["title"] = self.title + " - " + str(_("delete element"))
+                if "version" in self.request.GET:
+                    context["version"] = self.request.GET["version"]
 
                 parent_class.table_paths_to_context(self, context)
 
@@ -1678,6 +1698,9 @@ class GenericRows(object):
                 ):
                     if not self.request.ability.can("delete", self.object):
                         return default_block(request)
+
+                if hasattr(self.object, "on_delete"):
+                    self.object.on_delete(request, self)
 
                 return super().post(request, *args, **kwargs)
 

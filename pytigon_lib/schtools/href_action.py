@@ -246,6 +246,7 @@ class Action:
             standard_web_browser = 1
 
         pos = actions_str.split(",")
+        action = ""
         if not "=" in pos[0]:
             action = pos[0].strip()
 
