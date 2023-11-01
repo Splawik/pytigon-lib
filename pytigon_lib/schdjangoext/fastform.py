@@ -152,7 +152,7 @@ def form_from_str(
     if "make_form_class" in input_str:
         d = globals_dict | locals_dict
         l = {}
-        exec(input_str, d, l)
+        exec(input_str, globals(), locals())
         return l["make_form_class"](base_form_class, init_data)
     else:
 

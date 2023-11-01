@@ -691,7 +691,10 @@ class GenericRows(object):
                 if self.kwargs["vtype"] == "table_action":
                     parent = None
                     try:
-                        parent_id = int(self.kwargs["filter"])
+                        try:
+                            parent_id = int(self.kwargs["filter"])
+                        except:
+                            parent_id = 0
                         if parent_id > 0:
                             parent = self.model.objects.get(id=parent_id)
                         else:
@@ -701,19 +704,25 @@ class GenericRows(object):
                             ):
                                 parent_id = int(self.kwargs["base_filter"])
                                 parent = self.model.objects.get(id=parent_id)
+                            elif (
+                                "parent_pk" in self.kwargs and self.kwargs["parent_pk"]
+                            ):
+                                parent = self.model.objects.get(
+                                    id=int(self.kwargs["parent_pk"])
+                                )
+
                     except:
                         parent = None
 
-                    if hasattr(parent, "get_derived_object"):
-                        obj2 = parent.get_derived_object(
+                    model = self.get_queryset().model
+                    if parent and hasattr(model, "get_derived_object"):
+                        obj2 = model(parent=parent).get_derived_object(
                             {
                                 "view": self,
                             }
                         )
                         model = type(obj2)
-                    else:
-                        model = self.get_queryset().model
-                    # queryset = self.get_queryset()
+
                     if hasattr(model, "table_action"):
                         data = request.POST
                         if request.content_type == "application/json":
@@ -729,6 +738,7 @@ class GenericRows(object):
                                 print(request.body)
                                 print("-----------------------------------------")
                                 raise Http404("Invalid data format")
+
                         ret = getattr(model, "table_action")(self, request, data)
                         if ret == None:
                             raise Http404("Action doesn't exists")
@@ -850,31 +860,10 @@ class GenericRows(object):
                 context["vtype"] = self.kwargs["vtype"]
                 context["parent_id"] = None
 
-                # context['prj'] = ""
-                # for app in settings.APPS:
-                #    if '.' in app and parent_class.table.app in app:
-                #        _app = app.split('.')[0]
-                #        if not _app.startswith('_'):
-                #            context['prj'] = app.split('.')[0]
-                #        break
 
                 if "tree" in self.kwargs["vtype"]:
                     c = self._context_for_tree()
                     context.update(c)
-                    # try:
-                    #    parent = int(self.kwargs['filter'])
-                    # except:
-                    #    try:
-                    #        parent = int(self.kwargs['base_filter'])
-                    #    except:
-                    #       parent = None
-                    # print("XXXX1", parent, kwargs, self.kwargs)
-                    # if parent != None:
-                    #    context['parent_pk'] = parent
-                    #    if parent > 0:
-                    #        context['parent_obj'] = self.model.objects.get(id=parent)
-                    #    else:
-                    #        context['parent_obj'] = None
 
                 context["kwargs"] = self.kwargs
                 context["GET"] = self.request.GET
