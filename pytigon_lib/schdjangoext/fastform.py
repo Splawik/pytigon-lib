@@ -149,7 +149,7 @@ def form_from_str(
 ):
     if "make_form_class" in input_str:
         exec(input_str)
-        return locals["make_form_class"](base_form_class, init_data)
+        return locals()["make_form_class"](base_form_class, init_data)
     else:
 
         class _Form(base_form_class):
