@@ -100,7 +100,6 @@ class JSONModel(models.Model):
             else:
                 return view.get_form(form_class)
         elif data:
-
             class form_class2(form_class):
                 def __init__(self, *args, **kwargs):
                     nonlocal data

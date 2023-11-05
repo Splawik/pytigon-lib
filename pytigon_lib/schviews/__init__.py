@@ -1221,13 +1221,11 @@ class GenericRows(object):
                 else:
                     self.form_class = self.get_form_class()
 
-                # if self.object and hasattr(self.object, 'get_form'):
-                #    form = self.object.get_form(self, request, self.form_class, False)
-                #    if not form:
-                #        form = self.get_form(form_class)
-                # else:
-                form = self.get_form(self.form_class)
-
+                form = None
+                if self.object and hasattr(self.object, 'get_form'):
+                    form = self.object.get_form(self, request, self.form_class, False)
+                if not form:
+                    form = self.get_form(self.form_class)
                 if form:
                     for field in form.fields:
                         if hasattr(form.fields[field].widget, "py_client"):
@@ -1256,7 +1254,12 @@ class GenericRows(object):
                 else:
                     self.form_class = self.get_form_class()
 
-                form = self.get_form(self.form_class)
+
+                form = None
+                if self.object and hasattr(self.object, 'get_form'):
+                    form = self.object.get_form(self, request, self.form_class, False)
+                if not form:
+                    form = self.get_form(self.form_class)
                 if self.model and hasattr(self.model, "is_form_valid"):
 
                     def vfun():
@@ -1275,14 +1278,14 @@ class GenericRows(object):
                 """
                 If the form is valid, save the associated model.
                 """
-                _data = {}
+                jsondata = {}
                 for key, value in form.data.items():
                     if key.startswith("json_"):
-                        _data[key[5:]] = value
+                        jsondata[key[5:]] = value
 
                 self.object = form.save(commit=False)
-                if _data:
-                    self.object._data = _data
+                if jsondata:
+                    self.object.jsondata = jsondata
 
                 if hasattr(self.object, "post_form"):
                     if self.object.post_form(self, form, request):
@@ -1422,7 +1425,13 @@ class GenericRows(object):
                     self.form_class = self.object.get_form_class(self, request, True)
                 else:
                     self.form_class = self.get_form_class()
-                form = self.get_form(self.form_class)
+                
+                form = None
+                if self.object and hasattr(self.object, 'get_form'):
+                    form = self.object.get_form(self, request, self.form_class, False)
+                if not form:
+                    form = self.get_form(self.form_class)
+
                 return form
 
             def get(self, request, *args, **kwargs):
@@ -1514,15 +1523,15 @@ class GenericRows(object):
                 If the form is valid, save the associated model.
                 """
                 nonlocal parent_class
-                _data = {}
+                jsondata = {}
                 for key, value in form.data.items():
                     if key.startswith("json_"):
-                        _data[key[5:]] = value
+                        jsondata[key[5:]] = value
 
                 self.object = form.save(commit=False)
 
-                if _data:
-                    self.object._data = _data
+                if jsondata:
+                    self.object.jsondata = jsondata
 
                 if "parent_pk" in self.kwargs and hasattr(self.object, "parent_id"):
                     if int(self.kwargs["parent_pk"]) != 0:
