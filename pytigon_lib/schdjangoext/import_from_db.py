@@ -146,11 +146,11 @@ def get_fun_from_db_field(
                 add_to_cache(src_name, fun)
                 return fun
         elif settings.EXECUTE_DB_CODE == "exec_and_cache":
-            exec(field)
+            exec(field, globals(), locals())
             add_to_cache(src_name, locals()[function_name])
             return locals()[function_name]
         else:
-            exec(field)
+            exec(field, globals(), locals())
             return locals()[function_name]
     else:
         return None
