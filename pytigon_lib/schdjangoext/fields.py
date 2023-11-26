@@ -105,6 +105,12 @@ class ForeignKey(models.ForeignKey):
             del kwargs["can_add"]
         else:
             self.can_add = False
+        if "select2" in kwargs:
+            self.select2 = True
+            del kwargs["select2"]
+        else:
+            self.select2 = False
+
         if "minimum_input_length" in kwargs:
             self.minimum_input_length = kwargs["minimum_input_length"]
             del kwargs["minimum_input_length"]
@@ -149,7 +155,7 @@ class ForeignKey(models.ForeignKey):
 
         field = self
 
-        if self.search_fields or self.query:
+        if self.search_fields or self.query: # or self.select2:
             _search_fields = self.search_fields
             _query = self.query
             _minimum_input_length = self.minimum_input_length
@@ -281,6 +287,11 @@ class ManyToManyField(models.ManyToManyField):
 
 class HiddenForeignKey(models.ForeignKey):
     """Version of django models.ForeignKey class with hidden widget."""
+
+    def __init__(self, *argi, **argv):
+        if 'select2' in argv:
+            del argv['select2']
+        super().__init__(*argi, **argv)
 
     def formfield(self, **kwargs):
         field = models.ForeignKey.formfield(self, **kwargs)

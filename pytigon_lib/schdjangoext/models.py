@@ -182,13 +182,19 @@ def get_form(obj, fields_list=None, widgets_dict=None):
 
 
 def extend_class(main, base):
-    main.__bases__ = tuple(
-        [
-            base,
-        ]
-        + list(main.__bases__)
-    )
-
+    if (
+        "makemigrations" in sys.argv
+        or "makeallmigrations" in sys.argv
+        or "exporttolocaldb" in sys.argv
+    ):
+        pass
+    else:
+        main.__bases__ = tuple(
+            [
+                base,
+            ]
+            + list(main.__bases__)
+        )
 
 if (
     "makemigrations" in sys.argv
