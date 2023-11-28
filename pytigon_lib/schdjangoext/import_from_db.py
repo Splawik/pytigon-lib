@@ -2,9 +2,11 @@ import sys
 import types
 import os
 import datetime
+import time
 import importlib.abc
 from importlib.machinery import ModuleSpec
 from django.conf import settings
+import importlib
 
 CACHE = {}
 
@@ -130,11 +132,13 @@ def get_fun_from_db_field(
                     from_cache = False
                     with open(src_file_path, "wb") as f:
                         f.write(field_utf)
+                    time.sleep(0.01)
             else:
                 from_cache = False
                 os.makedirs(gen_path, exist_ok=True)
                 with open(src_file_path, "wb") as f:
                     f.write(field.encode("utf-8"))
+                time.sleep(0.1)
             if from_cache and in_cache(src_name):
                 return get_from_cache(src_name)
             else:
