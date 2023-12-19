@@ -35,6 +35,7 @@ def get_environ(path=None):
             LOGS_TO_DOCKER=(bool, False),
             PWA=(bool, False),
             GRAPHQL=(bool, False),
+            ALLAUTH=(bool, False),
             REST=(bool, False),
             CANCAN_ENABLED=(bool, False),
             COMPRESS_ENABLED=(bool, False),

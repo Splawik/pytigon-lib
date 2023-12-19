@@ -57,7 +57,10 @@ class ComplexEncoder(json.JSONEncoder):
 
 def as_complex(dct):
     if "object" in dct:
-        return eval(dct["object"])
+        try:
+            return eval(dct["object"])
+        except:
+            return None
     return dct
 
 

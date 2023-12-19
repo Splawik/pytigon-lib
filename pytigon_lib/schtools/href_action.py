@@ -357,8 +357,11 @@ class Action:
             standard_web_browser, action2, "attrs_in_menu"
         )
 
-        if not self.url:
-            self.url = get_action_parm(standard_web_browser, action2, "url")
+        if not self.url or self.url.startswith("+"):
+            url = get_action_parm(standard_web_browser, action2, "url")
+            if self.url.startswith("+"):
+                url += self.url[1:]
+            self.url = url
 
         self.url = self.format(self.url)
 
@@ -389,7 +392,10 @@ class Action:
                 buf += "&x2=%s" % self.d["x2"]
                 if self.d["x3"]:
                     buf += "&x3=%s" % self.d["x3"]
-            ret += "?" + buf
+            if '?' in ret:
+                ret += "&" + buf
+            else:
+                ret += "?" + buf
         return ret
 
 
