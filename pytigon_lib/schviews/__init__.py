@@ -860,7 +860,6 @@ class GenericRows(object):
                 context["vtype"] = self.kwargs["vtype"]
                 context["parent_id"] = None
 
-
                 if "tree" in self.kwargs["vtype"]:
                     c = self._context_for_tree()
                     context.update(c)
@@ -1222,7 +1221,7 @@ class GenericRows(object):
                     self.form_class = self.get_form_class()
 
                 form = None
-                if self.object and hasattr(self.object, 'get_form'):
+                if self.object and hasattr(self.object, "get_form"):
                     form = self.object.get_form(self, request, self.form_class, False)
                 if not form:
                     form = self.get_form(self.form_class)
@@ -1254,9 +1253,8 @@ class GenericRows(object):
                 else:
                     self.form_class = self.get_form_class()
 
-
                 form = None
-                if self.object and hasattr(self.object, 'get_form'):
+                if self.object and hasattr(self.object, "get_form"):
                     form = self.object.get_form(self, request, self.form_class, False)
                 if not form:
                     form = self.get_form(self.form_class)
@@ -1426,7 +1424,7 @@ class GenericRows(object):
                 else:
                     self.form_class = self.get_form_class()
                 form = None
-                if self.object and hasattr(self.object, 'get_form'):
+                if self.object and hasattr(self.object, "get_form"):
                     form = self.object.get_form(self, request, self.form_class, False)
                 if not form:
                     form = self.get_form(self.form_class)

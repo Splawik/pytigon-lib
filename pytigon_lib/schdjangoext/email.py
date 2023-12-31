@@ -3,6 +3,8 @@ import email
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
 from django.template import Template, Context
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 
 
 class PytigonEmailMessage(EmailMultiAlternatives):
@@ -25,19 +27,13 @@ class PytigonEmailMessage(EmailMultiAlternatives):
     def set_eml_body(self, context, eml_template_name, txt_template_name=None):
         template_eml = get_template(eml_template_name)
         eml_name = template_eml.origin.name
-        with open(eml_name) as f:
-            msg = email.message_from_file(f)
-            maintype = msg.get_content_maintype()
-            if maintype == 'multipart':
-                for part in msg.get_payload():
-                    if part.get_content_maintype() == 'text':
-                        t = Template(part.get_payload())
-                        c = Context(context)
-                        self.attach(t.render(c))
-            elif maintype == 'text':
-                t = Template(msg.get_payload())
-                c = Context(context)
-                self.attach(t.render(c))
+        with open(eml_name, "rt") as f:
+            t = Template(f.read())
+            c = Context(context)
+            txt = t.render(c)
+            msg = email.message_from_string(txt)
+            self.attach(content=msg, mimetype="message/rfc822")
+
 
 def send_message(
     subject,
@@ -48,7 +44,7 @@ def send_message(
     context={},
     message_txt_template_name=None,
     prepare_message=None,
-    send = True
+    send=True,
 ):
     message = PytigonEmailMessage(subject, "", from_email, to, bcc)
     if message_template_name.endswith(".html"):
