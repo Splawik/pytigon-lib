@@ -41,6 +41,7 @@ from django.utils.translation import gettext_lazy as _
 from pytigon_lib.schviews.actions import new_row_ok, update_row_ok
 from pytigon_lib.schviews.viewtools import render_to_response
 from pytigon_lib.schtools.schjson import json_loads, json_dumps
+from pytigon_lib.schtools.tools import is_in_cancan_rules
 
 from .viewtools import (
     transform_template_name,
@@ -71,13 +72,6 @@ make_path_lazy = lazy(make_path, str)
 def _isinstance(field, instances):
     for instance in instances:
         if isinstance(field, instance):
-            return True
-    return False
-
-
-def is_in_rules(model, rules):
-    for rule in rules:
-        if rule["subject"] == model:
             return True
     return False
 
@@ -173,7 +167,7 @@ def view_editor(
             if (
                 obj
                 and hasattr(settings, "CANCAN")
-                and is_in_rules(type(obj), request.ability.access_rules.rules)
+                and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
             ):
                 if not request.ability.can("editor_%s" % field_edit_name, obj):
                     return default_block(request)
@@ -191,7 +185,7 @@ def view_editor(
             if (
                 obj
                 and hasattr(settings, "CANCAN")
-                and is_in_rules(type(obj), request.ability.access_rules.rules)
+                and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
             ):
                 if not request.ability.can("editor_%s" % field_edit_name, obj):
                     return default_block(request)
@@ -216,7 +210,7 @@ def view_editor(
         if (
             obj
             and hasattr(settings, "CANCAN")
-            and is_in_rules(type(obj), request.ability.access_rules.rules)
+            and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
         ):
             if not request.ability.can("editor_%s" % field_edit_name, obj):
                 return default_block(request)
@@ -884,7 +878,7 @@ class GenericRows(object):
                         if self.queryset:
                             ret = self.queryset
                         else:
-                            if hasattr(settings, "CANCAN") and is_in_rules(
+                            if hasattr(settings, "CANCAN") and is_in_cancan_rules(
                                 self.model, self.request.ability.access_rules.rules
                             ):
                                 ret = self.request.ability.queryset_for(
@@ -927,7 +921,7 @@ class GenericRows(object):
                                 if hasattr(self.model, "filter"):
                                     ret = self.model.filter(filter, self, self.request)
                                 else:
-                                    if hasattr(settings, "CANCAN") and is_in_rules(
+                                    if hasattr(settings, "CANCAN") and is_in_cancan_rules(
                                         self.model,
                                         self.request.ability.access_rules.rules,
                                     ):
@@ -937,7 +931,7 @@ class GenericRows(object):
                                     else:
                                         ret = self.model.objects.all()
                             else:
-                                if hasattr(settings, "CANCAN") and is_in_rules(
+                                if hasattr(settings, "CANCAN") and is_in_cancan_rules(
                                     self.model, self.request.ability.access_rules.rules
                                 ):
                                     ret = self.request.ability.queryset_for(
@@ -1083,7 +1077,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
@@ -1200,7 +1194,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
@@ -1238,7 +1232,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
@@ -1437,7 +1431,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
@@ -1462,7 +1456,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
@@ -1673,7 +1667,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
@@ -1687,7 +1681,7 @@ class GenericRows(object):
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
-                    and is_in_rules(
+                    and is_in_cancan_rules(
                         type(self.object), self.request.ability.access_rules.rules
                     )
                 ):
