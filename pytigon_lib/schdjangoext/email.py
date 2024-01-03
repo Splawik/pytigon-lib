@@ -3,7 +3,6 @@ import email
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
 from django.template import Template, Context
-from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
 
@@ -24,15 +23,39 @@ class PytigonEmailMessage(EmailMultiAlternatives):
         self.body = template_plain.render(context)
         self.attach_alternative(self.html_body, "text/html")
 
-    def set_eml_body(self, context, eml_template_name, txt_template_name=None):
+    def _process_part(self, part):
+        if part.get_content_maintype() == "multipart":
+            for item in part.get_payload():
+                self._process_part(item)
+        elif part.get_content_maintype() == "text" and not self.html_body:
+            try:
+                encoding = part.get("Content-Type").split('"')[1]
+            except:
+                encoding = "utf-8"
+            if part.get_content_type() == "text/plain":
+                self.body = part.get_payload(decode=True).decode(encoding)
+            else:
+                self.attach_alternative(
+                    part.get_payload(decode=True).decode(encoding),
+                    part.get_content_type(),
+                )
+                self.html_body = "OK"
+        elif part.get_content_maintype() == "image":
+            img = MIMEImage(part.get_payload(decode=True))
+            for item in part.items():
+                img.add_header(item[0], item[1])
+            self.attach(img)
+        else:
+            self.attach(part, "message/rfc822")
+
+    def set_eml_body(self, context, eml_template_name):
         template_eml = get_template(eml_template_name)
         eml_name = template_eml.origin.name
         with open(eml_name, "rt") as f:
             t = Template(f.read())
             c = Context(context)
             txt = t.render(c)
-            msg = email.message_from_string(txt)
-            self.attach(content=msg, mimetype="message/rfc822")
+            self._process_part(email.message_from_string(txt))
 
 
 def send_message(
@@ -49,7 +72,7 @@ def send_message(
     message = PytigonEmailMessage(subject, "", from_email, to, bcc)
     if message_template_name.endswith(".html"):
         message.set_html_body(context, message_template_name, message_txt_template_name)
-    if message_template_name.endswith(".eml"):
+    elif message_template_name.endswith(".eml"):
         message.set_eml_body(context, message_template_name)
     if prepare_message:
         prepare_message(message)
