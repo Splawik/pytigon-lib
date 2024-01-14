@@ -25,6 +25,7 @@ import platform
 import inspect
 import re
 
+from collections import abc
 from base64 import b64encode, b64decode
 
 
@@ -185,3 +186,12 @@ def is_in_cancan_rules(model, rules):
         if rule["subject"] == model:
             return True
     return False
+
+
+def update_nested_dict(d, u):
+    for k, v in u.items():
+        if isinstance(v, abc.Mapping):
+            d[k] = update_nested_dict(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
