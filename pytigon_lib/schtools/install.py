@@ -123,20 +123,8 @@ def export_to_db(withoutapp=None, to_local_db=True):
         prj_name = settings.PRJ_NAME
         data_path = settings.DATA_PATH
         app_data_path = os.path.join(data_path, prj_name)
-        db_path = os.path.join(app_data_path, prj_name + ".db")
-
-        if to_local_db:
-            if os.path.exists(db_path):
-                os.rename(
-                    db_path,
-                    db_path
-                    + "."
-                    + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                    + ".bak",
-                )
-            cmd(["migrate", "--database", "local"])
-        else:
-            cmd(["migrate"])
+        # db_path = os.path.join(app_data_path, prj_name + ".db")
+        db_path = settings.DATABASES["local"]["NAME"]
 
         temp_path = os.path.join(data_path, "temp")
         if not os.path.exists(temp_path):
@@ -189,6 +177,19 @@ def export_to_db(withoutapp=None, to_local_db=True):
         parameters.append(json_path)
         parameters.append("--traceback")
         cmd(parameters)
+
+        if to_local_db:
+            if os.path.exists(db_path):
+                os.rename(
+                    db_path,
+                    db_path
+                    + "."
+                    + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                    + ".bak",
+                )
+            cmd(["migrate", "--database", "local"])
+        else:
+            cmd(["migrate"])
 
         if to_local_db:
             cmd(["loaddata", "--database", "local", json_path, "--traceback"])

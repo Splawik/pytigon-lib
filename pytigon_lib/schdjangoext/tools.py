@@ -63,3 +63,14 @@ def make_href(href, base_url=None):
         else:
             href2 += "?" + x
     return href2
+
+
+def from_migrations():
+    if (
+        "makemigrations" in sys.argv
+        or "makeallmigrations" in sys.argv
+        or "exporttolocaldb" in sys.argv
+    ):
+        return True
+    else:
+        return False
