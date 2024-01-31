@@ -26,6 +26,7 @@ import sys
 from django.db import models
 from django import forms
 from django.core import serializers
+from django.contrib.contenttypes.models import ContentType
 
 from pytigon_lib.schtools.schjson import ComplexEncoder, ComplexDecoder
 from pytigon_lib.schdjangoext.fastform import form_from_str
@@ -100,6 +101,7 @@ class JSONModel(models.Model):
             else:
                 return view.get_form(form_class)
         elif data:
+
             class form_class2(form_class):
                 def __init__(self, *args, **kwargs):
                     nonlocal data
@@ -125,6 +127,73 @@ class JSONModel(models.Model):
 
 
 class TreeModel(JSONModel):
+    class Meta:
+        abstract = True
+
+
+ASSOCIATED_MODEL_CACHE = {}
+
+
+class AssociatedModel(models.Model):
+    class Meta:
+        abstract = True
+
+    application = models.CharField(
+        "Application",
+        null=False,
+        blank=False,
+        editable=False,
+        db_index=True,
+        max_length=64,
+    )
+    table = models.CharField(
+        "Table",
+        null=False,
+        blank=False,
+        editable=False,
+        default="default",
+        db_index=True,
+        max_length=64,
+    )
+    group = models.CharField(
+        "Group",
+        null=True,
+        blank=True,
+        editable=False,
+        default="default",
+        db_index=True,
+        max_length=64,
+    )
+    parent_id = models.IntegerField(
+        "Parent id",
+        null=True,
+        blank=True,
+        editable=False,
+        db_index=True,
+    )
+
+    def get_associated_model(self):
+        global ASSOCIATED_MODEL_CACHE
+        key = self.application.lower() + "/" + self.table.lower()
+        if key in ASSOCIATED_MODEL_CACHE:
+            return ASSOCIATED_MODEL_CACHE[key]
+        model_obj = ContentType.objects.filter(
+            app_label=self.application.lower(), model=self.table.lower()
+        ).first()
+        if model_obj:
+            model_class = model_obj.model_class()
+            ASSOCIATED_MODEL_CACHE[key] = model_class
+            return model_class
+        return None
+
+    def get_associated_obj(self):
+        model = self.get_associated_model()
+        if model:
+            return model.objects.filter(pk=self.parent_id).first()
+        return None
+
+
+class AssociatedJSONModel(AssociatedModel, JSONModel):
     class Meta:
         abstract = True
 
@@ -195,6 +264,7 @@ def extend_class(main, base):
             ]
             + list(main.__bases__)
         )
+
 
 if (
     "makemigrations" in sys.argv

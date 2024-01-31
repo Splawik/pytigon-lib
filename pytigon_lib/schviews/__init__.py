@@ -921,7 +921,9 @@ class GenericRows(object):
                                 if hasattr(self.model, "filter"):
                                     ret = self.model.filter(filter, self, self.request)
                                 else:
-                                    if hasattr(settings, "CANCAN") and is_in_cancan_rules(
+                                    if hasattr(
+                                        settings, "CANCAN"
+                                    ) and is_in_cancan_rules(
                                         self.model,
                                         self.request.ability.access_rules.rules,
                                     ):
@@ -1105,7 +1107,7 @@ class GenericRows(object):
         fun = make_perms_test_fun(
             parent_class.table.app,
             self.base_model,
-            self.base_perm % "list",
+            self.base_perm % "view",
             DetailView.as_view(),
         )
         return self._append(url, fun)
@@ -1587,7 +1589,7 @@ class GenericRows(object):
         fun = make_perms_test_fun(
             parent_class.table.app,
             self.base_model,
-            self.base_perm % "change",
+            self.base_perm % "add",
             CreateView.as_view(),
         )
         return self._append(url, fun)
