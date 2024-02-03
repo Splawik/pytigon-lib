@@ -20,10 +20,8 @@
 import sys
 import os
 import asyncio
-import imp
 from subprocess import Popen, PIPE
 from threading import Thread
-import importlib
 
 from pytigon_lib.schtools.tools import get_executable
 from pytigon_lib.schtools.platform_info import platform_name
