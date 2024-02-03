@@ -192,6 +192,48 @@ class AssociatedModel(models.Model):
             return model.objects.filter(pk=self.parent_id).first()
         return None
 
+    def get_associated_obj_to_parent(self):
+        model = self.get_associated_model()
+        if model:
+            parent = model.objects.filter(pk=self.parent_id).first()
+            if parent and hasattr(parent, "get_associated_obj"):
+                return parent.get_associated_obj()
+        return None
+
+    def init_new(self, request, view, value=None):
+        if value:
+            app = None
+            x = value.split("__")
+            if len(x) == 4:
+                app, tbl, id, grp = x
+            elif len(x) == 3:
+                app, tbl, id = x
+                grp = "default"
+            if app:
+                return {"application": app, "table": tbl, "parent_id": id, "group": grp}
+        return {
+            "application": "default",
+            "table": "default",
+            "parent_id": 0,
+            "group": "default",
+        }
+
+    @classmethod
+    def filter(cls, value, view=None, request=None):
+        if value:
+            app = None
+            x = value.split("__")
+            if len(x) == 4:
+                app, tbl, id, grp = x
+            elif len(x) == 3:
+                app, tbl, id = x
+                grp = "default"
+            if app:
+                return cls.objects.filter(
+                    application=app, table=tbl, parent_id=id, group=grp
+                )
+        return cls.objects.all()
+
 
 class AssociatedJSONModel(AssociatedModel, JSONModel):
     class Meta:
