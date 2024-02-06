@@ -1289,7 +1289,7 @@ class GenericRows(object):
                 form.save_m2m()
 
                 if self.object:
-                    return update_row_ok(request, int(self.object.id), str(self.object))
+                    return update_row_ok(request, int(self.object.id), self.object)
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 
@@ -1363,13 +1363,14 @@ class GenericRows(object):
                 return names
 
             def get_success_url(self):
-                if self.object:
-                    success_url = make_path_lazy(
-                        "new_row_ok", (int(self.object.id), str(self.object))
-                    )
-                else:
-                    success_url = make_path_lazy("ok")
-                return success_url
+                # if self.object:
+                #    success_url = make_path_lazy(
+                #        "new_row_ok", (int(self.object.id), str(self.object))
+                #    )
+                # else:
+                #    success_url = make_path_lazy("ok")
+                # return success_url
+                return make_path_lazy("ok")
 
             def _get_form(self, request, *args, **kwargs):
                 # self.object = self.model()

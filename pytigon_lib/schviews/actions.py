@@ -18,7 +18,8 @@
 # version: "0.1a"
 
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.forms.models import model_to_dict
 
 _NEW_ROW_OK_HTML = """
 <head>
@@ -47,7 +48,7 @@ _UPDATE_ROW_OK_HTML = """
 </head>
 """
 
-_UPDATE_ROW_OK_SHTML = """
+OLD_UPDATE_ROW_OK_SHTML = """
 <head>
     <meta name="RETURN" content="$$RETURN_OK" />
     <meta name="target" content="code" />
@@ -60,6 +61,13 @@ if page:
 self.ok()
     </script>
 </body>
+"""
+
+_UPDATE_ROW_OK_SHTML = """
+<head>
+    <meta name="RETURN" content="$$RETURN_OK" />
+    <meta name="target" content="code" />
+</head>
 """
 
 _OK_HTML = """
@@ -115,12 +123,13 @@ def new_row_ok(request, id, title):
         return HttpResponse(_NEW_ROW_OK_HTML + "id:" + str(id))
 
 
-def update_row_ok(request, id, title):
+def update_row_ok(request, id, obj):
     if not "HTTP_USER_AGENT" in request.META or (
         request.META["HTTP_USER_AGENT"]
         and request.META["HTTP_USER_AGENT"].lower().startswith("py")
     ):
-        return HttpResponse(_UPDATE_ROW_OK_SHTML % (id, title))
+        # return HttpResponse(_UPDATE_ROW_OK_SHTML % (id, str(obj)))
+        return JsonResponse({"action": "update_row_ok", "obj": model_to_dict(obj)})
     else:
         return HttpResponse(_UPDATE_ROW_OK_HTML + "id:" + str(id))
 
