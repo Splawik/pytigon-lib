@@ -1556,9 +1556,7 @@ class GenericRows(object):
                         tp = ctx["table_path"]
                         return HttpResponseRedirect(tp + ("%d/edit/" % self.object.pk))
                     else:
-                        return new_row_ok(
-                            request, int(self.object.id), str(self.object)
-                        )
+                        return new_row_ok(request, int(self.object.id), self.object)
                 else:
                     return super(generic.edit.ModelFormMixin, self).form_valid(form)
 

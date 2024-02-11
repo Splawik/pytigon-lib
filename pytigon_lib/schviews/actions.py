@@ -113,12 +113,13 @@ _ERROR_HTML = """
 """
 
 
-def new_row_ok(request, id, title):
+def new_row_ok(request, id, obj):
     if not "HTTP_USER_AGENT" in request.META or (
         request.META["HTTP_USER_AGENT"]
         and request.META["HTTP_USER_AGENT"].lower().startswith("py")
     ):
-        return HttpResponse(_NEW_ROW_OK_SHTML % (id, title))
+        return JsonResponse({"action": "new_row_ok", "obj": model_to_dict(obj)})
+        # return HttpResponse(_NEW_ROW_OK_SHTML % (id, title))
     else:
         return HttpResponse(_NEW_ROW_OK_HTML + "id:" + str(id))
 
