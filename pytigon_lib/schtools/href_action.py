@@ -210,6 +210,15 @@ def set_attrs(obj, params, attr_tab, standard_web_browser):
         i += 1
 
 
+def get_perm(app, table, action):
+    if "edit" in action:
+        return "%s.change_%s" % (app, table)
+    elif "delete" in action:
+        return "%s.delete_%s" % (app, table)
+    else:
+        return ""
+
+
 class Action:
     def __init__(self, actions_str, context, d):
         # actions_str: action,title,icon_name,target,attrs,tag_class,url
@@ -247,12 +256,12 @@ class Action:
 
         pos = actions_str.split(",")
         action = ""
-        if not "=" in pos[0]:
+        if "=" not in pos[0]:
             action = pos[0].strip()
 
         while True:
             if "=" in pos[-1]:
-                if not pos[-1].split("=")[0].strip() in standard_attr:
+                if pos[-1].split("=")[0].strip() not in standard_attr:
                     break
                 s = pos.pop().split("=", 1)
                 if s[0] == "action":
@@ -392,7 +401,7 @@ class Action:
                 buf += "&x2=%s" % self.d["x2"]
                 if self.d["x3"]:
                     buf += "&x3=%s" % self.d["x3"]
-            if '?' in ret:
+            if "?" in ret:
                 ret += "&" + buf
             else:
                 ret += "?" + buf
@@ -443,6 +452,19 @@ def actions_dict(context, actions_str):
     act = actions
     for pos2 in actions_str.split(";"):
         pos = pos2.strip()
+        if "?:" in pos:
+            x = pos.split("?:", 1)
+            if x[0]:
+                perm = x[0]
+            else:
+                app = context["app_name"]
+                table = context["table_name"].lower()
+                perm = get_perm(app, table, x[1])
+
+            if perm and not context["request"].user.has_perm(perm):
+                print("perm: ", context["request"].user, perm)
+                continue
+            pos = x[1]
         if not pos:
             continue
         if pos[0] == "|":
@@ -459,10 +481,12 @@ def actions_dict(context, actions_str):
     d["actions"] = actions
     d["actions2"] = actions2
 
-    if len("actions") > 0:
+    if len(actions) > 0:
         d["action"] = actions[0]
-    else:
+    elif len(actions2) > 0:
         d["action"] = actions2[0]
+    else:
+        d["action"] = []
     return d
 
 
