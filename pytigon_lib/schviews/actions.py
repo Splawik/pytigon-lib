@@ -27,46 +27,15 @@ _NEW_ROW_OK_HTML = """
 </head>
 """
 
-_NEW_ROW_OK_SHTML = """
-<head>
-    <meta name="RETURN" content="$$RETURN_OK" />
-    <meta name="target" content="code" />
-</head>
-<body>
-    <script language=python>
-page = self.get_parent_page().get_parent_page()
-if page:
-    page.signal('return_new_row', id=%s, title="%s")
-self.ok()
-    </script>
-</body>
-"""
-
 _UPDATE_ROW_OK_HTML = """
 <head>
     <meta name="RETURN" content="$$RETURN_UPDATE_ROW_OK" />
 </head>
 """
 
-OLD_UPDATE_ROW_OK_SHTML = """
+_DELETE_ROW_OK_HTML = """
 <head>
     <meta name="RETURN" content="$$RETURN_OK" />
-    <meta name="target" content="code" />
-</head>
-<body>
-    <script language=python>
-page = self.get_parent_page().get_parent_page()
-if page:
-    page.signal('return_updated_row', id=%s, title="%s")
-self.ok()
-    </script>
-</body>
-"""
-
-_UPDATE_ROW_OK_SHTML = """
-<head>
-    <meta name="RETURN" content="$$RETURN_OK" />
-    <meta name="target" content="code" />
 </head>
 """
 
@@ -114,25 +83,33 @@ _ERROR_HTML = """
 
 
 def new_row_ok(request, id, obj):
-    if not "HTTP_USER_AGENT" in request.META or (
+    if "HTTP_USER_AGENT" not in request.META or (
         request.META["HTTP_USER_AGENT"]
         and request.META["HTTP_USER_AGENT"].lower().startswith("py")
     ):
         return JsonResponse({"action": "new_row_ok", "obj": model_to_dict(obj)})
-        # return HttpResponse(_NEW_ROW_OK_SHTML % (id, title))
     else:
         return HttpResponse(_NEW_ROW_OK_HTML + "id:" + str(id))
 
 
 def update_row_ok(request, id, obj):
-    if not "HTTP_USER_AGENT" in request.META or (
+    if "HTTP_USER_AGENT" not in request.META or (
         request.META["HTTP_USER_AGENT"]
         and request.META["HTTP_USER_AGENT"].lower().startswith("py")
     ):
-        # return HttpResponse(_UPDATE_ROW_OK_SHTML % (id, str(obj)))
         return JsonResponse({"action": "update_row_ok", "obj": model_to_dict(obj)})
     else:
         return HttpResponse(_UPDATE_ROW_OK_HTML + "id:" + str(id))
+
+
+def delete_row_ok(request, id, obj):
+    if "HTTP_USER_AGENT" not in request.META or (
+        request.META["HTTP_USER_AGENT"]
+        and request.META["HTTP_USER_AGENT"].lower().startswith("py")
+    ):
+        return JsonResponse({"action": "delete_row_ok", "obj": model_to_dict(obj)})
+    else:
+        return HttpResponse(_DELETE_ROW_OK_HTML + "id:" + str(id))
 
 
 def ok(request):

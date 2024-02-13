@@ -38,7 +38,7 @@ import django.db.models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from pytigon_lib.schviews.actions import new_row_ok, update_row_ok
+from pytigon_lib.schviews.actions import new_row_ok, update_row_ok, delete_row_ok
 from pytigon_lib.schviews.viewtools import render_to_response
 from pytigon_lib.schtools.schjson import json_loads, json_dumps
 from pytigon_lib.schtools.tools import is_in_cancan_rules
@@ -1692,7 +1692,12 @@ class GenericRows(object):
                 if hasattr(self.object, "on_delete"):
                     self.object.on_delete(request, self)
 
-                return super().post(request, *args, **kwargs)
+                pk = int(self.object.id)
+
+                super().post(request, *args, **kwargs)
+
+                return delete_row_ok(request, pk, self.object)
+                # return super().post(request, *args, **kwargs)
 
         VIEWS_REGISTER["delete"][self.base_model] = DeleteView
 
