@@ -42,6 +42,7 @@ def get_environ(path=None):
             SECRET_KEY=(str, ""),
             CHANNELS_REDIS=(str, ""),
             PUBLISH_IN_SUBFOLDER=(bool, False),
+            THUMBNAIL_PROTECTED=(bool, False),
         )
 
     if path:

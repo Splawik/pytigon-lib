@@ -21,7 +21,7 @@ import os
 import sys
 from pytigon_lib.schfs import extractall
 import zipfile
-from distutils.dir_util import copy_tree
+import shutil
 import configparser
 from pytigon_lib.schtools.process import py_manage
 from pytigon_lib.schtools.cc import make
@@ -134,7 +134,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             os.makedirs(_data_path)
         if os.path.exists(zip_file2):
             if test2 == 2:
-                extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=[".*\.db"])
+                extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=[r".*\.db"])
             else:
                 extractall(zipfile.ZipFile(zip_file2), _data_path)
         if not os.path.exists(os.path.join(_data_path, "media")):
@@ -187,7 +187,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if test3:
         p2 = os.path.join(os.path.join(_root_path, "static"), "app")
         if os.path.exists(p2):
-            copy_tree(p2, _static_app_path, preserve_mode=0, preserve_times=0)
+            shutil.copytree(p2, _static_app_path)
 
     _paths = [
         "",
@@ -222,7 +222,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                     pip_install(pip_str, prjlib, confirm=True)
 
     if os.path.exists(prjlib):
-        if not prjlib in sys.path:
+        if prjlib not in sys.path:
             sys.path.append(prjlib)
         if test1 or test2 or test3:
             ret = make(_data_path, os.path.join(_prj_path, prj), prj)
