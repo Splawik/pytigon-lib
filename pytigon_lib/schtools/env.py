@@ -35,6 +35,7 @@ def get_environ(path=None):
             LOGS_TO_DOCKER=(bool, False),
             PWA=(bool, False),
             GRAPHQL=(bool, False),
+            DJANGO_Q=(bool, False),
             ALLAUTH=(bool, False),
             REST=(bool, False),
             CANCAN_ENABLED=(bool, False),
@@ -43,6 +44,8 @@ def get_environ(path=None):
             CHANNELS_REDIS=(str, ""),
             PUBLISH_IN_SUBFOLDER=(bool, False),
             THUMBNAIL_PROTECTED=(bool, False),
+            COMPRESSOR=(bool, False),
+            LOG_VIEWER=(bool, False),
         )
 
     if path:
