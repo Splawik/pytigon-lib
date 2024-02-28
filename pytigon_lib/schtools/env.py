@@ -44,7 +44,7 @@ def get_environ(path=None):
             CHANNELS_REDIS=(str, ""),
             PUBLISH_IN_SUBFOLDER=(bool, False),
             THUMBNAIL_PROTECTED=(bool, False),
-            COMPRESSOR=(bool, False),
+            MAILER=(bool, True),
             LOG_VIEWER=(bool, False),
         )
 
