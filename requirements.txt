@@ -9,3 +9,4 @@ pyexcel-xlsx
 pyexcel-ods3
 python-docx
 fpdf2
+python-datetuit
