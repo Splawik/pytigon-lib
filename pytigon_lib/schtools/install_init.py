@@ -54,6 +54,8 @@ def upgrade_test(zip_path, out_path):
             t2 = cfg2["DEFAULT"]["GEN_TIME"]
             if t2 < t1:
                 return True
+        else:
+            return False
     return False
 
 
@@ -115,28 +117,28 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     _data_path = os.path.normpath(data_path)
     _prj_path = os.path.normpath(prj_path)
     _static_app_path = os.path.normpath(static_app_path)
-    _base_compiler_path = os.path.join(_data_path, "ext_prg")
-    test1 = 0 if os.path.exists(_prj_path) else 1
-    test2 = 0 if os.path.exists(_data_path) else 1
-    test3 = 0 if os.path.exists(_static_app_path) else 1
+    # _base_compiler_path = os.path.join(_data_path, "ext_prg")
+    # is_prj_path = True if os.path.exists(_prj_path) else False
+    is_data_path = (
+        True if os.path.exists(os.path.join(_data_path, "install.ini")) else False
+    )
+    is_static_path = True if os.path.exists(_static_app_path) else False
+    upgrade = False
 
-    if not test2:
+    if is_data_path:
         if upgrade_test(
             os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip"),
             _data_path,
         ):
-            test2 = 2
+            upgrade = True
             print("Upgrade data")
 
-    if test2:
+    if not is_data_path:
         zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")
         if not os.path.exists(_data_path):
             os.makedirs(_data_path)
         if os.path.exists(zip_file2):
-            if test2 == 2:
-                extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=[r".*\.db"])
-            else:
-                extractall(zipfile.ZipFile(zip_file2), _data_path)
+            extractall(zipfile.ZipFile(zip_file2), _data_path)
         if not os.path.exists(os.path.join(_data_path, "media")):
             media_path = os.path.join(os.path.join(_data_path, "media"))
             os.makedirs(media_path)
@@ -181,10 +183,15 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                         if err_tab:
                             print(err_tab)
         os.chdir(tmp)
-    if test2 == 2:
-        pass
 
-    if test3:
+    if upgrade:
+        zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")
+        if not os.path.exists(_data_path):
+            os.makedirs(_data_path)
+        if os.path.exists(zip_file2):
+            extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=[r".*\.db"])
+
+    if not is_static_path:
         p2 = os.path.join(os.path.join(_root_path, "static"), "app")
         if os.path.exists(p2):
             shutil.copytree(p2, _static_app_path)
@@ -224,11 +231,11 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if os.path.exists(prjlib):
         if prjlib not in sys.path:
             sys.path.append(prjlib)
-        if test1 or test2 or test3:
-            ret = make(_data_path, os.path.join(_prj_path, prj), prj)
-            if ret:
-                for pos in ret:
-                    print(pos)
+        # if test1 or test2 or test3:
+        #    ret = make(_data_path, os.path.join(_prj_path, prj), prj)
+        #    if ret:
+        #        for pos in ret:
+        #            print(pos)
     syslib = os.path.join(_data_path, prj, "syslib")
     if not os.path.exists(syslib):
         os.makedirs(syslib)
