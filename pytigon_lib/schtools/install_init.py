@@ -159,7 +159,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             doc_path = os.path.join(os.path.join(_data_path, "doc"))
             os.makedirs(doc_path)
 
-        if is_dev and not set(SYS_COMMANDS, set(sys.argv)):
+        if is_dev and not SYS_COMMANDS.intersection(sys.argv):
             prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
         else:
             prjs = []
