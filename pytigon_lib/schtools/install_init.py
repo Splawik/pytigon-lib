@@ -122,10 +122,11 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     is_data_path = (
         True if os.path.exists(os.path.join(_data_path, "install.ini")) else False
     )
+    is_dev = prj in ("schdevtools", "schmanage", "_schsetup")
     is_static_path = True if os.path.exists(_static_app_path) else False
     upgrade = False
 
-    if is_data_path:
+    if is_data_path and is_dev:
         if upgrade_test(
             os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip"),
             _data_path,
@@ -137,7 +138,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")
         if not os.path.exists(_data_path):
             os.makedirs(_data_path)
-        if os.path.exists(zip_file2):
+        if os.path.exists(zip_file2) and is_dev:
             extractall(zipfile.ZipFile(zip_file2), _data_path)
         if not os.path.exists(os.path.join(_data_path, "media")):
             media_path = os.path.join(os.path.join(_data_path, "media"))
@@ -150,7 +151,12 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             doc_path = os.path.join(os.path.join(_data_path, "doc"))
             os.makedirs(doc_path)
 
-        prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
+        if is_dev:
+            prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
+        else:
+            prjs = [
+                prj,
+            ]
 
         tmp = os.getcwd()
         for app in prjs:
