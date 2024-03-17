@@ -154,9 +154,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if is_dev:
             prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
         else:
-            prjs = [
-                prj,
-            ]
+            prjs = []
 
         tmp = os.getcwd()
         for app in prjs:
