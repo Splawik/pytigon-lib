@@ -110,6 +110,14 @@ def upgrade_local_libs():
                 pip_install(pip_str, prjlib, confirm=True, upgrade=True)
 
 
+SYS_COMMANDS = {
+    "makeallmigrations",
+    "migrate",
+    "createautouser",
+    "import_projects",
+}
+
+
 def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if prj == "_schall":
         return
@@ -151,7 +159,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             doc_path = os.path.join(os.path.join(_data_path, "doc"))
             os.makedirs(doc_path)
 
-        if is_dev:
+        if is_dev and not set(SYS_COMMANDS, set(sys.argv)):
             prjs = [ff for ff in os.listdir(_prj_path) if not ff.startswith("_")]
         else:
             prjs = []
