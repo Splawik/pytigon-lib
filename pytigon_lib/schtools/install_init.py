@@ -19,13 +19,15 @@
 
 import os
 import sys
-from pytigon_lib.schfs import extractall
 import zipfile
 import shutil
 import configparser
+import multiprocessing
+from pytigon_lib.schfs import extractall
 from pytigon_lib.schtools.process import py_manage
 from pytigon_lib.schtools.cc import make
 from pytigon_lib.schtools.process import py_run
+from pytigon_lib.schtools.nim_integration import install_nim
 
 
 def _mkdir(path, ext=None):
@@ -92,8 +94,25 @@ def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
                 print("pip error: ", pos)
 
     if success and confirm:
-        with open(os.path.join(prjlib, "install.txt"), "wt") as f:
-            f.write("OK")
+        return True
+    else:
+        return False
+
+
+def build_all(path):
+    ret = True
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if name.endswith("_build.py"):
+                p = os.path.join(root, name)
+                with open(p, "rt") as f:
+                    buf = f.read()
+                    exec(buf)
+                    if "build" in locals():
+                        x = locals()["build"](path=p.replace("_build.py", ".nim"))
+                        if not x:
+                            ret = False
+    return ret
 
 
 def upgrade_local_libs():
@@ -121,6 +140,10 @@ SYS_COMMANDS = {
 def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if prj == "_schall":
         return
+
+    l = multiprocessing.Lock()
+    l.acquire()
+
     _root_path = os.path.normpath(root_path)
     _data_path = os.path.normpath(data_path)
     _prj_path = os.path.normpath(prj_path)
@@ -198,6 +221,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                         print("python: pytigon: projects imported!")
                         if err_tab:
                             print(err_tab)
+        install_nim(_data_path)
         os.chdir(tmp)
 
     if upgrade:
@@ -233,6 +257,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if not os.path.exists(prjlib) or not os.path.exists(
         os.path.join(prjlib, "install.txt")
     ):
+        ok = True
         if not os.path.exists(prjlib):
             os.mkdir(prjlib)
         config_file = os.path.join(prj_path, prj, "install.ini")
@@ -242,7 +267,15 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             if "DEFAULT" in config:
                 pip_str = config["DEFAULT"].get("PIP", "")
                 if pip_str:
-                    pip_install(pip_str, prjlib, confirm=True)
+                    x = pip_install(pip_str, prjlib, confirm=True)
+                    if not x:
+                        ok = False
+        x = build_all(os.path.join(_prj_path, prj))
+        if not x:
+            ok = False
+        if ok:
+            with open(os.path.join(prjlib, "install.txt"), "wt") as f:
+                f.write("OK")
 
     if os.path.exists(prjlib):
         if prjlib not in sys.path:
@@ -257,3 +290,4 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         os.makedirs(syslib)
         with open(os.path.join(syslib, "__init__.py"), "wt") as f:
             f.write(" ")
+    l.release()
