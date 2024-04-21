@@ -3,6 +3,9 @@ import httpx
 import tarfile
 import os
 import tempfile
+import ziglang
+import stat
+
 
 if os.name == "nt":
     NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4_x64.zip"
@@ -29,8 +32,25 @@ def install_nim(data_path):
     with tarfile.open(nim_tar, "r") as tar:
         tar.extractall(prg_path)
 
-    nim_lib_path = os.path.join(prg_path, "lib")
-    os.makedirs(nim_lib_path)
+    # nim_lib_path = os.path.join(prg_path, "lib")
+    # os.makedirs(nim_lib_path)
+
+    nim_path = get_nim_path(data_path)
+    if nim_path:
+        if os.name == "nt":
+            path = os.path.join(nim_path, "bin", "zigcc.cmd")
+            with open(path, "wt") as f:
+                f.write("#!/bin/sh\n")
+                f.write(
+                    "%s cc %%*\n" % ziglang.__file__.replace("__init__.py", "zig.exe")
+                )
+        else:
+            path = os.path.join(nim_path, "bin", "zigcc")
+            with open(path, "wt") as f:
+                f.write("#!/bin/sh\n")
+                f.write("%s cc $@\n" % ziglang.__file__.replace("__init__.py", "zig"))
+            st = os.stat(path)
+            os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
 def get_nim_path(data_path):
