@@ -221,7 +221,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                         print("python: pytigon: projects imported!")
                         if err_tab:
                             print(err_tab)
-        install_nim(_data_path)
+        # install_nim(_data_path)
         os.chdir(tmp)
 
     if upgrade:

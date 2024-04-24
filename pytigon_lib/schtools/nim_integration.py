@@ -1,56 +1,114 @@
 import lzma
 import httpx
 import tarfile
+import zipfile
 import os
 import tempfile
 import ziglang
 import stat
 
+from pytigon_lib.schtools.process import run
 
 if os.name == "nt":
     NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4_x64.zip"
+    ZIG_CC_C = """
+#include <string.h>
+#include <process.h>
+
+int main(int argi, char **argv)
+{
+    char bufor[4096];
+    int i;
+
+    strcpy(bufor, "ptig zig cc");
+    for (int i = 1; i < argi; i++)
+    {
+        strcat(bufor, " ");
+        strcat(bufor, argv[i]);
+    }
+    return system(bufor);
+}
+"""
 else:
     NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4-linux_x64.tar.xz"
+    ZIG_CC_C = """
+#include <string.h>
+#include <stdlib.h>
+
+int main(int argi, char **argv)
+{
+    char bufor[4096];
+    int i;
+
+    strcpy(bufor, "ptig zig cc");
+    for (int i = 1; i < argi; i++)
+    {
+        strcat(bufor, " ");
+        strcat(bufor, argv[i]);
+    }
+    return system(bufor);
+}
+"""
 
 
 def install_nim(data_path):
     temp_dir = tempfile.gettempdir()
-    nim_tar_xz = os.path.join(temp_dir, "nim.tar.xz")
-    nim_tar = os.path.join(temp_dir, "nim.tar")
     r = httpx.get(NIM_DOWNLOAD_PATH)
-    if r.status_code == 200:
-        with open(nim_tar_xz, "wb") as f:
-            f.write(r.content)
+    if os.name == "nt":
+        nim_zip = os.path.join(temp_dir, "nim.zip")
+        if r.status_code == 200:
+            with open(nim_zip, "wb") as f:
+                f.write(r.content)
+        prg_path = os.path.join(data_path, "prg")
+        os.makedirs(prg_path, exist_ok=True)
 
-    buf = lzma.open(nim_tar_xz).read()
-    with open(nim_tar, "wb") as f:
-        f.write(buf)
+        with zipfile.ZipFile(nim_zip) as f:
+            f.extractall(prg_path)
 
-    prg_path = os.path.join(data_path, "prg")
-    os.makedirs(prg_path, exist_ok=True)
+    else:
+        nim_tar_xz = os.path.join(temp_dir, "nim.tar.xz")
+        nim_tar = os.path.join(temp_dir, "nim.tar")
+        if r.status_code == 200:
+            with open(nim_tar_xz, "wb") as f:
+                f.write(r.content)
 
-    with tarfile.open(nim_tar, "r") as tar:
-        tar.extractall(prg_path)
+        buf = lzma.open(nim_tar_xz).read()
+        with open(nim_tar, "wb") as f:
+            f.write(buf)
 
-    # nim_lib_path = os.path.join(prg_path, "lib")
-    # os.makedirs(nim_lib_path)
+        prg_path = os.path.join(data_path, "prg")
+        os.makedirs(prg_path, exist_ok=True)
+
+        with tarfile.open(nim_tar, "r") as tar:
+            tar.extractall(prg_path)
 
     nim_path = get_nim_path(data_path)
     if nim_path:
-        if os.name == "nt":
-            path = os.path.join(nim_path, "bin", "zigcc.cmd")
-            with open(path, "wt") as f:
-                f.write("#!/bin/sh\n")
-                f.write(
-                    "%s cc %%*\n" % ziglang.__file__.replace("__init__.py", "zig.exe")
-                )
-        else:
-            path = os.path.join(nim_path, "bin", "zigcc")
-            with open(path, "wt") as f:
-                f.write("#!/bin/sh\n")
-                f.write("%s cc $@\n" % ziglang.__file__.replace("__init__.py", "zig"))
-            st = os.stat(path)
-            os.chmod(path, st.st_mode | stat.S_IEXEC)
+        nim_cfg_path = os.path.join(nim_path, "config", "nim.cfg")
+        with open(nim_cfg_path, "rt") as f:
+            buf = f.read()
+            buf = buf.replace(
+                "cc = gcc", "cc = clang\nclang.exe = zigcc\nclang.linkerexe = zigcc\n"
+            )
+        with open(nim_cfg_path, "wt") as f:
+            f.write(buf)
+
+        zigcc_bin = os.path.join(
+            nim_path, "bin", "zigcc.exe" if os.name == "nt" else "zigcc"
+        )
+        zigcc_c = os.path.join(temp_dir, "zigcc.c")
+        with open(zigcc_c, "wt") as f:
+            f.write(ZIG_CC_C)
+
+        exit_code, output_tab, err_tab = run(
+            ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c]
+        )
+        if err_tab:
+            print(err_tab)
+
+        if os.name != "nt":
+            st = os.stat(zigcc_bin)
+            os.chmod(zigcc_bin, st.st_mode | stat.S_IEXEC)
 
 
 def get_nim_path(data_path):
