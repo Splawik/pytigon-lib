@@ -60,7 +60,7 @@ class FrozenModules:
             sys.modules[pos] = self.to_restore[pos]
 
 
-def run(cmd):
+def run(cmd, shell=True):
     """run extern command
 
     args:
@@ -74,7 +74,7 @@ def run(cmd):
     example:
         run(["ls" "-la",])
     """
-    process = Popen(cmd, stdout=PIPE, stderr=PIPE)
+    process = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=shell)
     (output, err) = process.communicate()
     exit_code = process.wait()
     if output:
@@ -115,7 +115,8 @@ def py_run(cmd):
         [
             get_executable(),
         ]
-        + cmd
+        + cmd,
+        False,
     )
 
 

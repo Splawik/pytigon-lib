@@ -21,7 +21,7 @@ int main(int argi, char **argv)
     buf[2] = "cc";
     memcpy(buf + 3, argv + 1, sizeof(char *) * (argi - 1));
     buf[argi + 2] = 0;
-    return execvp("ptig", buf);
+    execvp("ptig", buf);
 }
 """
 
