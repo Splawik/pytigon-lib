@@ -4,51 +4,31 @@ import tarfile
 import zipfile
 import os
 import tempfile
-import ziglang
 import stat
 
 from pytigon_lib.schtools.process import run
 
-if os.name == "nt":
-    NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4_x64.zip"
-    ZIG_CC_C = """
-#include <string.h>
-#include <process.h>
-
-int main(int argi, char **argv)
-{
-    char bufor[4096];
-    int i;
-
-    strcpy(bufor, "ptig zig cc");
-    for (int i = 1; i < argi; i++)
-    {
-        strcat(bufor, " ");
-        strcat(bufor, argv[i]);
-    }
-    return system(bufor);
-}
-"""
-else:
-    NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4-linux_x64.tar.xz"
-    ZIG_CC_C = """
+ZIG_CC_C = """
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 int main(int argi, char **argv)
 {
-    char bufor[4096];
-    int i;
-
-    strcpy(bufor, "ptig zig cc");
-    for (int i = 1; i < argi; i++)
-    {
-        strcat(bufor, " ");
-        strcat(bufor, argv[i]);
-    }
-    return system(bufor);
+    char **buf = (char **)malloc(sizeof(char *) * (argi + 3));
+    buf[0] = "ptig";
+    buf[1] = "zig";
+    buf[2] = "cc";
+    memcpy(buf + 3, argv + 1, sizeof(char *) * (argi - 1));
+    buf[argi + 2] = 0;
+    return execvp("ptig", buf);
 }
 """
+
+if os.name == "nt":
+    NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4_x64.zip"
+else:
+    NIM_DOWNLOAD_PATH = "https://nim-lang.org/download/nim-2.0.4-linux_x64.tar.xz"
 
 
 def install_nim(data_path):
