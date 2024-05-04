@@ -81,7 +81,7 @@ def install_nim(data_path):
             f.write(ZIG_CC_C)
 
         exit_code, output_tab, err_tab = run(
-            ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c]
+            ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c], env=os.environ
         )
         if err_tab:
             print(err_tab)
