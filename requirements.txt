@@ -10,3 +10,5 @@ pyexcel-ods3
 python-docx
 fpdf2
 python-dateutil
+markdown
+pyquery
