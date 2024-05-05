@@ -25,7 +25,6 @@ import configparser
 import multiprocessing
 from pytigon_lib.schfs import extractall
 from pytigon_lib.schtools.process import py_manage
-from pytigon_lib.schtools.cc import make
 from pytigon_lib.schtools.process import py_run
 from pytigon_lib.schtools.nim_integration import install_nim
 

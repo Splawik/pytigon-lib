@@ -20,12 +20,10 @@
 import datetime
 import zipfile
 import io
-from shutil import move
 
 from pytigon_lib.schdjangoext.django_manage import *
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.process import py_run
-from pytigon_lib.schtools.cc import make
 from pytigon_lib.schtools.main_paths import get_prj_name
 
 
@@ -109,10 +107,10 @@ def install():
                 "auto", "auto@pytigon.com", "anawa"
             )
 
-    ret = make(data_path, prj_path, prj_name)
-    if ret:
-        for pos in ret:
-            print(pos)
+    # ret = make(data_path, prj_path, prj_name)
+    # if ret:
+    #    for pos in ret:
+    #        print(pos)
 
 
 def export_to_db(withoutapp=None, to_local_db=True):
