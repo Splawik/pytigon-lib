@@ -18,8 +18,7 @@
 # version: "0.1a"
 
 
-"""Module contains many additional db models.
-"""
+"""Module contains many additional db models."""
 
 import sys
 
@@ -312,6 +311,7 @@ if (
     "makemigrations" in sys.argv
     or "makeallmigrations" in sys.argv
     or "exporttolocaldb" in sys.argv
+    or "migrate" in sys.argv
 ):
 
     def OverwritableCallable(func):

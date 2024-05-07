@@ -150,18 +150,23 @@ def export_to_db(withoutapp=None, to_local_db=True):
                 "4",
             ]
 
-        do_not_export = [
-            "auth",
-            "contenttypes",
-            "sessions",
-            "sites",
-            "admin",
-            "socialaccount",
-            "account",
-        ]
+        if withoutapp is None or "sys" in withoutapp:
+            do_not_export = [
+                "auth",
+                "contenttypes",
+                "sessions",
+                "sites",
+                "admin",
+                "socialaccount",
+                "account",
+            ]
+        else:
+            do_not_export = []
+
         if withoutapp:
             for item in withoutapp:
-                do_not_export.append(item)
+                if item:
+                    do_not_export.append(item)
 
         for item in do_not_export:
             for app in settings.INSTALLED_APPS:
