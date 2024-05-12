@@ -197,7 +197,7 @@ def get_main_paths(prj_name=None):
                     "PRJ_PATH", os.path.abspath(os.path.join(pytigon_path, ".."))
                 )
 
-        prj_static_path = os.path.join(ret["PRJ_PATH"], "static")
+        prj_static_path = os.path.join(ret["PRJ_PATH"], PRJ_NAME, "static")
         if (
             prj_static_path not in ret["STATICFILES_DIRS"]
             and prj_static_path != ret["STATIC_PATH"]
