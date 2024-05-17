@@ -60,7 +60,7 @@ class FrozenModules:
             sys.modules[pos] = self.to_restore[pos]
 
 
-def run(cmd, shell=False, env=False):
+def run(cmd, shell=False, env=None):
     """run extern command
 
     args:
