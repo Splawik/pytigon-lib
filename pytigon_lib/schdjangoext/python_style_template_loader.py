@@ -21,11 +21,12 @@ import os
 import codecs
 
 from django.conf import settings
-from django.template import TemplateDoesNotExist
+from django.template import Origin, TemplateDoesNotExist
 from django.utils._os import safe_join
 from django.template.loaders.base import Loader as BaseLoader
 import django.template.loaders.filesystem
 import django.template.loaders.app_directories
+from django.core.exceptions import SuspiciousFileOperation
 
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
 
@@ -123,19 +124,41 @@ class FSLoader(django.template.loaders.filesystem.Loader):
     is_usable = True
 
     def get_template_sources(self, template_name):
-        template_name2 = template_name
-        x = template_name.split("/")
-        if "_" in x[-1]:
-            xx = x[-1].rsplit("_", 1)
-            xx2 = xx[1].split(".")
-            if len(xx2) > 1:
-                template_name2 = "/".join(
-                    x[:-1]
-                    + [
-                        xx[0] + "." + xx2[1],
-                    ]
-                )
-        return super().get_template_sources(template_name2)
+        for template_dir in self.get_dirs():
+            try:
+                name = safe_join(template_dir, template_name)
+            except SuspiciousFileOperation:
+                continue
+
+            yield Origin(
+                name=name,
+                template_name=template_name,
+                loader=self,
+            )
+
+            if '_' in name:
+                x = name.rsplit("_", 1)
+                if len(x[1])==7 and x[1].endswith('.html'):
+                    yield Origin(
+                        name=x[0]+".html",
+                        template_name=template_name,
+                        loader=self,
+                    )
+
+    def get_contents(self, origin):
+        try:
+            with open(origin.name, encoding=self.engine.file_charset) as fp:
+                return fp.read()
+        except FileNotFoundError:
+            if '_' in origin.name:
+                x = origin.name.rsplit("_", 1)
+                if len(x[1])==7 and x[1].endswith('.html'):
+                    try:
+                        with open(x[0]+".html", encoding=self.engine.file_charset) as fp:
+                            return fp.read()
+                    except FileNotFoundError:
+                        raise TemplateDoesNotExist(origin)
+            raise TemplateDoesNotExist(origin)
 
 
 class Loader(BaseLoader):
