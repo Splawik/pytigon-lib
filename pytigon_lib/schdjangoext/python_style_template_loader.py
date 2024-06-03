@@ -136,11 +136,11 @@ class FSLoader(django.template.loaders.filesystem.Loader):
                 loader=self,
             )
 
-            if '_' in name:
+            if "_" in name:
                 x = name.rsplit("_", 1)
-                if len(x[1])==7 and x[1].endswith('.html'):
+                if len(x[1]) == 7 and x[1].endswith(".html"):
                     yield Origin(
-                        name=x[0]+".html",
+                        name=x[0] + ".html",
                         template_name=template_name,
                         loader=self,
                     )
@@ -150,11 +150,13 @@ class FSLoader(django.template.loaders.filesystem.Loader):
             with open(origin.name, encoding=self.engine.file_charset) as fp:
                 return fp.read()
         except FileNotFoundError:
-            if '_' in origin.name:
+            if "_" in origin.name:
                 x = origin.name.rsplit("_", 1)
-                if len(x[1])==7 and x[1].endswith('.html'):
+                if len(x[1]) == 7 and x[1].endswith(".html"):
                     try:
-                        with open(x[0]+".html", encoding=self.engine.file_charset) as fp:
+                        with open(
+                            x[0] + ".html", encoding=self.engine.file_charset
+                        ) as fp:
                             return fp.read()
                     except FileNotFoundError:
                         raise TemplateDoesNotExist(origin)
