@@ -113,11 +113,15 @@ class BaseHtmlElemParser(object):
         self.attrs = attrs
         css_attrs = self.parser.css.get_dict(self)
         for pos in css_attrs:
-            if not pos in self.attrs:
+            if pos not in self.attrs:
                 self.attrs[pos] = css_attrs[pos]
         self.child_tags = []
         self.data = []
         self.width = -1
+        self.max_width = 1000000000
+        self.min_width = -1000000000
+        self.max_height = 1000000000
+        self.min_height = -1000000000
         self.height = -1
         self.dy = 0
         if "width" in attrs:
@@ -126,14 +130,35 @@ class BaseHtmlElemParser(object):
             else:
                 parent_width = 0
             if parent_width >= 0:
-                self.width = self._norm_sizes([attrs["width"]], parent_width)[0]
+                self.width = self._norm_sizes_and_minmax(
+                    self.attrs, "width", "max-width", "min-width", parent_width
+                )[0]
         if "height" in attrs:
             if "%" in attrs["height"]:
                 parent_height = self.get_parent_height()
             else:
                 parent_height = 0
             if parent_height >= 0:
-                self.height = self._norm_sizes([attrs["height"]], parent_height)[0]
+                self.height = self._norm_sizes_and_minmax(
+                    self.attrs, "height", "max-height", "min-height", parent_height
+                )[0]
+        if attrs and self.width == -1 and "max-width" in attrs:
+            self.max_width = self._norm_sizes_and_minmax(
+                self.attrs, "max-width", "max-width", None, self.get_parent_width()
+            )[0]
+        if attrs and self.width == -1 and "min-width" in attrs:
+            self.min_width = self._norm_sizes_and_minmax(
+                self.attrs, "min-width", "min-width", None, self.get_parent_width()
+            )[0]
+        if attrs and self.height == -1 and "max-height" in attrs:
+            self.max_height = self._norm_sizes_and_minmax(
+                self.attrs, "height", "max-height", None, self.get_parent_height()
+            )[0]
+        if attrs and self.height == -1 and "min-height" in attrs:
+            self.min_height = self._norm_sizes_and_minmax(
+                self.attrs, "min-height", "min-height", None, self.get_parent_height()
+            )[0]
+
         self.rendered_children = []
 
         self.dc_info = None
@@ -214,7 +239,7 @@ class BaseHtmlElemParser(object):
                 color = rgb_to_hex(color)
             else:
                 color = "#000"
-        if not font_family in (
+        if font_family not in (
             "serif",
             "sans-serif",
             "monospace",
@@ -222,7 +247,7 @@ class BaseHtmlElemParser(object):
             "fantasy",
         ):
             font_family = "sans-serif"
-        if not "%" in font_size:
+        if "%" not in font_size:
             font_size = 100
         else:
             try:
@@ -279,7 +304,6 @@ class BaseHtmlElemParser(object):
             return None
 
     def handle_starttag(self, parser, tag, attrs):
-
         if tag in self.child_tags or tag == "comment":
             handler = self.class_from_tag_name(tag)
             if handler:
@@ -358,7 +382,7 @@ class BaseHtmlElemParser(object):
         ret = []
         for pos in sizes:
             test = True
-            if not "calc" in pos:
+            if "calc" not in pos:
                 try:
                     pos2 = pos.replace("px", "").strip()
                     if pos2.endswith("%"):
@@ -412,20 +436,74 @@ class BaseHtmlElemParser(object):
             ret.append(x)
         return ret
 
+    def _norm_sizes_and_minmax(self, attrs, size_str, max_size_str, min_size_str, dxy):
+        tab = tab_max = tab_min = None
+        if size_str not in attrs:
+            return []
+        else:
+            tab = self._norm_sizes(
+                [
+                    attrs[size_str],
+                ],
+                dxy,
+            )
+        if attrs and max_size_str and max_size_str in attrs:
+            tab_max = self._norm_sizes(
+                [
+                    attrs[max_size_str],
+                ],
+                dxy,
+            )
+            tab = list([min(item1, item2) for item1, item2 in zip(tab, tab_max)])
+        if attrs and min_size_str and min_size_str in attrs:
+            tab_min = self._norm_sizes(
+                [
+                    attrs[min_size_str],
+                ],
+                dxy,
+            )
+            tab = list([max(item1, item2) for item1, item2 in zip(tab, tab_min)])
+        return tab
+
+    def take_into_account_minmax(self, w, h, scale=False):
+        w2 = max(min(w, self.max_width), self.min_width)
+        h2 = max(min(w, self.max_height), self.min_height)
+        if scale:
+            if w2 != w and w != 0:
+                h2 = h * w2 / w
+            elif h2 != h and h != 0:
+                w2 = w * h2 / h
+        return (w2, h2)
+
     def set_width(self, width):
         self.width = width
 
-    def get_width(self):
+    def _get_width(self):
         if self.width >= 0:
             return [self.width, self.width, self.width]
         else:
             if "width" in self.attrs:
                 (parent_width, parent_min, parent_max) = self.parent.get_client_width()
-                width = self._norm_sizes([self.attrs["width"]], parent_width)[0]
-                min = self._norm_sizes([self.attrs["width"]], parent_min)[0]
-                max = self._norm_sizes([self.attrs["width"]], parent_max)[0]
+                width = self._norm_sizes_and_minmax(
+                    self.attrs, "width", "max-width", "min-width", parent_width
+                )[0]
+                min = self._norm_sizes_and_minmax(
+                    self.attrs, "width", "max-width", "min-width", parent_min
+                )[0]
+                max = self._norm_sizes_and_minmax(
+                    self.attrs, "width", "max-width", "min-width", parent_max
+                )[0]
                 return [width, min, max]
             return self.calc_width()
+
+    def get_width(self):
+        w = self._get_width()
+        for i, item in enumerate(w):
+            if w[i] > self.max_width:
+                w[i] = self.max_width
+            if w[i] < self.min_width:
+                w[i] = self.min_width
+        return w
 
     def get_client_width(self):
         m = self._get_pseudo_margins()
@@ -440,15 +518,25 @@ class BaseHtmlElemParser(object):
     def set_height(self, height):
         self.height = height
 
-    def get_height(self):
+    def _get_height(self):
         if self.height >= 0:
             return self.height
         else:
             if "height" in self.attrs:
                 parent_height = self.parent.get_height()
-                height = self._norm_sizes([self.attrs["height"]], parent_height)[0]
+                height = self._norm_sizes_and_minmax(
+                    self.attrs, "height", "max-height", "min-height", parent_height
+                )[0]
                 return height
             return self.calc_height()
+
+    def get_height(self):
+        h = self._get_height()
+        if h > self.max_height:
+            h = self.max_height
+        if h < self.min_height:
+            h = self.min_height
+        return h
 
     def calc_width(self):
         """return: bestwidth, minwidth, maxwidth"""

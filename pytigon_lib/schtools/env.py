@@ -48,6 +48,7 @@ def get_environ(path=None):
             THUMBNAIL_PROTECTED=(bool, False),
             MAILER=(bool, True),
             LOG_VIEWER=(bool, False),
+            SCRIPT_MODE=(bool, False),
         )
 
     if path:

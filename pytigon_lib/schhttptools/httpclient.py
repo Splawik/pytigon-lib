@@ -17,9 +17,7 @@
 # license: "LGPL 3.0"
 # version: "0.1a"
 
-"""Module contains classed for define http client
-
-"""
+"""Module contains classed for define http client"""
 
 import base64
 import os
@@ -570,7 +568,6 @@ class HttpClient:
             and not "?" in adr
         ):
             path = adr.replace("http://127.0.0.2", "")
-
             try:
                 ext = "." + path.split(".")[-1]
                 if ext in mimetypes.types_map:
@@ -597,6 +594,9 @@ class HttpClient:
             file_name = adr[7:]
             if file_name[0] == "/" and file_name[2] == ":":
                 file_name = file_name[1:]
+            if file_name.startswith("."):
+                if for_vfs:
+                    file_name = "/cwd" + file_name[1:]
 
             ext = "." + file_name.split(".")[-1]
             if ext in mimetypes.types_map:

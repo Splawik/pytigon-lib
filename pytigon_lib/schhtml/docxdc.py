@@ -387,7 +387,7 @@ class DocxDcinfo(BaseDcInfo):
     def __init__(self, dc):
         BaseDcInfo.__init__(self, dc)
 
-    def get_test_height(self, word, style):
+    def get_text_height(self, word, style):
         return 1
 
     def get_img_size(self, png_data):

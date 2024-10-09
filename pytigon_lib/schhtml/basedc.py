@@ -68,6 +68,14 @@ class BaseDc(object):
         self.notify_callback = notify_callback
         self.handle_html_directly = False
 
+    @property
+    def dx(self):
+        return self.width
+
+    @property
+    def dy(self):
+        return self.height
+
     def close(self):
         pass
 
@@ -434,7 +442,7 @@ class BaseDcInfo(object):
     def get_extents(self, word, style):
         dx = self.get_text_width(word, style)
         dx_space = self.get_text_width(" ", style)
-        dy = self.get_test_height(word, style)
+        dy = self.get_text_height(word, style)
         dy_up = dy / 2
         dy_down = dy - dy_up
         return (dx, dx_space, dy_up, dy_down)

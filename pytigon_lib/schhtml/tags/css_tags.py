@@ -38,9 +38,13 @@ class CssLink(BaseHtmlElemParser):
     def close(self):
         if "href" in self.attrs:
             href = self.attrs["href"]
-            http = self.parser.http
+            if ".ico" in href:
+                return
+            # http = self.parser.http
+            http = self.parser.get_http_object()
             try:
                 response = http.get(self, href)
+                print(response.ret_code)
                 if response.ret_code == 404:
                     css_txt = None
                 else:
@@ -48,10 +52,11 @@ class CssLink(BaseHtmlElemParser):
             except:
                 css_txt = None
         if css_txt:
-            try:
+            # try:
+            if True:
                 self.parser.css.parse_str(css_txt)
-            except:
-                pass
+            # except:
+            #    pass
 
 
 register_tag_map("link", CssLink)

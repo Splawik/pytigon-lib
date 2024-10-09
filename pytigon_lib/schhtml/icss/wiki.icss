@@ -185,7 +185,7 @@ div.codehilite
     white-space: pre
 
 img
-    width:100%
+    max-width:100%
 
 div.codehilite .hll 
     background: #f8f8f8; 

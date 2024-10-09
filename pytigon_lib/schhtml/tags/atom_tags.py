@@ -20,7 +20,7 @@
 import io
 import PIL
 
-from django.core.files.storage import default_storage
+# from django.core.files.storage import default_storage
 
 from pytigon_lib.schhtml.basehtmltags import (
     BaseHtmlAtomParser,
@@ -127,7 +127,7 @@ class ImgDraw(object):
         self.height = height
 
     def draw_atom(self, dc, style, x, y, dx, dy):
-        http = self.img_tag.parser.http
+        # http = self.img_tag.parser.http
         if self.image:
             dc.draw_image(
                 x,
@@ -146,12 +146,15 @@ class ImgTag(AtomTag):
         AtomTag.__init__(self, parent, parser, tag, attrs)
 
         if "src" in attrs:
-            if "file://" in attrs["src"]:
-                self.src = "file://" + default_storage.fs.getsyspath(
-                    attrs["src"].replace("file://", "")
-                )
-            else:
-                self.src = attrs["src"]
+            # if "file://" in attrs["src"]:
+            #    if "file://." in attrs["src"]:
+            #        self.src = attrs["src"].replace("file://.", "file:///cwd")
+            #    else:
+            #        self.src = "file://" + default_storage.fs.getsyspath(
+            #            attrs["src"].replace("file://", "")
+            #        )
+            # else:
+            self.src = attrs["src"]
         else:
             self.src = None
         self.img = None
@@ -160,9 +163,9 @@ class ImgTag(AtomTag):
 
     def close(self):
         if self.width > 0:
-            self.dx = self.width
+            self.dx = self.get_width()[0]
         if self.height > 0:
-            self.dy = self.height
+            self.dy = self.get_height()
 
         if self.src:
             http = self.parser.get_http_object()
@@ -203,19 +206,23 @@ class ImgTag(AtomTag):
 
         if self.img:
             if self.width > 0 and self.height > 0:
-                self.dx = self.width
-                self.dy = self.height
+                self.dx = self.get_width()[0]
+                self.dy = self.get_height()
             else:
                 if self.width > 0:
                     (dx, dy) = self.dc_info.get_img_size(self.img)
-                    self.dx = self.width
-                    self.dy = dy * self.width / dx
+                    self.dx = min(self.get_width()[0], self.max_width)
+                    self.dy = dy * self.dx / dx
                 elif self.height > 0:
                     (dx, dy) = self.dc_info.get_img_size(self.img)
-                    self.dx = dx * self.height / dy
+                    self.dx = dx * min(self.get_height(), self.max_height) / dy
                     self.dy = self.height
                 else:
                     (self.dx, self.dy) = self.dc_info.get_img_size(self.img)
+
+            self.dx, self.dy = self.take_into_account_minmax(
+                self.dx, self.dy, scale=True
+            )
 
             img_atom = Atom(
                 ImgDraw(self, self.img, self.dx, self.dy), self.dx, 0, self.dy, 0
