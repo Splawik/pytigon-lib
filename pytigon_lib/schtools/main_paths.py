@@ -4,16 +4,16 @@ from os import environ
 from pytigon_lib.schtools.platform_info import platform_name
 import sys
 
-#                Client(appimage,emscripten)     Client/DEV                  Server                          Android                         pytigon-lib
+#               Client(appimage,emscripten)     Client/DEV                  Server                          Android                         pytigon-lib
 #
-# ROOT_PATH       site-packages/pytigon           ./                          /home/www-data/www/pytigon                site-packages/pytigon           None
-# SERW_PATH       site-packages/pytigon/schserw   ./schserw                   site-packages/pytigon/schserw   site-packages/pytigon/schserw   None
-# DATA_PATH       ~/.pytigon                      ~/.pytigon                  /home/www-data/.pytigon         STORAGE/pytigon_data            ~/.pytigon
-# LOG_PATH        console                         console                     /var/log                        STORAGE/pytigon_data            ~/.pytigon
-# TEMP_PATH       %TEMP%                          %TEMP%                      %TEMP%                          %TEMP%                          %TEMP%
-# PRJ_PATH        ~/.pytigon/prj                  ./prj                       /home/www-data/pytigon/prj            SORAGE/pytigon/prj              ~/.pytigon/prj
-# PRJ_PATH_ALT    site-packages/pytigon/prj       site-packages/pytigon/prj   site-packages/pytigon/prj      site-packages/pytigon/prj       None
-# STATIC_PATH     site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static   site-packages/pytigon/static    site-packages/pytigon/static
+# ROOT_PATH     site-packages/pytigon           ./                          /home/www-data/www/pytigon      site-packages/pytigon           None
+# SERW_PATH     site-packages/pytigon/schserw   ./schserw                   site-packages/pytigon/schserw   site-packages/pytigon/schserw   None
+# DATA_PATH     ~/pytigon_data                  ~/pytigon_data              /home/www-data/pytigon_data     STORAGE/pytigon_data            ~/pytigon_data
+# LOG_PATH      console                         console                     /var/log                        STORAGE/pytigon_data            ~/pytigon_data
+# TEMP_PATH     %TEMP%                          %TEMP%                      %TEMP%                          %TEMP%                          %TEMP%
+# PRJ_PATH      ~/pytigon_data/prj              ./prj                       /home/www-data/pytigon/prj      SORAGE/pytigon/prj              ~/pytigon_data/prj
+# PRJ_PATH_ALT  site-packages/pytigon/prj       site-packages/pytigon/prj   site-packages/pytigon/prj       site-packages/pytigon/prj       None
+# STATIC_PATH   site-packages/pytigon/static    site-packages/pytigon/staticsite-packages/pytigon/static    site-packages/pytigon/static    site-packages/pytigon/static
 
 PRJ_NAME = ""
 
@@ -118,7 +118,7 @@ def get_main_paths(prj_name=None):
 
         elif platform_type == "webserver":
             ret["DATA_PATH"] = data_path = if_not_in_env(
-                "DATA_PATH", os.path.join(home_path, ".pytigon")
+                "DATA_PATH", os.path.join(home_path, "pytigon_data")
             )
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", "/var/log")
             ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
@@ -127,7 +127,7 @@ def get_main_paths(prj_name=None):
             )
         else:
             ret["DATA_PATH"] = data_path = if_not_in_env(
-                "DATA_PATH", os.path.join(home_path, ".pytigon")
+                "DATA_PATH", os.path.join(home_path, "pytigon_data")
             )
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", data_path)
             # cwd_prj = os.path.join(cwd, "prj")
