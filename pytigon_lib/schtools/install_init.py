@@ -140,8 +140,12 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if prj == "_schall":
         return
 
-    l = multiprocessing.Lock()
-    l.acquire()
+    try:
+        l = multiprocessing.Lock()
+    except:
+        l = None
+    if l:
+        l.acquire()
 
     _root_path = os.path.normpath(root_path)
     _data_path = os.path.normpath(data_path)
@@ -289,4 +293,5 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         os.makedirs(syslib)
         with open(os.path.join(syslib, "__init__.py"), "wt") as f:
             f.write(" ")
-    l.release()
+    if l:
+        l.release()

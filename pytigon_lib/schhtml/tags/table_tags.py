@@ -692,7 +692,6 @@ class TdTag(Par):
             max -= self.border[0] + self.border[1] + self.padding[0] + self.padding[1]
         return [opt, min, max]
 
-
 class CaptionTag(BaseHtmlElemParser):
     def __init__(
         self,

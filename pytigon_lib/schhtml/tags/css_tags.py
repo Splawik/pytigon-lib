@@ -21,10 +21,13 @@ from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_ma
 
 
 class Css(BaseHtmlElemParser):
+    """Load CSS definitions from STYLE tag"""
+
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
 
     def close(self):
+        """parse CSS definitions"""
         self.parser.css.parse_str("".join(self.data))
 
 
@@ -32,31 +35,35 @@ register_tag_map("style", Css)
 
 
 class CssLink(BaseHtmlElemParser):
+    """
+    Load CSS definitions from LINK tag
+    """
+
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
 
     def close(self):
+        """
+        Load CSS definitions from LINK tag
+        """
         if "href" in self.attrs:
             href = self.attrs["href"]
+            # skip favicon
             if ".ico" in href:
                 return
-            # http = self.parser.http
+            # get http object
             http = self.parser.get_http_object()
             try:
                 response = http.get(self, href)
-                print(response.ret_code)
                 if response.ret_code == 404:
                     css_txt = None
                 else:
                     css_txt = response.str()
             except:
                 css_txt = None
-        if css_txt:
-            # try:
-            if True:
+            # parse css definitions
+            if css_txt:
                 self.parser.css.parse_str(css_txt)
-            # except:
-            #    pass
 
 
 register_tag_map("link", CssLink)
