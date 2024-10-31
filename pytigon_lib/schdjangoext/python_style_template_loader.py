@@ -59,6 +59,8 @@ def compile_template(
             # if not type(filepath) == str:
             #    continue
             filepath2 = filepath.replace("_src", "").replace(".ihtml", ".html")
+            if "site-packages" in filepath2:
+                filepath2 = filepath2.replace(settings.PRJ_PATH, settings.PRJ_PATH_ALT)
             try:
                 write = False
                 if os.path.exists(filepath):
