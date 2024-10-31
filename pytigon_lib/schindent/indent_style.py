@@ -103,7 +103,9 @@ def iter_lines(f, f_name, lang):
             except:
                 t = None
             try:
-                with open(os.path.join(base_path, "translate.py"), "rt", encoding="utf-8") as p:
+                with open(
+                    os.path.join(base_path, "translate.py"), "rt", encoding="utf-8"
+                ) as p:
                     for line in p.readlines():
                         fr = line.split('_("')
                         if len(fr) > 1:
@@ -195,9 +197,18 @@ def iter_lines(f, f_name, lang):
         yield line2
     yield "."
     if len(tab_translate) > 0:
-        with open(os.path.join(base_path, "translate.py"), "wt", encoding="utf-8") as p:
-            for word in tab_translate:
-                p.write('_("' + word + '")\n')
+        if "site-packages" not in base_path:
+            try:
+                with open(
+                    os.path.join(base_path, "translate.py"), "wt", encoding="utf-8"
+                ) as p:
+                    for word in tab_translate:
+                        p.write('_("' + word + '")\n')
+            except:
+                import sys, traceback
+
+                print(sys.exc_info())
+                traceback.print_exc()
 
 
 class ConwertToHtml:
