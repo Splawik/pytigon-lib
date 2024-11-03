@@ -130,13 +130,6 @@ def get_main_paths(prj_name=None):
                 "DATA_PATH", os.path.join(home_path, "pytigon_data")
             )
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", data_path)
-            # cwd_prj = os.path.join(cwd, "prj")
-            # if os.path.exists(cwd_prj):
-            #    ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", cwd_prj)
-            #    ret["PRJ_PATH_ALT"] = if_not_in_env(
-            #        "PRJ_PATH_ALT", os.path.join(root_path, "prj")
-            #    )
-            # else:
             ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
             ret["PRJ_PATH_ALT"] = if_not_in_env(
                 "PRJ_PATH_ALT", os.path.join(root_path, "prj")
@@ -187,8 +180,12 @@ def get_main_paths(prj_name=None):
         ret["UPLOAD_PATH_PROTECTED"] = if_not_in_env(
             "UPLOAD_PROTECTED_PATH", os.path.join(ret["MEDIA_PATH"], "protected_upload")
         )
-        if not os.path.exists(os.path.join(ret["PRJ_PATH"], PRJ_NAME)):
-            if os.path.exists(os.path.join(ret["PRJ_PATH_ALT"], PRJ_NAME)):
+        if not os.path.exists(
+            os.path.join(ret["PRJ_PATH"], PRJ_NAME, "settings_app.py")
+        ):
+            if os.path.exists(
+                os.path.join(ret["PRJ_PATH_ALT"], PRJ_NAME, "settings_app.py")
+            ):
                 tmp = ret["PRJ_PATH"]
                 ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", ret["PRJ_PATH_ALT"])
                 ret["PRJ_PATH_ALT"] = if_not_in_env("PRJ_PATH_ALT", tmp)
