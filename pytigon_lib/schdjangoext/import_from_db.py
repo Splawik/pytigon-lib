@@ -170,6 +170,6 @@ def run_code_from_db_field(
         function_name,
         argv,
     )
-    if fun != None:
+    if fun is not None:
         return fun(**argv)
     return None
