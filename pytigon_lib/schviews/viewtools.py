@@ -272,9 +272,9 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 self["Content-Disposition"] = "attachment; filename=%s" % file_in_name
             return self
         elif self.context_data["view"].doc_type() in ("xlsx", "docx", "pptx"):
-            self[
-                "Content-Type"
-            ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            self["Content-Type"] = (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
             context = self.resolve_context(self.context_data)
             stream_out = render_ooxml(self.template_name, Context(context))
             if type(stream_out) == tuple:
@@ -293,9 +293,9 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             content = "" + t.render(context)
 
             if self.context_data["view"].doc_type() == "hdoc":
-                self[
-                    "Content-Type"
-                ] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                self["Content-Type"] = (
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
 
                 from pytigon_lib.schhtml.docxdc import DocxDc as Dc
 
@@ -303,9 +303,9 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     "html", "docx"
                 )
             else:
-                self[
-                    "Content-Type"
-                ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                self["Content-Type"] = (
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
                 from pytigon_lib.schhtml.xlsxdc import XlsxDc as Dc
 
