@@ -21,7 +21,6 @@ import os
 import os.path
 import io
 import logging
-from re import template
 
 LOGGER = logging.getLogger(__name__)
 
