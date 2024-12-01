@@ -1,5 +1,4 @@
 import json
-from re import template
 import markdown
 from django.template.loader import select_template
 
@@ -235,7 +234,6 @@ class IndentMarkdownProcessor:
                     fbuf.append("")
 
             if not in_func:
-
                 #                self.line_number += 1
                 #                parent = self.parent_processor
                 #                while parent:
@@ -285,7 +283,6 @@ def imd2html(buf):
 
 
 if __name__ == "__main__":
-
     EXAMPLE = """
 # Paragraph
 
