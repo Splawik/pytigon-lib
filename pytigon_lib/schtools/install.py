@@ -104,7 +104,7 @@ def install():
             from django.contrib.auth.models import User
 
             User.objects.db_manager("default").create_superuser(
-                "auto", "auto@pytigon.com", "anawa"
+                "auto", "auto@pytigon.cloud", "anawa"
             )
 
     # ret = make(data_path, prj_path, prj_name)
@@ -203,7 +203,7 @@ def export_to_db(withoutapp=None, to_local_db=True):
             from django.contrib.auth.models import User
 
             User.objects.db_manager("local").create_superuser(
-                "auto", "auto@pytigon.com", "anawa"
+                "auto", "auto@pytigon.cloud", "anawa"
             )
 
 

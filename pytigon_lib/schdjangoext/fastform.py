@@ -148,8 +148,9 @@ def form_from_str(
     prefix="",
 ):
     if "make_form_class" in input_str:
-        exec(input_str, globals(), locals())
-        return locals()["make_form_class"](base_form_class, init_data)
+        l = locals()
+        exec(input_str, globals(), l)
+        return l["make_form_class"](base_form_class, init_data)
     else:
 
         class _Form(base_form_class):

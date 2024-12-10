@@ -105,10 +105,11 @@ def build_all(path):
             if name.endswith("_build.py"):
                 p = os.path.join(root, name)
                 with open(p, "rt") as f:
+                    l = locals()
                     buf = f.read()
-                    exec(buf)
-                    if "build" in locals():
-                        x = locals()["build"](path=p.replace("_build.py", ".nim"))
+                    exec(buf, globals(), l)
+                    if "build" in l:
+                        x = l["build"](path=p.replace("_build.py", ".nim"))
                         if not x:
                             ret = False
     return ret
