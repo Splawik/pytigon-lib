@@ -20,7 +20,6 @@
 
 """Helper class for json encoder"""
 
-
 try:
     import json
 except:
@@ -50,6 +49,9 @@ class ComplexEncoder(json.JSONEncoder):
         if not obj.__class__.__name__ in self.standard_types:
             if obj.__class__.__name__ == "datetime":
                 return {"object": repr(obj).replace(", tzinfo=<UTC>", "")}
+            elif obj.__class__.__name__ == "ndarray":
+                return obj.tolist()
+                # json.JSONEncoder.default(self, obj.tolist())
             else:
                 return {"object": repr(obj)}
         return json.JSONEncoder.default(self, obj)
