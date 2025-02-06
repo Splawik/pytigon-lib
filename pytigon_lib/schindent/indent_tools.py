@@ -67,39 +67,39 @@ def reformat_js(tabkod):
     for pos in tabkod:
         code = pos[1]
         postfix = ""
-        if code.startswith("def ") and code.endswith(":"):
-            code = f"function {code[4:]}"
+        if code[:4] == "def " and code[-1] == ":":
+            code = "function " + code[4:]
         if code.endswith("({"):
             postfix = "})"
-            code = f"{code[:-2]}({{"
+            code = code[:-2] + "({"
             sep = ","
         elif code.endswith("("):
             postfix = ")"
-            code = f"{code[:-1]}("
+            code = code[:-1] + "("
             sep = ","
         elif code.endswith("["):
             postfix = "]"
-            code = f"{code[:-1]}["
+            code = code[:-1] + "["
             sep = ","
         elif code.endswith("[,"):
             postfix = "],"
-            code = f"{code[:-2]}["
+            code = code[:-2] + "["
             sep = ","
         elif code.endswith(":"):
             postfix = "}"
             sep = ";"
-            code = f"{code[:-1]}{{"
+            code = code[:-1] + "{"
         elif code.endswith("/:"):
             postfix = ""
             sep = ""
             code = code[:-2]
         elif code.endswith("="):
             postfix = "}"
-            code = f"{code[:-1]}= {{"
+            code = code[:-1] + "= {"
             sep = ","
         elif code.endswith("{"):
             postfix = "}"
-            code = f"{code[:-1]}{{"
+            code = code[:-1] + "{"
             sep = ","
         tabkod2.append((pos[0], code, postfix, sep))
 
@@ -108,18 +108,22 @@ def reformat_js(tabkod):
     stack = []
 
     for pos in tabkod2:
-        while stack and pos[0] > stack[-1][0]:
-            stack.append(pos)
-            break
-        top = stack.pop() if stack else None
-        if top and pos[0] == top[0]:
-            sep_char = stack[-1][3] if stack else ";"
-            tabkod3[-1][1] += sep_char
-        elif top:
-            if stack:
-                tabkod3.append([stack[-1][0], stack[-1][2]])
+        while len(stack) > 0:
+            if pos[0] > stack[-1][0]:
+                stack.append(pos)
+                break
+            top = stack.pop()
+            if pos[0] == top[0]:
+                if len(stack) > 0:
+                    x = stack[-1][3]
+                else:
+                    x = ";"
+                tabkod3[-1][1] += x
+            else:
+                if len(stack) > 0:
+                    tabkod3.append([stack[-1][0], stack[-1][2]])
         tabkod3.append([pos[0], pos[1]])
-        if not stack:
+        if len(stack) == 0:
             stack.append(pos)
 
     return tabkod3
@@ -217,15 +221,17 @@ def indent_html(txt):
 
 if __name__ == "__main__":
     if False:
-        with open("./test/test11.html", "r") as f_in, open(
-            "./test/test11.ihtml", "w"
-        ) as f_out:
+        with (
+            open("./test/test11.html", "r") as f_in,
+            open("./test/test11.ihtml", "w") as f_out,
+        ):
             ret = norm_html(f_in.read())
             f_out.write(ret)
 
     if True:
-        with open("./test/test11.ihtml", "r") as f_in, open(
-            "./test/_test11.html", "w"
-        ) as f_out:
+        with (
+            open("./test/test11.ihtml", "r") as f_in,
+            open("./test/_test11.html", "w") as f_out,
+        ):
             ret = indent_html(f_in.read())
             f_out.write(ret)
