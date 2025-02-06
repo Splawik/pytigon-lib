@@ -1,28 +1,21 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2020 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.108"
-
 from graphene import Node
 from graphene_django.filter import DjangoFilterConnectionField
 from graphene_django.types import DjangoObjectType
 
 
 def add_graphql_to_class(model, filter_fields, query_class):
+    """
+    Adds GraphQL schema definitions to a Django model class.
+
+    Args:
+        model: The Django model class to which GraphQL schema will be added.
+        filter_fields: Fields to be used for filtering in GraphQL queries.
+        query_class: The GraphQL query class where the schema will be added.
+
+    Raises:
+        AttributeError: If the model does not have the required attributes.
+    """
+
     _model = model
     _filter_fields = filter_fields
 
@@ -31,22 +24,29 @@ def add_graphql_to_class(model, filter_fields, query_class):
     else:
         app_label = ""
 
-    # class __Model(DjangoObjectType):
-    class Meta:
-        nonlocal _model, _filter_fields
-        model = _model
-        interfaces = (Node,)
-        filter_fields = _filter_fields
+    try:
+        app_label = model._meta.app_label if hasattr(model._meta, "app_label") else ""
 
-    _Model = type(
-        app_label + "__" + _model.__name__ + "__class",
-        (DjangoObjectType,),
-        {"Meta": Meta},
-    )
+        class Meta:
+            nonlocal _model, _filter_fields
+            model = _model
+            interfaces = (Node,)
+            filter_fields = _filter_fields
 
-    setattr(query_class, app_label + "__" + _model.__name__, Node.Field(_Model))
-    setattr(
-        query_class,
-        app_label + "__" + _model.__name__ + "All",
-        DjangoFilterConnectionField(_Model),
-    )
+        # Dynamically create a new DjangoObjectType class for the model
+        ModelType = type(
+            f"{app_label}__{model.__name__}__class",
+            (DjangoObjectType,),
+            {"Meta": Meta},
+        )
+
+        # Add the new type to the query class
+        setattr(query_class, f"{app_label}__{model.__name__}", Node.Field(ModelType))
+        setattr(
+            query_class,
+            f"{app_label}__{model.__name__}All",
+            DjangoFilterConnectionField(ModelType),
+        )
+
+    except AttributeError as e:
+        raise AttributeError(f"Model is missing required attributes: {e}")

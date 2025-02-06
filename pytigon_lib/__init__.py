@@ -1,21 +1,17 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
+"""
+Initialize system paths based on the project name and environment path.
 
-# Pytigon - wxpython and django application framework
+This function sets up the necessary system paths for the project by:
+1. Loading environment configurations if an environment path is provided.
+2. Removing duplicate and relative paths from `sys.path`.
+3. Adding platform-specific paths to `sys.path`.
+4. Adding project-specific paths to `sys.path`.
+5. Adding additional paths related to external libraries and plugins.
 
-# author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"dd
-# copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
+
+Raises:
+    Exception: If there is an error during the initialization of paths, it prints the error message and raises the exception.
+"""
 
 import sys
 import os
@@ -24,80 +20,79 @@ from pytigon_lib.schtools.env import get_environ
 
 
 def init_paths(prj_name=None, env_path=None):
-    if env_path:
-        get_environ(env_path)
+    """Initialize system paths based on the project name and environment path.
 
-    cfg = get_main_paths(prj_name)
+    Args:
+        prj_name (str, optional): The name of the project. Defaults to None.
+        env_path (str, optional): Path to the environment configuration. Defaults to None.
+    """
+    try:
+        if env_path:
+            get_environ(env_path)
 
-    tmp = []
-    for pos in sys.path:
-        if pos not in tmp:
-            if not pos.startswith("."):
-                tmp.append(pos)
-    sys.path = tmp
+        cfg = get_main_paths(prj_name)
 
-    from pytigon_lib.schtools.platform_info import platform_name
+        # Remove duplicate and relative paths from sys.path
+        sys.path = list(
+            dict.fromkeys(pos for pos in sys.path if not pos.startswith("."))
+        )
 
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    pname = platform_name()
+        from pytigon_lib.schtools.platform_info import platform_name
 
-    if pname == "Android":
-        p = os.path.abspath(os.path.join(base_path, "..", "_android"))
-        p2 = os.path.abspath(os.path.join(base_path, "..", "ext_lib"))
-        if p not in sys.path:
-            sys.path.insert(0, p)
-        if p2 not in sys.path:
-            sys.path.append(p2)
-    else:
-        if pname == "Windows":
-            p = os.path.abspath(
-                os.path.join(base_path, "..", "python" "lib", "site-packages")
-            )
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        pname = platform_name()
+
+        # Platform-specific path adjustments
+        if pname == "Android":
+            p = os.path.abspath(os.path.join(base_path, "..", "_android"))
+            p2 = os.path.abspath(os.path.join(base_path, "..", "ext_lib"))
+            for path in [p, p2]:
+                if path not in sys.path:
+                    sys.path.insert(0, path) if path == p else sys.path.append(path)
         else:
-            p = os.path.abspath(
-                os.path.join(
-                    base_path,
-                    "..",
-                    "python",
-                    "lib",
-                    "python%d.%d/site-packages"
-                    % (sys.version_info[0], sys.version_info[1]),
+            if pname == "Windows":
+                p = os.path.abspath(
+                    os.path.join(base_path, "..", "python", "lib", "site-packages")
                 )
+            else:
+                p = os.path.abspath(
+                    os.path.join(
+                        base_path,
+                        "..",
+                        "python",
+                        "lib",
+                        f"python{sys.version_info[0]}.{sys.version_info[1]}/site-packages",
+                    )
+                )
+            p2 = os.path.abspath(os.path.join(base_path, "..", "ext_lib"))
+            for path in [p, p2]:
+                if path not in sys.path:
+                    sys.path.insert(0, path) if path == p else sys.path.append(path)
+
+        # Add project-specific paths
+        for path_key in ["SERW_PATH", "ROOT_PATH", "PRJ_PATH_ALT"]:
+            if cfg[path_key] not in sys.path:
+                sys.path.append(cfg[path_key])
+
+        # Add additional paths
+        additional_paths = [
+            os.path.join(cfg["ROOT_PATH"], "ext_lib"),
+            os.path.join(cfg["ROOT_PATH"], "appdata", "plugins"),
+            os.path.join(cfg["DATA_PATH"], "plugins"),
+        ]
+        if prj_name:
+            additional_paths.extend(
+                [
+                    os.path.join(cfg["DATA_PATH"], prj_name, "syslib"),
+                    os.path.join(cfg["PRJ_PATH"], prj_name, "prjlib"),
+                    os.path.join(cfg["DATA_PATH"], prj_name, "prjlib"),
+                ]
             )
 
-        p2 = os.path.abspath(os.path.join(base_path, "..", "ext_lib"))
+        for path in additional_paths:
+            if path not in sys.path and os.path.exists(path):
+                sys.path.append(path)
 
-        if p not in sys.path:
-            sys.path.insert(0, p)
-        if p2 not in sys.path:
-            sys.path.append(p2)
-
-    if cfg["SERW_PATH"] not in sys.path:
-        sys.path.append(cfg["SERW_PATH"])
-    if cfg["ROOT_PATH"] not in sys.path:
-        sys.path.append(cfg["ROOT_PATH"])
-    if cfg["PRJ_PATH_ALT"] not in sys.path:
-        sys.path.append(cfg["PRJ_PATH_ALT"])
-
-    p1 = os.path.join(cfg["ROOT_PATH"], "ext_lib")
-    p2 = os.path.join(cfg["ROOT_PATH"], "appdata", "plugins")
-    p3 = os.path.join(cfg["DATA_PATH"], "plugins")
-    if prj_name:
-        p4 = os.path.join(cfg["DATA_PATH"], prj_name, "syslib")
-        p5 = os.path.join(cfg["PRJ_PATH"], prj_name, "prjlib")
-        if p5 not in sys.path and os.path.exists(p5):
-            sys.path.append(p5)
-
-    if p1 not in sys.path:
-        sys.path.append(p1)
-    if p2 not in sys.path:
-        sys.path.append(p2)
-    if p3 not in sys.path:
-        sys.path.append(p3)
-    if prj_name and p4 not in sys.path:
-        sys.path.append(p4)
-
-    if prj_name:
-        prjlib_path = os.path.join(cfg["DATA_PATH"], prj_name, "prjlib")
-        if prjlib_path not in sys.path:
-            sys.path.append(prjlib_path)
+    except Exception as e:
+        print(f"Error initializing paths: {e}")
+        raise

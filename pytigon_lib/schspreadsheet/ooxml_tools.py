@@ -1,69 +1,66 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2019 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 from lxml import etree
 
 
 def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name, value):
+    """Create a filter function to update pivot table based on cache field value.
+
+    Args:
+        cache_field_name (str): Name of the cache field.
+        pivot_table_name (str): Name of the pivot table.
+        pivot_field_name (str): Name of the pivot field.
+        value (str): Value to filter on.
+
+    Returns:
+        function: A function that updates the pivot table based on the cache field value.
+    """
+
     def _update_filter(doc_transform, root):
-        nonlocal cache_field_name, pivot_table_name, pivot_field_name, value
-        fields = root.findall(".//cacheFields/cacheField", namespaces=root.nsmap)
-        tab = []
-        for field in fields:
-            if "name" in field.attrib and field.attrib["name"] == cache_field_name:
-                s = field.findall(".//sharedItems", namespaces=root.nsmap)
-                for pos in s:
-                    for pos2 in pos:
-                        tab.append(pos2.attrib.get("v", ""))
-                break
-
         try:
-            id = tab.index(value)
-        except:
-            id = -1
-
-        if id >= 0:
-            xml_name = pivot_table_name
-            ret = doc_transform.get_xml_content(xml_name)
-            root2 = ret["data"]
-            # content = doc_transform.zip_file.read(xml_name)
-            # root2 = etree.XML(content)
-            fields2 = root2.findall(".//pivotFields/pivotField", namespaces=root2.nsmap)
-            for field2 in fields2:
-                if (
-                    "name" in field2.attrib
-                    and field2.attrib["name"] == pivot_field_name
-                ):
-                    items = field2.findall(".//items/item", namespaces=root2.nsmap)
-                    for item in items:
-                        if "x" in item.attrib:
-                            if int(item.attrib["x"]) == id:
-                                if "h" in item.attrib:
-                                    del item.attrib["h"]
-                            else:
-                                item.attrib["h"] = "1"
+            # Find all cache fields
+            fields = root.findall(".//cacheFields/cacheField", namespaces=root.nsmap)
+            tab = []
+            for field in fields:
+                if field.attrib.get("name") == cache_field_name:
+                    shared_items = field.findall(
+                        ".//sharedItems", namespaces=root.nsmap
+                    )
+                    for item in shared_items:
+                        for sub_item in item:
+                            tab.append(sub_item.attrib.get("v", ""))
                     break
-            if not ret["from_cache"]:
-                doc_transform.to_update.append(
-                    (xml_name, root2),
+
+            # Find the index of the value in the cache field
+            try:
+                id = tab.index(value)
+            except ValueError:
+                id = -1
+
+            if id >= 0:
+                # Get the pivot table content
+                ret = doc_transform.get_xml_content(pivot_table_name)
+                root2 = ret["data"]
+                fields2 = root2.findall(
+                    ".//pivotFields/pivotField", namespaces=root2.nsmap
                 )
+
+                # Update the pivot field items based on the cache field value
+                for field2 in fields2:
+                    if field2.attrib.get("name") == pivot_field_name:
+                        items = field2.findall(".//items/item", namespaces=root2.nsmap)
+                        for item in items:
+                            if "x" in item.attrib:
+                                if int(item.attrib["x"]) == id:
+                                    item.attrib.pop("h", None)
+                                else:
+                                    item.attrib["h"] = "1"
+                        break
+
+                # Add to update list if not from cache
+                if not ret["from_cache"]:
+                    doc_transform.to_update.append((pivot_table_name, root2))
+
+        except Exception as e:
+            raise RuntimeError(f"Error updating filter: {e}")
 
         return False
 
@@ -71,18 +68,33 @@ def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name,
 
 
 def make_group_fun(pivot_field_no, values_on):
+    """Create a grouping function for pivot fields.
+
+    Args:
+        pivot_field_no (int): Index of the pivot field.
+        values_on (str): Semicolon-separated values to group on.
+
+    Returns:
+        function: A function that updates the pivot field grouping.
+    """
+
     def _update_group(doc_transform, root):
-        nonlocal pivot_field_no, values_on
-        values_tab = values_on.split(";")
-        fields = root.findall(".//pivotFields/pivotField", namespaces=root.nsmap)
-        field = fields[pivot_field_no]
-        items = field.findall(".//item", root.nsmap)
-        for item in items:
-            if "n" in item.attrib and item.attrib["n"] in values_tab:
-                if "sd" in item.attrib:
-                    del item.attrib["sd"]
-            else:
-                item.attrib["sd"] = "0"
+        try:
+            values_tab = values_on.split(";")
+            fields = root.findall(".//pivotFields/pivotField", namespaces=root.nsmap)
+            field = fields[pivot_field_no]
+            items = field.findall(".//item", namespaces=root.nsmap)
+
+            # Update the pivot field items based on the grouping values
+            for item in items:
+                if "n" in item.attrib and item.attrib["n"] in values_tab:
+                    item.attrib.pop("sd", None)
+                else:
+                    item.attrib["sd"] = "0"
+
+        except Exception as e:
+            raise RuntimeError(f"Error updating group: {e}")
+
         return True
 
     return _update_group

@@ -1,39 +1,17 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 import re
-import os.path
+import os
 import tempfile
 import email.generator
 import zipfile
 import hashlib
-
 from tempfile import NamedTemporaryFile
-
 from django.core.files.storage import default_storage
 from django.conf import settings
-
 from pytigon_lib.schdjangoext.tools import gettempdir
 
 
 def norm_path(url):
-    """Normalize url"""
+    """Normalize URL by removing redundant slashes and resolving '..' and '.'."""
     ldest = []
     if url == "" or url == None:
         return ""
@@ -63,90 +41,82 @@ def norm_path(url):
 
 
 def open_file(filename, mode, for_vfs=False):
-    if for_vfs:
-        return default_storage.fs.open(filename, mode)
-    else:
+    """Open a file, either from the filesystem or from a virtual filesystem."""
+    try:
+        if for_vfs:
+            return default_storage.fs.open(filename, mode)
         return open(filename, mode)
+    except Exception as e:
+        raise IOError(f"Failed to open file {filename}: {e}")
 
 
 def open_and_create_dir(filename, mode, for_vfs=False):
-    """Open file - if path doesn't exist - path is created
-
-    Args:
-        filename - path and name of file
-        mode - see mode for standard python function: open
-    """
-    if for_vfs:
-        if not default_storage.fs.exists(default_storage.fs.path.dirname(filename)):
-            default_storage.fs.makedirs(default_storage.fs.path.dirname(filename))
-    else:
-        if not os.path.exists(os.path.dirname(filename)):
-            os.makedirs(os.path.dirname(filename))
-    return open(filename, mode, for_vfs)
+    """Open a file, creating the directory if it doesn't exist."""
+    try:
+        dirname = os.path.dirname(filename)
+        if for_vfs:
+            if not default_storage.fs.exists(dirname):
+                default_storage.fs.makedirs(dirname)
+        else:
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+        return open_file(filename, mode, for_vfs)
+    except Exception as e:
+        raise IOError(f"Failed to create directory or open file {filename}: {e}")
 
 
 def get_unique_filename(base_name=None, ext=None):
-    """Get temporary file name
-
-    Args:
-        base_name - if not Null returning name contains base_name
-    """
+    """Generate a unique filename using a boundary string."""
     boundary = email.generator._make_boundary()
     if base_name:
-        boundary += "_" + base_name
+        boundary += f"_{base_name}"
     if ext:
-        boundary += "." + ext
+        boundary += f".{ext}"
     return boundary
 
 
 def get_temp_filename(base_name=None, ext=None, for_vfs=False):
-    """Get temporary file name
-
-    Args:
-        base_name - if not Null returning name contains base_name
-    """
+    """Get a temporary filename, optionally with a base name and extension."""
+    filename = get_unique_filename(base_name, ext)
     if for_vfs:
-        return "/temp/" + get_unique_filename(base_name, ext)
-    else:
-        return os.path.join(settings.TEMP_PATH, get_unique_filename(base_name, ext))
+        return f"/temp/{filename}"
+    return os.path.join(settings.TEMP_PATH, filename)
 
 
 def delete_from_zip(zip_name, del_file_names):
-    """Delete one file from zip
-
-    Args:
-        zip_name - name of zip file
-        del_file_names - name of file to delete
-    """
-    del_file_names2 = [pos.lower() for pos in del_file_names]
-
+    """Delete files from a zip archive."""
+    del_file_names = [name.lower() for name in del_file_names]
     tmpname = get_temp_filename()
-    zin = zipfile.ZipFile(zip_name, "r")
-    zout = zipfile.ZipFile(tmpname, "w", zipfile.ZIP_STORED)
-    for item in zin.infolist():
-        if not item.filename.lower() in del_file_names2:
-            buffer = zin.read(item.filename)
-            zout.writestr(item, buffer)
-    zout.close()
-    zin.close()
-    os.remove(zip_name)
-    os.rename(tmpname, zip_name)
-    return 1
+
+    try:
+        with (
+            zipfile.ZipFile(zip_name, "r") as zin,
+            zipfile.ZipFile(tmpname, "w", zipfile.ZIP_STORED) as zout,
+        ):
+            for item in zin.infolist():
+                if item.filename.lower() not in del_file_names:
+                    zout.writestr(item, zin.read(item.filename))
+
+        os.remove(zip_name)
+        os.rename(tmpname, zip_name)
+        return 1
+    except Exception as e:
+        raise IOError(f"Failed to delete files from zip {zip_name}: {e}")
 
 
-def _clear_content(b):
+def _clear_content(data):
+    """Remove whitespace and newlines from binary data."""
     return (
-        b.replace(b" ", b"").replace(b"\n", b"").replace(b"\t", b"").replace(b"\r", b"")
+        data.replace(b" ", b"")
+        .replace(b"\n", b"")
+        .replace(b"\t", b"")
+        .replace(b"\r", b"")
     )
 
 
-def _cmp_txt_str_content(b1, b2):
-    _b1 = _clear_content(b1)
-    _b2 = _clear_content(b2)
-    if _b1 == _b2:
-        return True
-    else:
-        return False
+def _cmp_txt_str_content(data1, data2):
+    """Compare two binary strings after clearing whitespace."""
+    return _clear_content(data1) == _clear_content(data2)
 
 
 def extractall(
@@ -159,112 +129,85 @@ def extractall(
     backup_exts=None,
     only_path=None,
 ):
-    """Extract content from zip file
-
-    Args:
-        zip_file - path to zip file
-        path - destination path to extract zip content
-        members - if None: extract all zip members else: extract only files which are in members list
-        pwd  - password for zip, can be None if password is not set
-        exclude - do not extract files which are in exclude list
-        backup_zip -
-            Files extracted from zip can overwrite existings ones. If backup_zip is set to ZipFile object,
-            this function test if new content is equal with old before overwriting. If there are diferences,
-            old contents is saved to backup_zip. After operation backup_zip contains all changed files by
-            extracting zip file.
-        backup_exts - if  parametr is set, backed to backup_zip are only files which are on backup_ext list.
-    """
+    """Extract files from a zip archive, optionally backing up overwritten files."""
     if members is None:
         members = zip_file.namelist()
+
     for zipinfo in members:
-        if only_path:
-            if not zipinfo.startswith(only_path):
-                continue
-        if zipinfo.endswith("/") or zipinfo.endswith("\\"):
-            if not os.path.exists(path + "/" + zipinfo):
-                os.makedirs(path + "/" + zipinfo)
+        if only_path and not zipinfo.startswith(only_path):
+            continue
+
+        if zipinfo.endswith(("/", "\\")):
+            os.makedirs(os.path.join(path, zipinfo), exist_ok=True)
         else:
-            test = True
-            if exclude:
-                for pos in exclude:
-                    if re.match(pos, zipinfo, re.I) != None:
-                        test = False
-                        break
-            if test:
-                if backup_zip:
-                    if not backup_exts or zipinfo.split(".")[-1] in backup_exts:
-                        out_name = os.path.join(path, zipinfo)
-                        if os.path.exists(out_name):
-                            bytes = zip_file.read(zipinfo, pwd)
-                            with open(out_name, "rb") as f:
-                                bytes2 = f.read()
-                            if not _cmp_txt_str_content(bytes, bytes2):
-                                backup_zip.writestr(zipinfo, bytes2)
-                zip_file.extract(zipinfo, path, pwd)
+            if exclude and any(re.match(pattern, zipinfo, re.I) for pattern in exclude):
+                continue
+
+            out_name = os.path.join(path, zipinfo)
+            if backup_zip and (
+                not backup_exts or zipinfo.split(".")[-1] in backup_exts
+            ):
+                if os.path.exists(out_name):
+                    new_data = zip_file.read(zipinfo, pwd)
+                    with open(out_name, "rb") as f:
+                        old_data = f.read()
+                    if not _cmp_txt_str_content(new_data, old_data):
+                        backup_zip.writestr(zipinfo, old_data)
+
+            zip_file.extract(zipinfo, path, pwd)
 
 
 class ZipWriter:
-    """Helper class to create zip files"""
+    """Helper class to create zip files."""
 
-    def __init__(self, filename, basepath="", exclude=[], sha256=False):
-        """Constructor
-
-        Args:
-            filename - path to zip file
-            basepath
-        """
+    def __init__(self, filename, basepath="", exclude=None, sha256=False):
         self.filename = filename
         self.basepath = basepath
         self.base_len = len(self.basepath)
         self.zip_file = zipfile.ZipFile(
             filename, "w", zipfile.ZIP_BZIP2, compresslevel=9
         )
-        # self.zip_file = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
-
-        self.exclude = exclude
-        if sha256:
-            self.sha256_tab = []
-        else:
-            self.sha256_tab = None
+        self.exclude = exclude or []
+        self.sha256_tab = [] if sha256 else None
 
     def close(self):
+        """Close the zip file."""
         self.zip_file.close()
 
     def _sha256_gen(self, file_name, data):
-        if self.sha256_tab != None:
-            sha256 = hashlib.sha256()
-            sha256.update(data)
-            self.sha256_tab.append((file_name, sha256.hexdigest(), len(data)))
+        """Generate SHA256 hash for the file content."""
+        if self.sha256_tab is not None:
+            sha256 = hashlib.sha256(data).hexdigest()
+            self.sha256_tab.append((file_name, sha256, len(data)))
 
     def write(self, file_name, name_in_zip=None, base_path_in_zip=None):
-        test = True
-        for pos in self.exclude:
-            if re.match(pos, file_name, re.I) != None:
-                test = False
-                break
-        if test:
-            with open(file_name, "rb") as f:
-                data = f.read()
-                if name_in_zip:
-                    self.writestr(name_in_zip, data)
-                elif base_path_in_zip:
-                    self.writestr(
-                        base_path_in_zip + file_name[self.base_len + 1 :], data
-                    )
-                else:
-                    self.writestr(file_name[self.base_len + 1 :], data)
+        """Write a file to the zip archive."""
+        if any(re.match(pattern, file_name, re.I) for pattern in self.exclude):
+            return
+
+        with open(file_name, "rb") as f:
+            data = f.read()
+            if name_in_zip:
+                self.writestr(name_in_zip, data)
+            elif base_path_in_zip:
+                self.writestr(base_path_in_zip + file_name[self.base_len + 1 :], data)
+            else:
+                self.writestr(file_name[self.base_len + 1 :], data)
 
     def writestr(self, path, data):
+        """Write data to a file in the zip archive."""
         self._sha256_gen(path, data)
-        return self.zip_file.writestr(path, data)
+        self.zip_file.writestr(path, data)
 
     def to_zip(self, file, base_path_in_zip=None):
+        """Add a file or folder to the zip archive."""
         if os.path.isfile(file):
             self.write(file, base_path_in_zip=base_path_in_zip)
         else:
             self.add_folder_to_zip(file, base_path_in_zip=base_path_in_zip)
 
     def add_folder_to_zip(self, folder, base_path_in_zip=None):
+        """Recursively add a folder to the zip archive."""
         for file in os.listdir(folder):
             full_path = os.path.join(folder, file)
             if os.path.isfile(full_path):
@@ -273,82 +216,15 @@ class ZipWriter:
                 self.add_folder_to_zip(full_path, base_path_in_zip=base_path_in_zip)
 
 
-# Perhaps for delete
-class Cmp(object):
-    def __init__(self, masks, key, convert_to_re=False):
-        if masks:
-            self.masks = []
-            for mask in masks:
-                if convert_to_re:
-                    x = (
-                        mask[1:]
-                        .replace(".", "\\.")
-                        .replace("*", ".*")
-                        .replace("?", ".")
-                    )
-                else:
-                    x = mask[1:]
-                self.masks.append((mask[0], re.compile(x)))
-        else:
-            self.masks = None
-        if key:
-            self.key = key.lower()
-        else:
-            self.key = None
-
-    def re_cmp(self, value1, mask):
-        ret = mask.match(value1)
-        if ret:
-            return True
-        else:
-            return False
-
-    def masks_filter(self, file_name):
-        if self.masks:
-            sel = False
-            for filter in self.masks:
-                if filter[0] == "+":
-                    if self.re_cmp(file_name, filter[1]):
-                        sel = True
-                else:
-                    if self.re_cmp(file_name, filter[1]):
-                        sel = False
-            return sel
-        else:
-            return False
-
-    def key_filter(self, file_name):
-        if self.key:
-            if file_name.lower().startswith(self.key):
-                return True
-            else:
-                return False
-            return True
-
-    def filter(self, file_name):
-        if self.key_filter(file_name) and self.masks_filter(file_name):
-            return True
-        return False
-
-
 def automount(path):
-    lpath = path.lower()
-    if lpath.endswith(".zip") or ".zip/" in lpath:
-        id = lpath.find(".zip")
-        pp = path[: id + 4]
-
-        syspath = default_storage.fs.getsyspath(pp, allow_none=True)
+    """Mount a zip file as a virtual filesystem if the path points to a zip file."""
+    if path.lower().endswith(".zip") or ".zip/" in path.lower():
+        zip_path = path[: path.lower().find(".zip") + 4]
+        syspath = default_storage.fs.getsyspath(zip_path, allow_none=True)
         if syspath:
-            zip_name = "zip://" + default_storage.fs.getsyspath(pp)
-            # default_storage.fs.mountdir(pp[1:], fsopendir(zip_name))
-            default_storage.fs.add_fs(pp[1:], OSFS(zip_name))
+            zip_name = f"zip://{syspath}"
+            default_storage.fs.add_fs(zip_path[1:], OSFS(zip_name))
     return path
-
-
-# input formats: ihtml, html, imd, md, spdf
-# output formats: html, spdf, pdf, xpdf, xlsx, docx
-# xpdf - pdf with source text in subject field
-# spdf - recorded BaseDc operation to zip file format renamed to spdf
 
 
 def convert_file(
@@ -359,120 +235,109 @@ def convert_file(
     for_vfs_input=True,
     for_vfs_output=True,
 ):
-
+    """Convert a file from one format to another."""
     from pytigon_lib.schhtml.basedc import BaseDc
     from pytigon_lib.schhtml.pdfdc import PdfDc
-    from pytigon_lib.schhtml.cairodc import CairoDc
     from pytigon_lib.schhtml.docxdc import DocxDc
     from pytigon_lib.schhtml.xlsxdc import XlsxDc
     from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
     from pytigon_lib.schindent.indent_style import ihtml_to_html_base
     from pytigon_lib.schindent.indent_markdown import markdown_to_html
-    from pytigon_lib.schfs import open_file
 
-    from pytigon_lib.schindent.indent_markdown import (
-        IndentMarkdownProcessor,
-        REG_OBJ_RENDERER,
-    )
-
-    i_f = input_format
-    o_f = output_format
-    if type(filename_or_stream_in) == str:
-        if for_vfs_input:
-            fin = default_storage.fs.open(automount(filename_or_stream_in), "rt")
+    try:
+        if isinstance(filename_or_stream_in, str):
+            fin = open_file(
+                automount(filename_or_stream_in),
+                "rt" if for_vfs_input else "rb",
+                for_vfs_input,
+            )
+            input_format = input_format or filename_or_stream_in.split(".")[-1].lower()
         else:
-            fin = open(filename_or_stream_in, "rb")
-        if not i_f:
-            i_f = filename_or_stream_in.split(".")[-1].lower()
-    else:
-        fin = filename_or_stream_in
+            fin = filename_or_stream_in
 
-    if type(filename_or_stream_out) == str:
-        if for_vfs_output:
-            fout = default_storage.fs.open(automount(filename_or_stream_out), "wb")
+        if isinstance(filename_or_stream_out, str):
+            fout = open_file(automount(filename_or_stream_out), "wb", for_vfs_output)
+            output_format = (
+                output_format or filename_or_stream_out.split(".")[-1].lower()
+            )
         else:
-            fout = open(filename_or_stream_out, "wb")
-        if not o_f:
-            o_f = filename_or_stream_out.split(".")[-1].lower()
-    else:
-        fout = filename_or_stream_out
+            fout = filename_or_stream_out
 
-    if i_f == "imd":
-        x = IndentMarkdownProcessor(output_format="html")
-        buf = x.convert(fin.read())
-    elif i_f == "md":
-        buf = markdown_to_html(fin.read())
-    elif i_f == "ihtml":
-        buf = ihtml_to_html_base(None, input_str=fin.read())
-    elif i_f == "spdf":
-        buf = None
-    else:
-        buf = fin.read()
-    if o_f == "html":
-        fout.write(buf.encode("utf-8"))
-        return True
+        if input_format == "imd":
+            from pytigon_lib.schindent.indent_markdown import IndentMarkdownProcessor
 
-    if o_f in ("pdf", "xpdf"):
-
-        def notify_callback(event_name, data):
-            if event_name == "end":
-                dc = data["dc"]
-                dc.surf.pdf.set_subject(buf)
-
-        if o_f == "xpdf":
-            dc = PdfDc(output_stream=fout, notify_callback=notify_callback)
+            processor = IndentMarkdownProcessor(output_format="html")
+            buf = processor.convert(fin.read())
+        elif input_format == "md":
+            buf = markdown_to_html(fin.read())
+        elif input_format == "ihtml":
+            buf = ihtml_to_html_base(None, input_str=fin.read())
+        elif input_format == "spdf":
+            buf = None
         else:
-            dc = PdfDc(output_stream=fout)
-        dc.set_paging(True)
-    elif o_f == "spdf":
+            buf = fin.read()
 
-        def notify_callback(event_name, data):
-            if event_name == "end":
-                print("SAVE:")
-                dc = data["dc"]
-                if dc.output_name:
-                    dc.save(dc.output_name)
-                else:
-                    result_buf = NamedTemporaryFile(delete=False)
-                    spdf_name = result_buf.name
-                    result_buf.close()
+        if output_format == "html":
+            fout.write(buf.encode("utf-8"))
+            return True
 
-                    dc.save(spdf_name)
+        if output_format in ("pdf", "xpdf"):
 
-                    with open(spdf_name, "rb") as f:
-                        dc.output_stream.write(f.read())
+            def notify_callback(event_name, data):
+                if event_name == "end":
+                    dc = data["dc"]
+                    dc.surf.pdf.set_subject(buf)
 
-        (width, height) = (595, 842)
-        dc = PdfDc(
-            output_stream=fout,
-            calc_only=True,
-            width=width,
-            height=height,
-            notify_callback=notify_callback,
-            record=True,
+            dc = PdfDc(
+                output_stream=fout,
+                notify_callback=notify_callback if output_format == "xpdf" else None,
+            )
+            dc.set_paging(True)
+        elif output_format == "spdf":
+
+            def notify_callback(event_name, data):
+                if event_name == "end":
+                    dc = data["dc"]
+                    if dc.output_name:
+                        dc.save(dc.output_name)
+                    else:
+                        with NamedTemporaryFile(delete=False) as temp_file:
+                            dc.save(temp_file.name)
+                            with open(temp_file.name, "rb") as f:
+                                dc.output_stream.write(f.read())
+
+            dc = PdfDc(
+                output_stream=fout,
+                calc_only=True,
+                width=595,
+                height=842,
+                notify_callback=notify_callback,
+                record=True,
+            )
+            dc.set_paging(True)
+        elif output_format == "docx":
+            dc = DocxDc(output_stream=fout)
+        elif output_format == "xlsx":
+            dc = XlsxDc(output_stream=fout)
+
+        p = HtmlViewerParser(
+            dc=dc,
+            calc_only=False,
+            init_css_str="@wiki.icss",
+            css_type=1,
+            use_tag_maps=True,
         )
-        dc.set_paging(True)
-    elif o_f == "docx":
-        dc = DocxDc(
-            output_stream=fout,
-        )
-    elif o_f == "xlsx":
-        dc = XlsxDc(output_stream=fout)
+        if input_format == "spdf":
+            dc.load(filename_or_stream_in)
+            dc.play()
+        else:
+            p.feed(buf)
+        p.close()
 
-    p = HtmlViewerParser(
-        dc=dc, calc_only=False, init_css_str="@wiki.icss", css_type=1, use_tag_maps=True
-    )
-    if i_f == "spdf":
-        dc.load(filename_or_stream_in)
-        dc.play()
-    else:
-        p.feed(buf)
-    p.close()
-
-    if type(filename_or_stream_in) == str:
-        if fin:
+        if isinstance(filename_or_stream_in, str):
             fin.close()
-    if type(filename_or_stream_out) == str:
-        if fout:
+        if isinstance(filename_or_stream_out, str):
             fout.close()
-    return True
+        return True
+    except Exception as e:
+        raise IOError(f"Failed to convert file: {e}")

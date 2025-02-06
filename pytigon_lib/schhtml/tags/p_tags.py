@@ -1,22 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 from pytigon_lib.schhtml.basehtmltags import (
     BaseHtmlAtomParser,
     register_tag_map,
@@ -41,7 +22,7 @@ LI_INDENT = 20
 
 class InlineElements(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
-        BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
+        super().__init__(parent, parser, tag, attrs)
         self.child_tags = (
             ATOM_TAGS + PAR_TAGS + ["table", "form", "comment", "vimg", "ctr*"]
         )
@@ -260,7 +241,7 @@ class AtomContainer(InlineElements):
             self.rendered_children = _rendered_children
 
         else:
-            BaseHtmlAtomParser.close(self)
+            super().close()
 
     def draw_atom(self, dc, style, x, y, dx, dy):
         if not self.subdiv:
@@ -296,20 +277,20 @@ class Par(InlineElements):
         if (
             issubclass(type(self.parent), Par)
             or issubclass(type(self.parent), AtomContainer)
-            or type(self.parent).__name__=='Atag'
+            or type(self.parent).__name__ == "Atag"
         ):
             if self.atom_list:
                 self.parent.append_atom_list(self.atom_list)
                 if self.tag == "p":
                     self.parent.atom_list.append_atom(BrAtom())
         else:
-            return BaseHtmlAtomParser.close(self)
+            super().close()
 
 
 class ParArray(AtomContainer):
     def __init__(self, parent, parser, tag, attrs):
         self.lp = 1
-        AtomContainer.__init__(self, parent, parser, tag, attrs)
+        super().__init__(parent, parser, tag, attrs)
         self.start = True
         self.end = False
 
@@ -327,7 +308,6 @@ class ParArray(AtomContainer):
         return dy
 
     def render(self, dc_parm):
-
         dc_parm.annotate("render_tag", {"element": self})
 
         if dc_parm.handle_html_directly:

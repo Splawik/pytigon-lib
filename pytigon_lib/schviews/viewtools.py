@@ -1,35 +1,39 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
+"""This module provides various utility functions and classes for handling template rendering,
+response generation, and object manipulation in a Django web application.
 
-# Pytigon - wxpython and django application framework
+Classes:
+    LocalizationTemplateResponse: A TemplateResponse subclass that resolves templates based on the request's language code.
+    ExtTemplateResponse: A LocalizationTemplateResponse subclass that handles rendering of various document types.
+    ExtTemplateView: A generic.TemplateView subclass that uses ExtTemplateResponse for rendering.
 
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
+Functions:
+    transform_template_name(obj, request, template_name): Transforms the template name using an object's method if available.
+    change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=None): Changes the position of an object in a table.
+    duplicate_row(request, app, tab, pk, field=None): Duplicates a given row in a database table.
+    render_to_response(template_name, context=None, content_type=None, status=None, using=None, request=None): Renders a template with a given context and returns an HttpResponse.
+    render_to_response_ext(request, template_name, context, doc_type="html"): Renders a template with a given context and document type, and returns an HttpResponse.
+    dict_to_template(template_name): A decorator that renders the returned dictionary from a function as a template.
+    dict_to_odf(template_name): A decorator that renders the returned dictionary from a function as an ODS template.
+    dict_to_ooxml(template_name): A decorator that renders the returned dictionary from a function as an OOXML template.
+    dict_to_txt(template_name): A decorator that renders the returned dictionary from a function as a plain text template.
+    dict_to_hdoc(template_name): A decorator that renders the returned dictionary from a function as an HTML document (hdoc).
+    dict_to_hxls(template_name): A decorator that renders the returned dictionary from a function as an HTML Excel document (hxls).
+    dict_to_pdf(template_name): A decorator that renders the returned dictionary from a function as a PDF document.
+    dict_to_spdf(template_name): A decorator that renders the returned dictionary from a function as a Small Page PDF document.
+    dict_to_json(func): A decorator that transforms the returned dictionary from a function into a JSON response.
+    dict_to_xml(func): A decorator that transforms the returned dictionary from a function into an XML response.
+"""
 
 import os
 import os.path
 import io
 import logging
 
-LOGGER = logging.getLogger(__name__)
-
 from django.apps import apps
 from django.db.models import Max, Min
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.template import loader, RequestContext, Context
-
 from django.views import generic
 from django.core import serializers
 
@@ -39,6 +43,7 @@ from pytigon_lib.schdjangoext.spreadsheet_render import render_odf, render_ooxml
 from pytigon_lib.schtools import schjson
 from pytigon_lib.schparser.html_parsers import SimpleTabParserBase
 
+LOGGER = logging.getLogger(__name__)
 
 DOC_TYPES = (
     "pdf",
@@ -57,6 +62,11 @@ DOC_TYPES = (
 
 
 def transform_template_name(obj, request, template_name):
+    """
+    This function allows to transform template name by obj method.
+    If obj has method transform_template_name, this method is called.
+    Otherwise template_name is returned unchanged.
+    """
     if hasattr(obj, "transform_template_name"):
         return obj.transform_template_name(request, template_name)
     else:
@@ -64,6 +74,21 @@ def transform_template_name(obj, request, template_name):
 
 
 def change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=None):
+    """
+    Change position of object in table.
+
+    Parameters:
+        request (HttpRequest): django http request
+        app (str): name of django app
+        tab (str): name of table
+        pk (int): id of object
+        forward (bool, optional): if True, move forward, if False move backward. Defaults to True.
+        field (str, optional): if not None, move in subset of objects which have this field equal to value of field in object with id=pk. Defaults to None.
+        callback_fun (function, optional): if not None, this function is called with two arguments: obj and obj2, where obj is object with id=pk and obj2 is object to which obj is moved. Defaults to None.
+
+    Returns:
+        HttpResponse: response with target refresh_page if object has been moved, and NO if not.
+    """
     model = apps.get_model(app, tab)
     obj = model.objects.get(id=pk)
     if field:
@@ -77,13 +102,13 @@ def change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=Non
         if "id__min" in agr:
             object_id_2 = agr["id__min"]
         else:
-            HttpResponse("NO")
+            return HttpResponse("NO")
     else:
         agr = query.filter(id__lt=int(pk)).aggregate(Max("id"))
         if "id__max" in agr:
             object_id_2 = agr["id__max"]
         else:
-            HttpResponse("NO")
+            return HttpResponse("NO")
     if object_id_2 == None:
         return HttpResponse("NO")
     obj2 = model.objects.get(id=object_id_2)
@@ -100,6 +125,19 @@ def change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=Non
 
 
 def duplicate_row(request, app, tab, pk, field=None):
+    """
+    Duplicate given row in database table.
+
+    Args:
+        request: Django request object.
+        app: Application name.
+        tab: Table name.
+        pk: Primary key of the row to be duplicated.
+        field: Optional field name to filter records by.
+
+    Returns:
+        HttpResponse: response with YES if object has been duplicated, and NO if not.
+    """
     model = apps.get_model(app, tab)
     obj = model.objects.get(id=pk)
     if obj:
@@ -111,6 +149,23 @@ def duplicate_row(request, app, tab, pk, field=None):
 
 class LocalizationTemplateResponse(TemplateResponse):
     def resolve_template(self, template):
+        """
+        Resolves the appropriate template for the response based on the request's language code.
+
+        If the language code is not "en", it attempts to find a language-specific version of
+        the template by appending the language code (e.g., "_fr" for French) before the ".html"
+        extension. If the template is a list or tuple, it constructs a list of templates with
+        both the language-specific and original template names. If the template is a string,
+        it creates a list with both the language-specific and original template names and
+        calls the `resolve_template` method of the superclass to select a template.
+
+        Args:
+            template (Union[str, List[str], Tuple[str]]): The template name(s) to resolve.
+
+        Returns:
+            Template: The resolved template object.
+        """
+
         lang = self._request.LANGUAGE_CODE[:2].lower()
         if lang != "en":
             if isinstance(template, (list, tuple)):
@@ -119,7 +174,7 @@ class LocalizationTemplateResponse(TemplateResponse):
                     templates.append(pos.replace(".html", "_" + lang + ".html"))
                     templates.append(pos)
                 return loader.select_template(templates)
-            elif type(template) == str:
+            elif isinstance(template, str):
                 return TemplateResponse.resolve_template(
                     self, [template.replace(".html", "_" + lang + ".html"), template]
                 )
@@ -142,6 +197,24 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         charset=None,
         using=None,
     ):
+        """
+        Constructor for ExtTemplateResponse.
+
+        Args:
+            request (HttpRequest): The request object.
+            template (Union[str, List[str], Tuple[str]]): The template name(s) to render.
+            context (Dict[str, Any], optional): The context to use for template rendering.
+            content_type (str, optional): The content type to return.
+            status (int, optional): The HTTP status code to return.
+            mimetype (str, optional): The MIME type to return.
+            current_app (str, optional): The current app name.
+            charset (str, optional): The charset to use for the response.
+            using (str, optional): The database alias to use for the response.
+
+        The constructor first calculates the template name(s) based on the request's language
+        code and the doc type of the view. It then calls the constructor of the superclass with
+        the calculated template name(s).
+        """
         template2 = None
         context["template"] = template
         if context and "view" in context and context["view"]:
@@ -236,6 +309,15 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         )
 
     def _get_model_template(self, context, doc_type):
+        """
+        Try to get template from model based on context and doc_type
+
+        If context has 'object' key, it calls template_for_object method
+        on object instance. If context has 'object_list' key and 'view' key,
+        it calls template_for_list method on object_list.model instance.
+
+        Returns None if no template found.
+        """
         if context and "object" in context:
             o = context["object"]
             v = context["view"]
@@ -257,6 +339,24 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         return None
 
     def render(self):
+        """
+        Try to render the response content.
+
+        If the view's doc_type is not one of "html", "pdf", "spdf", "json", the
+        response content will be rendered as a document of given type.
+
+        If the view's doc_type is "pdf", the response content will be rendered
+        as a PDF document using the 'stream_from_html' function.
+
+        If the view's doc_type is "spdf", the response content will be rendered
+        as a PDF document using the 'stream_from_html' function, but with
+        'stream_type' set to 'spdf'.
+
+        If the view's doc_type is "json", the response content will be rendered
+        as a JSON string using the 'SimpleTabParserBase' class.
+
+        :returns: The rendered response.
+        """
         if self.context_data["view"].doc_type() in ("ods", "odt", "odp"):
             self["Content-Type"] = "application/vnd.oasis.opendocument.spreadsheet"
             file_out, file_in = render_odf(
@@ -276,7 +376,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             )
             context = self.resolve_context(self.context_data)
             stream_out = render_ooxml(self.template_name, Context(context))
-            if type(stream_out) == tuple:
+            if isinstance(stream_out, tuple):
                 with open(stream_out[0], "rb") as f:
                     self.content = f.read()
                     file_in_name = os.path.basename(stream_out[1])
@@ -330,7 +430,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             ret = TemplateResponse.render(self)
             if self.context_data["view"].doc_type() == "pdf":
                 self["Content-Type"] = "application/pdf"
-                if type(self.template_name) == str:
+                if isinstance(self.template_name, str):
                     tname = self.template_name
                 else:
                     tname = self.template_name[0]
@@ -346,7 +446,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 self.content = pdf_stream.getvalue()
             elif self.context_data["view"].doc_type() == "spdf":
                 self["Content-Type"] = "application/spdf"
-                if type(self.template_name) == str:
+                if isinstance(self.template_name, str):
                     tname = self.template_name
                 else:
                     tname = self.template_name[0]
@@ -414,10 +514,10 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         context = self.resolve_context(self.context_data)
         try:
             content = template.render(context, self._request)
-        except:
+        except Exception:
             try:
                 content = template.render(RequestContext(self._request, context))
-            except:
+            except Exception:
                 content = template.render(context, self._request)
         return content
 
@@ -426,9 +526,25 @@ class ExtTemplateView(generic.TemplateView):
     response_class = ExtTemplateResponse
 
     def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests: instantiate a generic class-based view and
+        call its dispatch() method.
+        """
         return self.get(request, *args, **kwargs)
 
     def doc_type(self):
+        """
+        Return the document type for this view.
+
+        The document type is determined as follows.  If the target
+        in the URL starts with one of the document types given in
+        `DOC_TYPES`, then that document type is used.  If the
+        "json" parameter is set to 1 in the GET arguments, then
+        "json" is used.  Otherwise, "html" is used.
+
+        Returns:
+            str: The document type.
+        """
         for doc_type in DOC_TYPES:
             if self.kwargs["target"].startswith(doc_type):
                 return doc_type
@@ -445,11 +561,51 @@ def render_to_response(
     using=None,
     request=None,
 ):
+    """
+    Calls a template_name with a given context and returns an HttpResponse object with that rendered text.
+
+    Required arguments:
+
+        template_name: the name of the template to be rendered and returned.
+
+    Optional arguments:
+
+        context: A dictionary of values to add to the template context. By default, an
+            empty dictionary will be used.
+
+        content_type: The MIME type to use for the resulting document. Defaults to the value of
+            the ``DEFAULT_CONTENT_TYPE`` setting.
+
+        status: The status code for the response. Defaults to ``200``.
+
+        using: The name of the template engine to use for loading the template.
+
+        request: The request object used to generate this response. If not provided, the
+            ``HttpRequest`` object will be used.
+
+    Returns:
+        An ``HttpResponse`` whose content is the result of the template rendering passed
+        to this function. If ``content_type`` is specified, that MIME type is used.
+        Otherwise the default ``DEFAULT_CONTENT_TYPE`` setting is used.
+    """
     content = loader.render_to_string(template_name, context, request, using=using)
     return HttpResponse(content, content_type, status)
 
 
 def render_to_response_ext(request, template_name, context, doc_type="html"):
+    """
+    Renders a template with a given context and returns an HttpResponse object.
+
+    Args:
+        request: The HTTP request object.
+        template_name: The name of the template to be rendered.
+        context: A dictionary containing context data to be passed to the template.
+        doc_type: The document type to be set in the context, defaults to "html".
+
+    Returns:
+        An HttpResponse object with the rendered template content.
+    """
+
     context["target"] = doc_type
     if "request" in context:
         del context["request"]
@@ -457,6 +613,15 @@ def render_to_response_ext(request, template_name, context, doc_type="html"):
 
 
 def dict_to_template(template_name):
+    """
+    A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as a template.
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key. If the returned dictionary contains a key "template_name", the template with that name is rendered with the returned dictionary as the context. If the returned dictionary contains a key "doc_type", the document type of the response is set to the value of that key. Otherwise, the document type is set to "html".
+
+    :param template_name: The name of the template to be rendered.
+    :return: A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as a template.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -465,7 +630,6 @@ def dict_to_template(template_name):
             elif "redirect" in v:
                 return HttpResponseRedirect(make_href(v["redirect"]))
             elif "template_name" in v:
-                # return render_to_response(v["template_name"], v, request=request)
                 if "doc_type" in v:
                     return render_to_response_ext(
                         request, v["template_name"], v, doc_type=v["doc_type"]
@@ -473,7 +637,6 @@ def dict_to_template(template_name):
                 else:
                     return render_to_response_ext(request, v["template_name"], v)
             else:
-                # return render_to_response(template_name, v, request=request)
                 if "doc_type" in v:
                     return render_to_response_ext(
                         request,
@@ -490,6 +653,15 @@ def dict_to_template(template_name):
 
 
 def dict_to_odf(template_name):
+    """
+    A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as an OpenDocument Spreadsheet (ODS) template.
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key. If the returned dictionary contains a key "template_name", the template with that name is rendered with the returned dictionary as the context. If the returned dictionary contains a key "doc_type", the document type of the response is set to the value of that key. Otherwise, the document type is set to "ods".
+
+    :param template_name: The name of the template to be rendered.
+    :return: A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as an ODS template.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -511,6 +683,15 @@ def dict_to_odf(template_name):
 
 
 def dict_to_ooxml(template_name):
+    """
+    A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as a Microsoft Open Office XML (OOXML) Spreadsheet (XLSX) template.
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key. If the returned dictionary contains a key "template_name", the template with that name is rendered with the returned dictionary as the context. If the returned dictionary contains a key "doc_type", the document type of the response is set to the value of that key. Otherwise, the document type is set to "xlsx".
+
+    :param template_name: The name of the template to be rendered.
+    :return: A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as an OOXML template.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -532,6 +713,15 @@ def dict_to_ooxml(template_name):
 
 
 def dict_to_txt(template_name):
+    """
+    A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as a plain text template.
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key. If the returned dictionary contains a key "template_name", the template with that name is rendered with the returned dictionary as the context. If the returned dictionary contains a key "doc_type", the document type of the response is set to the value of that key. Otherwise, the document type is set to "txt".
+
+    :param template_name: The name of the template to be rendered.
+    :return: A decorator that calls the decorated function with the given arguments and keyword arguments and renders the returned dictionary as a plain text template.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -546,6 +736,17 @@ def dict_to_txt(template_name):
 
 
 def dict_to_hdoc(template_name):
+    """
+    A decorator that transforms the returned dictionary from the decorated function into an HTML document (hdoc).
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key.
+    If it contains a key "template_name", the specified template is rendered with the dictionary as the context.
+    The document type of the response is set to "hdoc".
+
+    :param template_name: The name of the template to be used for rendering.
+    :return: A decorator function that processes the response dictionary and renders it as an hdoc document.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -560,6 +761,17 @@ def dict_to_hdoc(template_name):
 
 
 def dict_to_hxls(template_name):
+    """
+    A decorator that transforms the returned dictionary from the decorated function into an HTML Excel document (hxls).
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key.
+    If it contains a key "template_name", the specified template is rendered with the dictionary as the context.
+    The document type of the response is set to "hxls".
+
+    :param template_name: The name of the template to be used for rendering.
+    :return: A decorator function that processes the response dictionary and renders it as an hxls document.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -574,6 +786,17 @@ def dict_to_hxls(template_name):
 
 
 def dict_to_pdf(template_name):
+    """
+    A decorator that transforms the returned dictionary from the decorated function into a PDF document.
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key.
+    If it contains a key "template_name", the specified template is rendered with the dictionary as the context.
+    The document type of the response is set to "pdf".
+
+    :param template_name: The name of the template to be used for rendering.
+    :return: A decorator function that processes the response dictionary and renders it as a PDF document.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -587,7 +810,18 @@ def dict_to_pdf(template_name):
     return _dict_to_template
 
 
-def dict_to_pdf(template_name):
+def dict_to_spdf(template_name):
+    """
+    A decorator that transforms the returned dictionary from the decorated function into a PDF document using the Small Page PDF template.
+
+    If the returned dictionary contains a key "redirect", a redirect is performed to the value of that key.
+    If it contains a key "template_name", the specified template is rendered with the dictionary as the context.
+    The document type of the response is set to "spdf".
+
+    :param template_name: The name of the template to be used for rendering.
+    :return: A decorator function that processes the response dictionary and renders it as a PDF document.
+    """
+
     def _dict_to_template(func):
         def inner(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
@@ -602,6 +836,16 @@ def dict_to_pdf(template_name):
 
 
 def dict_to_json(func):
+    """
+    A decorator that transforms the returned dictionary from the decorated function into a JSON response.
+
+    The decorated function should return a dictionary that will be serialized into JSON format.
+    The JSON response is returned with the content type set to "application/json".
+
+    :param func: The function to be decorated.
+    :return: A decorator function that processes the response dictionary and returns it as a JSON response.
+    """
+
     def inner(request, *args, **kwargs):
         v = func(request, *args, **kwargs)
         return HttpResponse(schjson.json_dumps(v), content_type="application/json")
@@ -610,9 +854,19 @@ def dict_to_json(func):
 
 
 def dict_to_xml(func):
+    """
+    A decorator that transforms the returned dictionary from the decorated function into an XML response.
+
+    The decorated function should return a dictionary that will be serialized into XML format.
+    The XML response is returned with the content type set to "application/xhtml+xml".
+
+    :param func: The function to be decorated.
+    :return: A decorator function that processes the response dictionary and returns it as an XML response.
+    """
+
     def inner(request, *args, **kwargs):
         v = func(request, *args, **kwargs)
-        if type(v) == "str":
+        if isinstance(v, str):
             return HttpResponse(v, content_type="application/xhtml+xml")
         else:
             return HttpResponse(

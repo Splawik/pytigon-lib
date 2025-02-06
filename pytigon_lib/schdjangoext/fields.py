@@ -1,23 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 """Module contains many additional fields for django models.
 """
 
@@ -54,10 +34,14 @@ class ModelSelect2WidgetExt(ModelSelect2Widget):
                 argv["attrs"] = {"href2": href2}
         if "attrs" in argv:
             argv["attrs"]["data-minimum-input-length"] = minimum_input_length
-            argv["attrs"]["class"] = "form-control" + (" show-form-btn" if href1 else "")
+            argv["attrs"]["class"] = "form-control" + (
+                " show-form-btn" if href1 else ""
+            )
         else:
             argv["attrs"] = {"data-minimum-input-length": minimum_input_length}
-            argv["attrs"]["class"] = "form-control" + (" show-form-btn" if href1 else "")
+            argv["attrs"]["class"] = "form-control" + (
+                " show-form-btn" if href1 else ""
+            )
         ModelSelect2Widget.__init__(self, label=label, **argv)
 
 
@@ -155,7 +139,7 @@ class ForeignKey(models.ForeignKey):
 
         field = self
 
-        if self.search_fields or self.query: # or self.select2:
+        if self.search_fields or self.query:  # or self.select2:
             _search_fields = self.search_fields
             _query = self.query
             _minimum_input_length = self.minimum_input_length
@@ -289,8 +273,8 @@ class HiddenForeignKey(models.ForeignKey):
     """Version of django models.ForeignKey class with hidden widget."""
 
     def __init__(self, *argi, **argv):
-        if 'select2' in argv:
-            del argv['select2']
+        if "select2" in argv:
+            del argv["select2"]
         super().__init__(*argi, **argv)
 
     def formfield(self, **kwargs):

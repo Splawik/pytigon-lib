@@ -1,44 +1,28 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 from pytigon_lib.schhtml.parser import Parser, content_tostring, Elem, Script, tostring
 from pytigon_lib.schhtml.htmltools import Td
 from pyquery import PyQuery as pq
 
 
 class ExtList(list):
+    """Extended list class with additional attributes for table rows."""
+
     row_id = 0
     class_attr = ""
 
 
 class SimpleTabParserBase(Parser):
-    """Parses html for tables. Found tables save to self.tables variable"""
+    """Parses HTML for tables and saves found tables to self.tables."""
 
     def __init__(self):
-        Parser.__init__(self)
+        super().__init__()
         self.tables = []
 
     def _preprocess(self, td):
+        """Preprocess table cell content."""
         return content_tostring(td).strip()
 
     def feed(self, html_txt):
+        """Parse HTML and extract tables."""
         self.init(html_txt)
         for elem in self._tree.iterfind(".//table"):
             table = []
@@ -58,36 +42,38 @@ class SimpleTabParserBase(Parser):
 
 
 class SimpleTabParser(SimpleTabParserBase):
-    """Like SimpleTabParserBase but td saves as Td object. SimpleTabParserBase saves td as string"""
+    """Like SimpleTabParserBase but saves table cells as Td objects."""
 
     def _preprocess(self, td):
+        """Preprocess table cell content into Td objects."""
         return Td(content_tostring(td).strip(), td.attrib)
 
 
 class TreeParser(Parser):
-    """Parses html for ul. Found ul save to self.list variable"""
+    """Parses HTML for unordered lists (ul) and saves the structure to self.list."""
 
     def __init__(self):
+        super().__init__()
         self.tree_parent = [["TREE", []]]
         self.list = self.tree_parent
         self.stack = []
         self.attr_to_li = []
         self.enable_data_read = False
-        Parser.__init__(self)
 
     def handle_starttag(self, tag, attrs):
+        """Handle start tags."""
         self.attr_to_li += attrs
         if tag == "ul":
             self.stack.append(self.list)
             self.list = self.list[-1][1]
             self.enable_data_read = False
-        else:
-            if tag == "li":
-                self.enable_data_read = True
-                self.list.append(["", [], []])
-                self.attr_to_li = []
+        elif tag == "li":
+            self.enable_data_read = True
+            self.list.append(["", [], []])
+            self.attr_to_li = []
 
     def handle_endtag(self, tag):
+        """Handle end tags."""
         if tag == "ul":
             self.list = self.stack.pop()
         if tag == "li":
@@ -96,17 +82,13 @@ class TreeParser(Parser):
         self.enable_data_read = False
 
     def handle_data(self, data):
+        """Handle data within tags."""
         if self.enable_data_read:
             self.list[-1][0] = self.list[-1][0] + data.rstrip(" \n")
 
 
-def _remove(parent, elem):
-    parent.remove(elem)
-
-
 class ShtmlParser(Parser):
-    """Parser for SchPage window. Divides the page into parts: header, footer, panel, body and script. Reads variables
-    from meta tag"""
+    """Parser for SchPage window. Divides the page into parts: header, footer, panel, body, and script."""
 
     def __init__(self):
         super().__init__()
@@ -117,16 +99,15 @@ class ShtmlParser(Parser):
         self.schhtml = None
 
     def _data_to_string(self, id):
-        if self._data[id] != None:
-            return tostring(self._data[id])
-        return ""
+        """Convert data to string."""
+        return tostring(self._data[id]) if self._data[id] is not None else ""
 
     def _script_to_string(self, id):
-        if self._data[id] != None:
-            return self._data[id].text
-        return ""
+        """Convert script to string."""
+        return self._data[id].text if self._data[id] is not None else ""
 
     def _reparent(self, selectors):
+        """Reparent elements based on selectors."""
         ret = []
         d = pq(self._tree)
 
@@ -135,19 +116,14 @@ class ShtmlParser(Parser):
             scripts = tmp("script")
             if scripts:
                 tmp.remove("script")
-            if tmp:
-                ret.append(tmp[0])
-            else:
-                ret.append(None)
-            if scripts:
-                ret.append(scripts[0])
-            else:
-                ret.append(None)
+            ret.append(tmp[0] if tmp else None)
+            ret.append(scripts[0] if scripts else None)
             if selector and tmp:
                 d.remove(selector)
         return ret
 
     def process(self, html_txt, address=None):
+        """Process HTML content."""
         self.address = address
         self.init(html_txt)
         for elem in self._tree.iterfind(".//meta"):
@@ -164,48 +140,50 @@ class ShtmlParser(Parser):
 
     @property
     def title(self):
+        """Get the title of the HTML document."""
         if not self._title:
             try:
                 self._title = self._tree.findtext(".//title").strip()
-            except:
+            except AttributeError:
                 self._title = ""
         return self._title
 
     def get_body(self):
-        """Get body fragment"""
+        """Get body fragment."""
         return (Elem(self._data[0]), Script(self._data[1]))
 
     def get_header(self):
-        """Get header fragment"""
+        """Get header fragment."""
         return (Elem(self._data[2]), Script(self._data[3]))
 
     def get_footer(self):
-        """Get footer fragment"""
+        """Get footer fragment."""
         return (Elem(self._data[4]), Script(self._data[5]))
 
     def get_panel(self):
-        """Get panel fragment"""
+        """Get panel fragment."""
         return (Elem(self._data[6]), Script(self._data[7]))
 
     def get_body_attrs(self):
-        """Get body attributes"""
-        b = self._tree.find(".//body")
-        if b != None:
-            return b.attrib
-        else:
-            return {}
+        """Get body attributes."""
+        body = self._tree.find(".//body")
+        return body.attrib if body is not None else {}
 
 
 if __name__ == "__main__":
-    f = open("test.html", "rt")
-    data = f.read()
-    f.close()
-    mp = ShtmlParser()
-    mp.Process(data)
-    if "TARGET" in mp.Var:
-        print("HEJ:", mp.Var["TARGET"])
-        print("<title***>", mp.title, "</title***>")
-        print("<header***>", mp.header.getvalue(), "</header***>")
-        print("<BODY***>", mp.body.getvalue(), "</BODY***>")
-        print("<footer***>", mp.footer.getvalue(), "</footer***>")
-        print("<panel***>", mp.panel.getvalue(), "</panel***>")
+    try:
+        with open("test.html", "rt") as f:
+            data = f.read()
+        mp = ShtmlParser()
+        mp.process(data)
+        if "TARGET" in mp.var:
+            print("HEJ:", mp.var["TARGET"])
+            print("<title***>", mp.title, "</title***>")
+            print("<header***>", mp.get_header()[0].getvalue(), "</header***>")
+            print("<BODY***>", mp.get_body()[0].getvalue(), "</BODY***>")
+            print("<footer***>", mp.get_footer()[0].getvalue(), "</footer***>")
+            print("<panel***>", mp.get_panel()[0].getvalue(), "</panel***>")
+    except FileNotFoundError:
+        print("Error: test.html not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")

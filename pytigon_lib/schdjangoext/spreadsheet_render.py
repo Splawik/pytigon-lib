@@ -1,33 +1,12 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
 """
 The module enables the dynamic creation of documents in a odf format (https://en.wikipedia.org/wiki/OpenDocument).
 Process of documents creation begins with the creation of the template. It is also in odf format.
 Template is a normal static document supplemented with dynamic structures placed in comments to the selected cells.
 The syntax of these additional comments is consistent with django. There are additional syntax elements
 to control the place where dynamic structures are activated.
-
-Additional syntax:
-    First char in spreadsheet cell:
-        * - result in text format
-        : - result as number
-        @ or $ - result as formula
-    First char in note:
-        !   - move expression to current cell
-              element before cell and element after cell separated by char: '@'
-              example:
-              !{% for i in list %}@{%endfor%}
-        !!  - move expression to current row
-        !!! - move expression to current sheet
-        
-    Syntax compatibile with django:
-        {{var}}, {% block %} etc.
-    There are aliases: '_start_' is alias for '{{'
-                       '_end_' is alias for '}}'
 """
 
-import os.path
+import os
 import io
 from zipfile import ZipFile
 import xml.dom.minidom
@@ -46,6 +25,7 @@ template_dirs = getattr(settings, "TEMPLATES")[0]["DIRS"]
 
 class OdfDocTemplateTransform(OdfDocTransform):
     def process_template(self, doc_str, context):
+        """Process the template string with the given context."""
         return Template(
             "{% load exsyntax %}{% load exfiltry %}{% load expr %}{% load l10n %}{% localize off %}"
             + doc_str
@@ -55,6 +35,7 @@ class OdfDocTemplateTransform(OdfDocTransform):
 
 class OOXmlDocTemplateTransform(OOXmlDocTransform):
     def process_template(self, doc_str, context):
+        """Process the template string with the given context."""
         return Template(
             "{% load exsyntax %}{% load exfiltry %}{% load expr %}{% load l10n %}{% localize off %}"
             + doc_str
@@ -63,146 +44,138 @@ class OOXmlDocTemplateTransform(OOXmlDocTransform):
 
 
 def oo_dict(template_name):
-    z = ZipFile(template_dirs[0] + "/" + template_name, "r")
-    doc_content = z.read("content.xml")
-    z.close()
-    doc = xml.dom.minidom.parseString(doc_content.replace("&apos;", "'"))
-    elementy = doc.getElementsByTagName("table:table")
-    ret = []
-    for element in elementy:
-        element.getAttribute("table:name")
-        ret.append(
-            (element.getAttribute("table:name"), element.getAttribute("table:name"))
-        )
-    return ret
+    """Extract table names from the ODF template."""
+    file_name = None
+    for template_dir in template_dirs:
+        if os.path.exists(os.path.join(template_dir, template_name)):
+            file_name = os.path.join(template_dir, template_name)
+
+    if file_name:
+        try:
+            with ZipFile(file_name, "r") as z:
+                doc_content = z.read("content.xml")
+                if isinstance(doc_content, bytes):
+                    doc_content = doc_content.decode("utf-8")
+                doc = xml.dom.minidom.parseString(doc_content.replace("&apos;", "'"))
+                elements = doc.getElementsByTagName("table:table")
+                return [
+                    (elem.getAttribute("table:name"), elem.getAttribute("table:name"))
+                    for elem in elements
+                ]
+        except Exception as e:
+            raise RuntimeError(f"Failed to process template: {e}")
+    else:
+        raise RuntimeError(f"Failed to find template: {template_name}")
 
 
-class DefaultTbl(object):
+class DefaultTbl:
+    """Default table class for managing row and column positions."""
+
     def __init__(self):
         self.row = -1
         self.col = -1
 
-    def IncRow(self, row=1):
-        self.row = self.row + row
+    def inc_row(self, row=1):
+        """Increment the row position."""
+        self.row += row
         return ""
 
-    def IncCol(self, col=1):
-        self.col = self.col + col
+    def inc_col(self, col=1):
+        """Increment the column position."""
+        self.col += col
         return ""
 
-    def SetCol(self, col):
+    def set_col(self, col):
+        """Set the column position."""
         self.col = col
         return ""
 
-    def SetRow(self, row):
+    def set_row(self, row):
+        """Set the row position."""
         self.row = row
         return ""
 
 
 def _render_doc(doc_type, template_name, context_instance=None, debug=None):
-    """Render odf file content, save rendered file and return its name
+    """Render the document and return the output file name and template name."""
+    context = (
+        {"tbl": DefaultTbl()} if "tbl" not in context_instance else context_instance
+    )
 
-    Args:
-        template_name - name of template. Template is odf file with special syntax.
-        context_instance - see django.template.Context
-        debug - if True - print some additional information to console
+    try:
+        with context_instance.push(context):
+            if "tbl" not in context_instance:
+                context_instance["tbl"] = DefaultTbl()
 
-    Returns:
-        (output_file_name, template_name)
-        output_file_name is the name of temporary file with rendered content
-        template_name - real path to template odf file
-    """
-    if not "tbl" in context_instance:
-        context = {
-            "tbl": DefaultTbl(),
-        }
-    else:
-        context = {}
+            if isinstance(template_name, (list, tuple)):
+                name = _find_template(template_name)
+            else:
+                name = _find_template((template_name,))
 
-    ret2 = None
+            name_out = get_temp_filename()
+            doc_class = (
+                OdfDocTemplateTransform
+                if doc_type.lower().startswith("od")
+                else OOXmlDocTemplateTransform
+            )
+            doc = doc_class(name, name_out)
 
-    with context_instance.push(context):
-        if not "tbl" in context_instance:
-            context_instance["tbl"] = DefaultTbl()
+            if doc.process(context_instance, debug) != 1:
+                os.remove(name_out)
+                return None, name
+            return name_out, name
+    except Exception as e:
+        raise RuntimeError(f"Failed to render document: {e}")
 
-        if template_name.__class__ in (list, tuple):
-            test = False
-            for tname in template_name:
-                if tname[0] == "/":
-                    name = tname
-                    if os.path.exists(name):
-                        test = True
-                        break
-                else:
-                    for template_dir in template_dirs:
-                        name = template_dir + "/" + tname
-                        if os.path.exists(name):
-                            test = True
-                            break
-                    if test:
-                        break
-            if not test:
-                raise TemplateDoesNotExist(";".join(template_name))
+
+def _find_template(template_names):
+    """Find the first existing template from the list."""
+    for tname in template_names:
+        if tname.startswith("/"):
+            if os.path.exists(tname):
+                return tname
         else:
-            name = template_name
-        name_out = get_temp_filename()
-        if doc_type.lower().startswith("od"):
-            doc = OdfDocTemplateTransform(name, name_out)
-        else:
-            doc = OOXmlDocTemplateTransform(name, name_out)
-
-        ret = doc.process(context_instance, debug)
-
-        if ret != 1:
-            ret2 = (None, name)
-            os.remove(name_out)
-        else:
-            ret2 = (name_out, name)
-    return ret2
+            for template_dir in template_dirs:
+                name = os.path.join(template_dir, tname)
+                if os.path.exists(name):
+                    return name
+    raise TemplateDoesNotExist(";".join(template_names))
 
 
 def _render_doc_to_response(
     doc_type, doc_content_type, template_name, context_instance=None, debug=None
 ):
+    """Render the document and return it as an HttpResponse."""
+    try:
+        s = _render_doc(doc_type, template_name, context_instance, debug)
+        if not s[0]:
+            return None
 
-    s = _render_doc(doc_type, template_name, context_instance, debug)
-
-    if not s[0]:
-        response = None
-    else:
-        if "_" in s[1]:
-            name = s[1].split("_")[1]
-        else:
-            name = s[1]
+        name = s[1].split("_")[1] if "_" in s[1] else s[1]
         response = HttpResponse()
-        response["Content-Disposition"] = "attachment; filename=%s" % name
-        response["Content-Type"] = "application/vnd.oasis.opendocument.spreadsheet"
-        f = open(s[0], "rb")
-        response.content = f.read()
-        f.close()
+        response["Content-Disposition"] = f"attachment; filename={name}"
+        response["Content-Type"] = doc_content_type
+
+        with open(s[0], "rb") as f:
+            response.content = f.read()
         os.remove(s[0])
-    return response
+        return response
+    except Exception as e:
+        raise RuntimeError(f"Failed to render document to response: {e}")
 
 
 def render_odf(template_name, context_instance=None, debug=None):
+    """Render an ODF document."""
     return _render_doc("ODF", template_name, context_instance, debug)
 
 
 def render_ooxml(template_name, context_instance=None, debug=None):
+    """Render an OOXML document."""
     return _render_doc("OOXML", template_name, context_instance, debug)
 
 
 def render_to_response_odf(template_name, context_instance=None, debug=None):
-    """Render odf file content, save it to HttpResponse (see django.http.HttpResponse)
-
-    Args:
-        template_name - name of template. Template is odf file with special syntax.
-        context_instance - see django.template.Context
-        debug - if True - print some additional information to console
-
-    Returns:
-        HttpResponse object
-    """
+    """Render an ODF document and return it as an HttpResponse."""
     return _render_doc_to_response(
         "ODF",
         "application/vnd.oasis.opendocument.spreadsheet",
@@ -213,16 +186,7 @@ def render_to_response_odf(template_name, context_instance=None, debug=None):
 
 
 def render_to_response_ooxml(template_name, context_instance=None, debug=None):
-    """Render odf file content, save it to HttpResponse (see django.http.HttpResponse)
-
-    Args:
-        template_name - name of template. Template is ooxml file with special syntax.
-        context_instance - see django.template.Context
-        debug - if True - print some additional information to console
-
-    Returns:
-        HttpResponse object
-    """
+    """Render an OOXML document and return it as an HttpResponse."""
     return _render_doc_to_response(
         "OOXML",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

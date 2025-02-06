@@ -1,45 +1,29 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 import collections
-
-
-from pytigon_lib.schindent.indent_style import ihtml_to_html_base
 from django.template import Template, Context
+from pytigon_lib.schindent.indent_style import ihtml_to_html_base
 
 
-class Html(object):
+class Html:
+    """Represents an HTML element with attributes and children."""
+
     def __init__(self, name, attr=None):
+        """Initialize the HTML element with a name and optional attributes."""
         self.name = name
         self.attr = attr
         self.value = None
         self.children = []
 
     def setvalue(self, value):
+        """Set the value of the HTML element."""
         self.value = value
 
     def setattr(self, attr):
+        """Set the attributes of the HTML element."""
         self.attr = attr
 
     def append(self, elem, attr=None):
-        if type(elem) == str:
+        """Append a child element to the HTML element."""
+        if isinstance(elem, str):
             helem = Html(elem, attr)
         else:
             helem = elem
@@ -47,34 +31,36 @@ class Html(object):
         return helem
 
     def dump(self):
-        ret = "<" + self.name
+        """Generate the HTML string representation of the element and its children."""
+        ret = f"<{self.name}"
         if self.attr:
-            ret += " " + self.attr.replace("'", '"')
-        ret = ret + ">"
+            ret += f" {self.attr.replace("'", '"')}"
+        ret += ">"
         for elem in self.children:
             ret += elem.dump()
         if self.value:
-            if isinstance(self.value, collections.abc.Callable):
-                ret += self.value()
-            else:
-                ret += self.value
-        ret += "</" + self.name + ">"
+            ret += self.value() if callable(self.value) else self.value
+        ret += f"</{self.name}>"
         return ret
 
 
 def make_start_tag(tag, attrs):
-    ret = "<" + tag
-    for pos in attrs:
-        if attrs[pos] != None:
-            ret += " " + pos + '="' + attrs[pos] + '"'
+    """Generate an HTML start tag with attributes."""
+    ret = f"<{tag}"
+    for key, value in attrs.items():
+        if value is not None:
+            ret += f' {key}="{value}"'
         else:
-            ret += " " + pos
+            ret += f" {key}"
     ret += ">"
     return ret
 
 
 class ITemplate:
+    """Template class for generating HTML from ihtml strings."""
+
     def __init__(self, ihtml_str):
+        """Initialize the template with an ihtml string."""
         ihtml_str2 = (
             ihtml_str.replace("[%]", "%")
             .replace("[{", "{{")
@@ -86,6 +72,6 @@ class ITemplate:
         self.template = Template(self.html_str)
 
     def gen(self, argv):
+        """Generate the final HTML by rendering the template with the given context."""
         c = Context(argv)
-        ret = self.template.render(c)
-        return ret
+        return self.template.render(c)

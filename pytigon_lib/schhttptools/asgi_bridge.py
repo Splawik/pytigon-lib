@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
-import urllib
+import urllib.parse
 import copy
+from typing import Dict, List, Tuple, Any, Optional
 
 SCOPE_TEMPLATE = {
     "type": "http",
@@ -25,125 +25,125 @@ SCOPE_TEMPLATE = {
 }
 
 
-def get_scope_and_content_http_get(path, headers):
+def get_scope_and_content_http_get(
+    path: str, headers: List[Tuple[str, str]]
+) -> Tuple[Dict[str, Any], str]:
+    """Generate a scope and content for an HTTP GET request."""
     scope = copy.deepcopy(SCOPE_TEMPLATE)
-    if "?" in path:
-        x = path.split("?", 1)
-        path2 = x[0]
-        query = x[1]
-    else:
-        path2 = path
-        query = ""
+    path2, query = (
+        (path.split("?", 1)[0], path.split("?", 1)[1]) if "?" in path else (path, "")
+    )
 
     scope["path"] = path2
     scope["query_string"] = query.encode("utf-8")
-    for pos in headers:
-        if type(pos[0]) == str:
-            key = pos[0].encode("utf-8")
-        else:
-            key = pos[0]
-        for pos2 in scope["headers"]:
-            if type(pos2[0]) == str:
-                key2 = pos2[0].encode("utf-8")
-            else:
-                key2 = pos2[0]
 
-            if key.lower() == key2.lower():
-                scope["headers"].remove(pos2)
-                break
-        scope["headers"].append((key, pos[1]))
+    for key, value in headers:
+        key_bytes = key.encode("utf-8") if isinstance(key, str) else key
+        scope["headers"] = [
+            (k, v) for k, v in scope["headers"] if k.lower() != key_bytes.lower()
+        ]
+        scope["headers"].append((key_bytes, value))
 
     return scope, ""
 
 
-def get_scope_and_content_http_post(path, headers, params={}):
+def get_scope_and_content_http_post(
+    path: str, headers: List[Tuple[str, str]], params: Optional[Dict[str, str]] = None
+) -> Tuple[Dict[str, Any], str]:
+    """Generate a scope and content for an HTTP POST request."""
     scope, content = get_scope_and_content_http_get(path, headers)
     scope["method"] = "POST"
-    scope["headers"].append((b"upgrade-insecure-requests", b"1"))
-    scope["headers"].append((b"content-type", b"application/x-www-form-urlencoded"))
-    if params:
-        content = urllib.parse.urlencode(params)
-    else:
-        content = ""
+    scope["headers"].extend(
+        [
+            (b"upgrade-insecure-requests", b"1"),
+            (b"content-type", b"application/x-www-form-urlencoded"),
+        ]
+    )
+
+    content = urllib.parse.urlencode(params) if params else ""
     scope["headers"].append((b"content-length", str(len(content)).encode("utf-8")))
+
     return scope, content
 
 
-def get_scope_websocket(path, headers):
-    scope, content = get_scope_and_content_http_get(path, headers)
+def get_scope_websocket(path: str, headers: List[Tuple[str, str]]) -> Dict[str, Any]:
+    """Generate a scope for a WebSocket connection."""
+    scope, _ = get_scope_and_content_http_get(path, headers)
     scope["type"] = "websocket"
     return scope
 
 
-async def get_or_post(application, path, headers, params={}, post=False):
+async def get_or_post(
+    application,
+    path: str,
+    headers: List[Tuple[str, str]],
+    params: Optional[Dict[str, str]] = None,
+    post: bool = False,
+) -> Dict[str, Any]:
+    """Handle GET or POST requests and return the response."""
     ret = {}
-    if post:
-        scope, content = get_scope_and_content_http_post(path, headers, params)
-    else:
-        scope, content = get_scope_and_content_http_get(path, headers)
+    scope, content = (
+        get_scope_and_content_http_post(path, headers, params)
+        if post
+        else get_scope_and_content_http_get(path, headers)
+    )
 
-    async def send(message):
+    async def send(message: Dict[str, Any]) -> None:
+        """Send a message to the client."""
         nonlocal ret
         for key, value in message.items():
-            if key in ret:
-                ret[key] += value
-            else:
-                ret[key] = value
+            ret[key] = ret.get(key, "") + value
 
-    async def receive():
+    async def receive() -> Dict[str, Any]:
+        """Receive a message from the client."""
         nonlocal content
         return {"type": "http", "body": content.encode("utf-8")}
 
-    application_queue = await application(scope, receive, send)
+    await application(scope, receive, send)
 
-    if "status" in ret and ret["status"] == 302:
-        if "headers" in ret:
-            for pos in ret["headers"]:
-                if pos[0] == b"Location":
-                    new_url = pos[1].decode("utf-8").replace("http://127.0.0.2", "")
-                    ret2 = await get_or_post(application, new_url, headers)
-                    if "headers" in ret:
-                        for pos2 in ret["headers"]:
-                            ret2["headers"].append(pos2)
-                    return ret2
+    if ret.get("status") == 302 and "headers" in ret:
+        for pos in ret["headers"]:
+            if pos[0] == b"Location":
+                new_url = pos[1].decode("utf-8").replace("http://127.0.0.2", "")
+                ret2 = await get_or_post(application, new_url, headers)
+                if "headers" in ret:
+                    ret2["headers"].extend(ret["headers"])
+                return ret2
 
     return ret
 
 
-async def websocket(application, path, headers, input_queue, output):
+async def websocket(
+    application, path: str, headers: List[Tuple[str, str]], input_queue, output
+) -> Dict[str, Any]:
+    """Handle WebSocket connections."""
     ret = {}
-    status = 0
     scope = get_scope_websocket(path.replace("ws://127.0.0.2/", ""), headers)
     connected = False
 
-    async def send(message):
-        nonlocal output
-        if "type" in message:
-            if message["type"] == "websocket.accept":
-                output.onOpen()
-            elif message["type"] == "websocket.send":
-                text = None
-                binary = None
-                if "text" in message:
-                    text = message["text"]
-                if "binary" in message:
-                    binary = message["binary"]
-                output.onMessage(text, binary)
-            elif message["type"] == "websocket.disconnect":
-                output.onClose(None, None, None)
+    async def send(message: Dict[str, Any]) -> None:
+        """Send a WebSocket message to the client."""
+        if message["type"] == "websocket.accept":
+            output.onOpen()
+        elif message["type"] == "websocket.send":
+            text = message.get("text")
+            binary = message.get("binary")
+            output.onMessage(text, binary)
+        elif message["type"] == "websocket.disconnect":
+            output.onClose(None, None, None)
 
-    async def receive():
+    async def receive() -> Dict[str, Any]:
+        """Receive a WebSocket message from the client."""
         nonlocal connected
         if not connected:
             connected = True
             return {"type": "websocket.connect"}
-        nonlocal status
-        nonlocal input_queue
         item = await input_queue.get()
-        if item:
-            return {"type": "websocket.receive", "text": item}
-        else:
-            return {"type": "websocket.disconnect"}
+        return (
+            {"type": "websocket.receive", "text": item}
+            if item
+            else {"type": "websocket.disconnect"}
+        )
 
-    application_queue = await application(scope, receive, send)
+    await application(scope, receive, send)
     return ret

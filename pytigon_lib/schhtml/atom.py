@@ -1,26 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 from pytigon_lib.schhtml.htmltools import superstrip
 
-decode_sym = (
+# Define symbols to decode
+DECODE_SYM = (
     ("&gt;", ">"),
     ("&lt;", "<"),
     ("&amp;", "&"),
@@ -28,16 +9,15 @@ decode_sym = (
 )
 
 
-def unescape(txt):
-    ret = txt
-    for pos in decode_sym:
-        if pos[0] in txt:
-            ret = ret.replace(pos[0], pos[1])
-    return ret
+def unescape(text):
+    """Unescape HTML entities in the given text."""
+    for symbol, replacement in DECODE_SYM:
+        text = text.replace(symbol, replacement)
+    return text
 
 
-class Atom(object):
-    """Base rendered element"""
+class Atom:
+    """Base rendered element."""
 
     def __init__(self, data, dx, dx_space, dy_up, dy_down, style=-1, is_txt=False):
         self.data = data
@@ -50,41 +30,43 @@ class Atom(object):
         self.is_txt = is_txt
 
     def get_width(self):
+        """Return the width of the atom."""
         return self.dx
 
     def get_height(self):
+        """Return the height of the atom."""
         return self.dy_up + self.dy_down
 
     def set_parent(self, parent):
+        """Set the parent of the atom."""
         self.parent = parent
 
     def get_parent(self):
+        """Return the parent of the atom."""
         return self.parent
 
 
 class NullAtom(Atom):
+    """Null atom with no content."""
+
     def __init__(self):
-        self.data = ""
-        self.dx = 0
-        self.dx_space = 0
-        self.dy_up = 0
-        self.dy_down = 0
-        self.style = None
-        self.parent = None
-        self.is_txt = None
+        super().__init__("", 0, 0, 0, 0)
 
     def draw_atom(self, dc, style, x, y):
+        """Draw the atom (no-op)."""
         return True
 
 
 class BrAtom(NullAtom):
+    """Line break atom."""
+
     def __init__(self, cr_count=1):
-        NullAtom.__init__(self)
+        super().__init__()
         self.cr_count = cr_count
 
 
-class AtomLine(object):
-    """Class represent full line in rendered html"""
+class AtomLine:
+    """Represents a full line in rendered HTML."""
 
     def __init__(self, maxwidth):
         self.maxwidth = maxwidth
@@ -96,26 +78,15 @@ class AtomLine(object):
         self.not_justify = False
 
     def _append(self, atom):
-        atom = atom
-        if len(self.objs) > 0 and atom.is_txt:
-            if False:
-                self.objs[-1].data += atom.data
-                self.objs[-1].dx_space = atom.dx_space
-                self.objs[-1].dx += atom.get_width()
-                self.dx = self.dx + atom.get_width()
-            else:
-                self.objs.append(atom)
-                self.dx = self.dx + atom.get_width()
-        else:
-            self.objs.append(atom)
-            self.dx = self.dx + atom.get_width()
+        """Append an atom to the line."""
+        self.objs.append(atom)
+        self.dx += atom.get_width()
         self.space = atom.dx_space
-        if self.dy_up < atom.dy_up:
-            self.dy_up = atom.dy_up
-        if self.dy_down < atom.dy_down:
-            self.dy_down = atom.dy_down
+        self.dy_up = max(self.dy_up, atom.dy_up)
+        self.dy_down = max(self.dy_down, atom.dy_down)
 
     def justify(self, from_second=False):
+        """Justify the line by adding space between atoms."""
         if self.not_justify:
             return
         dx = self.maxwidth - self.dx
@@ -123,7 +94,7 @@ class AtomLine(object):
         l = len(self.objs)
         if l > 1 + d:
             for e in self.objs:
-                if type(e) == BrAtom:
+                if isinstance(e, BrAtom):
                     return
             ddx = dx / (l - 1 - d)
             objs = []
@@ -138,6 +109,7 @@ class AtomLine(object):
             self.objs = objs
 
     def append(self, atom, force_append=False):
+        """Append an atom to the line if it fits."""
         if len(self.objs) > 0:
             if (
                 force_append
@@ -153,20 +125,23 @@ class AtomLine(object):
             return False
 
     def pop_if_one_char(self):
+        """Pop the last atom if it contains one or two characters."""
         if len(self.objs) > 2:
             a = self.objs[-1]
-            if a.is_txt:
-                if len(a.data) <= 2:
-                    self.dx -= a.dx
-                    self.objs = self.objs[:-1]
-                    return a
+            if a.is_txt and len(a.data) <= 2:
+                self.dx -= a.dx
+                self.objs = self.objs[:-1]
+                return a
         return None
 
     def get_height(self):
+        """Return the height of the line."""
         return self.dy_up + self.dy_down
 
 
-class AtomList(object):
+class AtomList:
+    """List of atoms to be rendered."""
+
     def __init__(self, dc_info, line_dy=0, pre=False):
         self.dc_info = dc_info
         self.atom_list = []
@@ -180,230 +155,222 @@ class AtomList(object):
         self.leave_single_char = True
 
     def set_first_line_offset(self, offset):
+        """Set the offset for the first line."""
         self.first_line_offset = offset
 
     def set_justify(self, justify=True):
+        """Set whether to justify the text."""
         self.justify = justify
 
     def set_leave_single_char(self, leave=True):
+        """Set whether to leave single characters on a line."""
         self.leave_single_char = leave
 
     def set_line_dy(self, dy):
+        """Set the line spacing."""
         self.line_dy = self.dc_info.get_line_dy(dy)
 
-    def append_text(self, txt, style, parent=None):
-        if txt and len(txt) > 0:
-            if not self.pre:
-                txt2 = unescape(txt.replace("\n", " "))
-            else:
-                if "\n" in txt:
-                    txt2 = unescape(txt)
-                    x = txt2.split("\n")
-                    self.append_text(x[0], style, parent)
-                    last_br = None
-                    for pos in x[1:]:
-                        if pos != "":
-                            if last_br:
-                                last_br.cr_count += 1
-                            else:
-                                last_br = BrAtom()
-                                self.append_atom(BrAtom())
-                            self.append_text(pos, style, parent)
-                            last_br = None
-                        else:
-                            if last_br:
-                                last_br.cr_count += 1
-                            else:
-                                last_br = BrAtom()
-                                self.append_atom(last_br)
-                    return
-                else:
-                    txt2 = unescape(txt)
-            words = superstrip(txt2).split(" ")
-            if txt2[0] == " ":
-                words[0] = " " + words[0]
-            for i in range(0, len(words) - 1):
-                words[i] = words[i] + " "
-            if txt2[-1] == " ":
-                words[-1] = words[-1] + " "
-                if words[-1] == "  ":
-                    words[-1] = " "
+    def append_text(self, text, style, parent=None):
+        """Append text to the atom list."""
+        if not text:
+            return
 
-            if self.pre or (parent and parent.no_wrap):
-                if txt2 != "":
-                    extents = self.dc_info.get_extents(txt2, style)
-                    atom = Atom(
-                        txt2,
-                        # superstrip(txt2),
-                        extents[0],
-                        extents[1],
-                        extents[2],
-                        extents[3],
-                        style,
-                        True,
-                    )
-                    atom.set_parent(parent)
-                    self.atom_list.append(atom)
+        if not self.pre:
+            text = unescape(text.replace("\n", " "))
+        else:
+            if "\n" in text:
+                lines = unescape(text).split("\n")
+                self.append_text(lines[0], style, parent)
+                last_br = None
+                for line in lines[1:]:
+                    if line:
+                        if last_br:
+                            last_br.cr_count += 1
+                        else:
+                            last_br = BrAtom()
+                            self.append_atom(BrAtom())
+                        self.append_text(line, style, parent)
+                        last_br = None
+                    else:
+                        if last_br:
+                            last_br.cr_count += 1
+                        else:
+                            last_br = BrAtom()
+                            self.append_atom(last_br)
+                return
             else:
-                for word in words:
-                    if word == "":
-                        continue
-                    extents = self.dc_info.get_extents(word, style)
-                    atom = Atom(
-                        word,
-                        extents[0],
-                        extents[1],
-                        extents[2],
-                        extents[3],
-                        style,
-                        True,
-                    )
-                    if parent:
-                        atom.set_parent(parent)
-                    self.atom_list.append(atom)
+                text = unescape(text)
+
+        words = superstrip(text).split(" ")
+        if text[0] == " ":
+            words[0] = " " + words[0]
+        for i in range(len(words) - 1):
+            words[i] += " "
+        if text[-1] == " ":
+            words[-1] += " "
+            if words[-1] == "  ":
+                words[-1] = " "
+
+        if self.pre or (parent and parent.no_wrap):
+            if text:
+                extents = self.dc_info.get_extents(text, style)
+                atom = Atom(
+                    text, extents[0], extents[1], extents[2], extents[3], style, True
+                )
+                atom.set_parent(parent)
+                self.atom_list.append(atom)
+        else:
+            for word in words:
+                if not word:
+                    continue
+                extents = self.dc_info.get_extents(word, style)
+                atom = Atom(
+                    word, extents[0], extents[1], extents[2], extents[3], style, True
+                )
+                if parent:
+                    atom.set_parent(parent)
+                self.atom_list.append(atom)
 
     def append_atom(self, atom):
+        """Append an atom to the list."""
         self.atom_list.append(atom)
 
     def get_width_tab(self):
+        """Calculate the optimal, minimum, and maximum width of the atom list."""
         minwidth = 0
         maxwidth = 0
         maxmaxwidth = 0
         for atom in self.atom_list:
-            if atom.get_width() > minwidth:
-                minwidth = atom.get_width()
+            minwidth = max(minwidth, atom.get_width())
             maxwidth += atom.get_width() + atom.dx_space
-            if type(atom) == BrAtom:
-                if maxwidth > maxmaxwidth:
-                    maxmaxwidth = maxwidth
-                    maxwidth = 0
+            if isinstance(atom, BrAtom):
+                maxmaxwidth = max(maxmaxwidth, maxwidth)
+                maxwidth = 0
 
-        if maxwidth < maxmaxwidth:
-            maxwidth = maxmaxwidth
-
-        if len(self.atom_list) > 8:
-            optwidth = (maxwidth * 8) / len(self.atom_list)
-        else:
-            optwidth = maxwidth
+        maxwidth = max(maxwidth, maxmaxwidth)
+        optwidth = (
+            (maxwidth * 8) // len(self.atom_list)
+            if len(self.atom_list) > 8
+            else maxwidth
+        )
         return (optwidth, minwidth, maxwidth)
 
     def gen_list_for_draw(self, width):
-        l = []
+        """Generate a list of lines for drawing."""
+        lines = []
         last_atom = None
         line = AtomLine(width)
         for atom in self.atom_list:
-            if atom.__class__ == BrAtom:
+            if isinstance(atom, BrAtom):
                 if atom.cr_count > 1:
-                    line.dy_down = line.dy_down + line.get_height() * (
-                        atom.cr_count - 1
-                    )
+                    line.dy_down += line.get_height() * (atom.cr_count - 1)
                 line.not_justify = True
-                l.append(line)
+                lines.append(line)
                 line = AtomLine(width)
                 continue
+
             test_append = True
             if atom.is_txt and atom.data == " ":
                 if (
-                    last_atom == None
-                    or last_atom
-                    and last_atom.is_txt
-                    and last_atom.data[-1] == " "
+                    not last_atom
+                    or (last_atom.is_txt and last_atom.data[-1] == " ")
                     or "CtrlTag" in last_atom.data.__class__.__name__
                 ):
                     test_append = False
+
             if test_append:
                 if not line.append(atom):
                     if not self.leave_single_char:
                         c = line.pop_if_one_char()
                     else:
                         c = None
-                    l.append(line)
+                    lines.append(line)
                     line = AtomLine(width)
                     if c:
                         line.append(c, force_append=True)
                     line.append(atom, force_append=True)
             last_atom = atom
-        if len(line.objs) > 0:
-            l.append(line)
+
+        if line.objs:
+            lines.append(line)
             if self.first_line_height == -1:
                 self.first_line_height = line.get_height()
 
-        for i, line in enumerate(l):
+        for i, line in enumerate(lines):
             if i == 0:
                 line.maxwidth -= self.first_line_offset
-            if self.justify and i < len(l) - 1:
-                if i == 0 and self.first_line_offset != 0:
-                    line.justify(from_second=True)
-                else:
-                    line.justify()
+            if self.justify and i < len(lines) - 1:
+                line.justify(from_second=(i == 0 and self.first_line_offset != 0))
 
-        self.list_for_draw = l
+        self.list_for_draw = lines
         self.width = width
 
     def get_height(self):
-        if self.list_for_draw:
-            dy = 0
-            for pos in self.list_for_draw:
-                dy = dy + pos.get_height()
-            dy += self.line_dy * (len(self.list_for_draw) - 1)
-            return dy
-        else:
+        """Return the total height of the atom list."""
+        if not self.list_for_draw:
             return -1
+        dy = sum(line.get_height() for line in self.list_for_draw)
+        dy += self.line_dy * (len(self.list_for_draw) - 1)
+        return dy
 
     def draw_atom_list(self, dc, align=0, valign=1):
+        """Draw the atom list on the given device context."""
         size = dc.get_size()
         if size[0] == -1:
             size[0] = self.width
+
+        y = 0
         if valign > 0:
             y2 = self.get_height()
             if valign == 1:
-                y = (size[1] - y2) / 2
+                y = (size[1] - y2) // 2
             else:
                 y = size[1] - y2
-        else:
-            y = 0
+
         if self.list_for_draw:
             first = True
             for line in self.list_for_draw:
-                if len(line.objs) > 0:
+                if line.objs:
                     if align == 0:
                         x = 0
                     else:
-                        if align == 1:
-                            x = (size[0] - line.dx + line.space) / 2
-                        else:
-                            x = size[0] - line.dx + line.space
+                        x = (
+                            (size[0] - line.dx + line.space) // 2
+                            if align == 1
+                            else size[0] - line.dx + line.space
+                        )
                     subdc = dc.subdc(x, y, size[0] - x, line.get_height())
                     subdc.draw_atom_line(
                         self.first_line_offset if first else 0, 0, line
                     )
                     y += line.get_height() + self.line_dy
                     first = False
+
         self.list_for_draw = []
         self.atom_list = []
-
         return y - self.line_dy
 
     def to_txt(self):
-        ret = ""
-        for atom in self.atom_list:
-            if type(atom.data) == str:
-                ret += atom.data
-        return ret
+        """Convert the atom list to a plain text string."""
+        return "".join(
+            atom.data for atom in self.atom_list if isinstance(atom.data, str)
+        )
 
     def to_attrs(self):
+        """Convert the atom list to a dictionary of attributes."""
         attrs = {}
         for atom in self.atom_list:
             if atom.parent:
                 for attr in atom.parent.attrs:
-                    if not attr in attrs:
+                    if attr not in attrs:
                         attrs[attr] = atom.parent.attrs[attr]
                 attrs["data"] = atom.data
         return attrs
 
     def to_obj_tab(self):
+        """Convert the atom list to a dictionary of objects."""
         objs = {}
         for atom in self.atom_list:
-            if atom.parent and not atom.parent.sys_id in objs:
+            if atom.parent and atom.parent.sys_id not in objs:
                 objs[atom.parent.sys_id] = atom.parent
         return objs

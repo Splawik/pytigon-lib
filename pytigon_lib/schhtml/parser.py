@@ -1,66 +1,68 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
+"""
+This module provides classes and functions to parse and handle HTML content.
 
-# Pytigon - wxpython and django application framework
+Classes:
+    Parser: A class to parse HTML content and handle tags and data.
+    Elem: A class to represent an HTML element.
+    Script: A class to represent a script element.
 
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
+Functions:
+    tostring(elem: etree.Element) -> str: Convert an element to a string representation.
+    content_tostring(elem: etree.Element) -> str: Convert the content of an element to a string.
+"""
+
+import io
+import re
+from typing import Optional, Union
 
 try:
     from lxml import etree
 
     LXML = True
-except:
-
+except ImportError:
     import xml.etree.ElementTree as etree
     from naivehtmlparser import NaiveHTMLParser
 
     LXML = False
 
 
-import io
-import re
-
-
 class Parser:
-    def __init__(self):
-        self._tree = None
-        self._cur_elem = None
+    """A class to parse HTML content and handle tags and data."""
 
-    def get_starttag_text(self):
+    def __init__(self):
+        self._tree: Optional[etree.Element] = None
+        self._cur_elem: Optional[etree.Element] = None
+
+    def get_starttag_text(self) -> str:
+        """Generate the start tag text for the current element."""
         if self._cur_elem:
-            ret = ""
-            for key, value in self._cur_elem.items():
-                if value:
-                    ret = ret + '%s="%s" ' % (key, value)
-                else:
-                    ret = ret + key + " "
-            return "<%s %s>" % (self._cur_elem.tag, ret[0:-1])
+            attributes = " ".join(
+                f'{key}="{value}"' if value else key
+                for key, value in self._cur_elem.items()
+            )
+            return (
+                f"<{self._cur_elem.tag} {attributes}>"
+                if attributes
+                else f"<{self._cur_elem.tag}>"
+            )
         return ""
 
-    def handle_starttag(self, tag, attrib):
+    def handle_starttag(self, tag: str, attrib: dict) -> None:
+        """Handle the start tag of an element."""
         pass
 
-    def handle_data(self, txt):
+    def handle_data(self, txt: str) -> None:
+        """Handle the text data within an element."""
         pass
 
-    def handle_endtag(self, tag):
+    def handle_endtag(self, tag: str) -> None:
+        """Handle the end tag of an element."""
         pass
 
-    def _crawl_tree(self, tree):
+    def _crawl_tree(self, tree: etree.Element) -> None:
+        """Recursively crawl through the HTML tree."""
         self._cur_elem = tree
-        if type(tree.tag) is str:
+        if isinstance(tree.tag, str):
             self.handle_starttag(tree.tag.lower(), tree.attrib)
             if tree.text:
                 self.handle_data(tree.text)
@@ -70,12 +72,13 @@ class Parser:
         if tree.tail:
             self.handle_data(tree.tail)
 
-    def crawl_tree(self, tree):
+    def crawl_tree(self, tree: etree.Element) -> None:
+        """Start crawling the HTML tree."""
         self._tree = tree
         self._crawl_tree(self._tree)
 
-    def from_html(self, html_txt):
-        global LXML
+    def from_html(self, html_txt: str) -> etree.Element:
+        """Parse HTML text and return the root element."""
         if LXML:
             parser = etree.HTMLParser(
                 remove_blank_text=True, remove_comments=True, remove_pis=True
@@ -87,27 +90,31 @@ class Parser:
             parser.close()
             return root
 
-    def init(self, html_txt):
-        if type(html_txt) == Elem:
+    def init(self, html_txt: Union[str, "Elem"]) -> None:
+        """Initialize the parser with HTML text or an Elem object."""
+        if isinstance(html_txt, Elem):
             self._tree = self.from_html("<html></html>")
             self._tree.append(html_txt.elem)
         else:
             try:
                 self._tree = self.from_html(html_txt)
-            except:
-                print(html_txt)
+            except Exception as e:
+                print(f"Error parsing HTML: {e}")
                 self._tree = None
 
-    def feed(self, html_txt):
+    def feed(self, html_txt: Union[str, "Elem"]) -> None:
+        """Feed HTML text to the parser and start crawling."""
         self.init(html_txt)
-        self._crawl_tree(self._tree)
+        if self._tree is not None and len(self._tree) > 0:
+            self._crawl_tree(self._tree)
 
-    def close(self):
+    def close(self) -> None:
+        """Close the parser and reset the tree."""
         self._tree = None
 
 
-def tostring(elem):
-    global LXML
+def tostring(elem: etree.Element) -> str:
+    """Convert an element to a string representation."""
     if LXML:
         return etree.tostring(
             elem, encoding="unicode", method="html", pretty_print=True
@@ -116,7 +123,8 @@ def tostring(elem):
         return etree.tostring(elem, encoding="unicode", method="html")
 
 
-def content_tostring(elem):
+def content_tostring(elem: etree.Element) -> str:
+    """Convert the content of an element to a string."""
     tab = []
     if elem.text:
         tab.append(elem.text)
@@ -128,40 +136,49 @@ def content_tostring(elem):
 
 
 class Elem:
-    def __init__(self, elem, tostring_fun=tostring):
+    """A class to represent an HTML element."""
+
+    def __init__(self, elem: etree.Element, tostring_fun=tostring):
         self.elem = elem
-        self._elem_txt = None
+        self._elem_txt: Optional[str] = None
         self._tostring_fun = tostring_fun
 
-    def __str__(self):
-        if self._elem_txt == None:
-            if self.elem != None:
-                self._elem_txt = self._tostring_fun(self.elem)
-            else:
-                return ""
+    def __str__(self) -> str:
+        """Return the string representation of the element."""
+        if self._elem_txt is None:
+            self._elem_txt = (
+                self._tostring_fun(self.elem) if self.elem is not None else ""
+            )
         return self._elem_txt
 
-    def __len__(self):
-        if self._elem_txt == None:
+    def __len__(self) -> int:
+        """Return the length of the element's string representation."""
+        if self._elem_txt is None:
             self._elem_txt = self._tostring_fun(self.elem)
         return len(self._elem_txt)
 
-    def __bool__(self):
-        if self.elem == None:
-            return False
-        else:
-            return True
+    def __bool__(self) -> bool:
+        """Return True if the element exists, False otherwise."""
+        return self.elem is not None
 
-    def super_strip(self, s):
+    @staticmethod
+    def super_strip(s: str) -> str:
+        """Strip and clean the string by removing extra spaces and newlines."""
         s = re.sub(r"(( )*(\\n)*)*", "", s)
         return s.strip()
 
-    def tostream(self, output=None, elem=None, tab=0):
-        if elem == None:
+    def tostream(
+        self,
+        output: Optional[io.StringIO] = None,
+        elem: Optional[etree.Element] = None,
+        tab: int = 0,
+    ) -> io.StringIO:
+        """Convert the element to a stream representation."""
+        if elem is None:
             elem = self.elem
-        if output == None:
+        if output is None:
             output = io.StringIO()
-        if type(elem.tag) is str:
+        if isinstance(elem.tag, str):
             output.write(" " * tab)
             output.write(elem.tag.lower())
             first = True
@@ -172,11 +189,10 @@ class Elem:
                     output.write(",,,")
                 output.write(key)
                 output.write("=")
-                if type(value) == str:
+                if isinstance(value, str):
                     output.write(value.replace("\n", "\\n"))
                 else:
                     output.write(str(value).replace("\n", "\\n"))
-
                 first = False
             if elem.text:
                 x = self.super_strip(elem.text.replace("\n", "\\n"))
@@ -197,5 +213,7 @@ class Elem:
 
 
 class Script(Elem):
-    def __init__(self, elem, tostring_fun=content_tostring):
+    """A class to represent a script element."""
+
+    def __init__(self, elem: etree.Element, tostring_fun=content_tostring):
         super().__init__(elem, tostring_fun)

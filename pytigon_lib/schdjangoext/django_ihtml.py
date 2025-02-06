@@ -1,28 +1,9 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 from pytigon_lib.schindent.indent_style import ConwertToHtml
 
-
+# Elements that should be self-closing in HTML
 SIMPLE_CLOSE_ELEM = ["br", "meta", "input"]
 
+# Django template elements that should auto-close
 AUTO_CLOSE_DJANGO_ELEM = [
     "for",
     "if",
@@ -34,6 +15,7 @@ AUTO_CLOSE_DJANGO_ELEM = [
     "with",
 ]
 
+# Django template elements that should not auto-close
 NO_AUTO_CLOSE_DJANGO_ELEM = [
     "else",
     "elif",
@@ -41,34 +23,48 @@ NO_AUTO_CLOSE_DJANGO_ELEM = [
 
 
 def fa_icons(value):
-    return "<i class='fa fa-%s'></i>" % value
+    """Generate Font Awesome icon HTML.
+
+    Args:
+        value (str): The name of the Font Awesome icon.
+
+    Returns:
+        str: HTML string for the icon.
+    """
+    return f"<i class='fa fa-{value}'></i>"
 
 
 def ihtml_to_html(file_name, input_str=None, lang="en"):
-    """Convert ihtml syntax to html
+    """Convert ihtml syntax to HTML.
 
     Args:
-        file_name - template file name
-        input_str - input string with ihtml content
-        lang - language
+        file_name (str): The name of the template file.
+        input_str (str, optional): The input string with ihtml content. Defaults to None.
+        lang (str, optional): The language. Defaults to "en".
+
+    Returns:
+        str: The converted HTML string or an empty string on error.
     """
-    conwert = ConwertToHtml(
-        file_name,
-        SIMPLE_CLOSE_ELEM,
-        AUTO_CLOSE_DJANGO_ELEM,
-        NO_AUTO_CLOSE_DJANGO_ELEM,
-        input_str,
-        lang,
-        output_processors={
-            "fa": fa_icons,
-        },
-    )
     try:
+        conwert = ConwertToHtml(
+            file_name,
+            SIMPLE_CLOSE_ELEM,
+            AUTO_CLOSE_DJANGO_ELEM,
+            NO_AUTO_CLOSE_DJANGO_ELEM,
+            input_str,
+            lang,
+            output_processors={
+                "fa": fa_icons,
+            },
+        )
         conwert.process()
         return conwert.to_str()
-    except:
-        import sys, traceback
+    except Exception as e:
+        print(f"Error during ihtml conversion: {e}")
+        import traceback
+        import sys
 
-        print(sys.exc_info())
-        traceback.print_exc()
+        print(sys.exc_info()[0])
+        print(traceback.print_exc())
+
         return ""

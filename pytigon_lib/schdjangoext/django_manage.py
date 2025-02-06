@@ -1,45 +1,42 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 import os
+import sys
 import django
+from django.core.management import execute_from_command_line
 
 
 def cmd(arg, from_main=False):
-    if from_main:
-        argv = arg
-    else:
-        if type(arg) == str:
-            argv = ["manage.py", arg]
-        else:
-            argv = [
-                "manage.py",
-            ] + arg
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
-    from django.core.management import execute_from_command_line
+    """
+    Execute a Django management command.
 
-    execute_from_command_line(argv)
+    Args:
+        arg (str or list): The command to execute. If a string, it will be converted to a list.
+        from_main (bool): If True, `arg` is treated as the full command line arguments.
+
+    Raises:
+        SystemExit: If the command execution fails.
+    """
+    try:
+        if from_main:
+            argv = arg
+        else:
+            argv = ["manage.py"] + ([arg] if isinstance(arg, str) else arg)
+
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
+        execute_from_command_line(argv)
+    except Exception as e:
+        print(f"Error executing command: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def syncdb():
+    """Synchronize the database."""
     cmd("syncdb")
 
 
 def help():
+    """Display help information."""
     cmd("help")
+
+
+if __name__ == "__main__":
+    cmd(sys.argv, from_main=True)

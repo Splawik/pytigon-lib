@@ -1,23 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 from django import forms
 from pytigon_lib.schdjangoext import fields as ext_fields
 
@@ -55,80 +35,80 @@ def make_form_class(base_form, init_data):
 
 
 def _scan_lines(input_str):
-    l = input_str.replace("\r", "").split("\n")
-    ret = []
+    """Scan input string and split into lines, handling multi-line choices."""
+    lines = input_str.replace("\r", "").split("\n")
+    result = []
     append_to_last = False
-    for pos in l:
+
+    for line in lines:
         if append_to_last:
-            ret[-1] = ret[-1] + ";" + pos
-            if "]" in pos:
+            result[-1] = result[-1] + ";" + line
+            if "]" in line:
                 append_to_last = False
         else:
-            ret.append(pos)
-            if ":[" in pos and not "]" in pos:
+            result.append(line)
+            if ":[" in line and "]" not in line:
                 append_to_last = True
-    return ret
+    return result
 
 
 def _get_name_and_title(s):
-    required = False
-    if s.endswith("!"):
-        required = True
-        s = s[:-1]
+    """Extract name, title, and required flag from a string."""
+    required = s.endswith("!")
+    s = s[:-1] if required else s
 
     if "//" in s:
         name, title = s.split("//", 1)
     else:
         title = s
-        x = s.encode("ascii", "replace").decode("utf-8").replace("?", "_").lower()
-        name = ""
-        for z in x:
-            if (z >= "a" and z <= "z") or (z >= "0" and z <= "9") or z == "_":
-                name += z
-        name = name[:16]
+        name = "".join(
+            z
+            for z in s.encode("ascii", "replace")
+            .decode("utf-8")
+            .replace("?", "_")
+            .lower()
+            if z.isalnum() or z == "_"
+        )[:16]
     return name, title, required
 
 
 def _read_form_line(line):
+    """Parse a single line to extract field information."""
     kwargs = {}
     field_type = None
     title = ""
     name = ""
     required = False
-    frm = ""
+    format_str = ""
+
     if "::" in line:
-        x = line.rsplit("::", 1)
-        line2 = x[0].strip()
-        frm = x[1].strip()
-        if frm.startswith("0"):
+        line_parts = line.rsplit("::", 1)
+        line2 = line_parts[0].strip()
+        format_str = line_parts[1].strip()
+
+        if format_str.startswith("0"):
             field_type = forms.IntegerField
-            if len(frm) > 1:
-                kwargs = {"min_value": 0, "max_value": 10 ** len(frm)}
-        elif frm.startswith("9"):
+            if len(format_str) > 1:
+                kwargs = {"min_value": 0, "max_value": 10 ** len(format_str)}
+        elif format_str.startswith("9"):
             field_type = forms.FloatField
-            if len(frm) > 1:
-                kwargs = {"min_value": 0, "max_value": 10 ** len(frm)}
-        elif frm.startswith("#"):
+            if len(format_str) > 1:
+                kwargs = {"min_value": 0, "max_value": 10 ** len(format_str)}
+        elif format_str.startswith("#"):
             field_type = forms.DateField
-        elif frm.startswith("*"):
+        elif format_str.startswith("*"):
             field_type = forms.CharField
-            if len(frm) > 0:
-                kwargs = {"max_length": len(frm)}
-        elif frm.startswith("_"):
+            kwargs = {"max_length": len(format_str)}
+        elif format_str.startswith("_"):
             field_type = forms.CharField
             kwargs = {"widget": forms.Textarea}
-        elif frm.startswith("["):
+        elif format_str.startswith("["):
             field_type = forms.ChoiceField
-            choices = list(
-                [
-                    (
-                        pos,
-                        pos,
-                    )
-                    for pos in frm[1:-1].replace(",", ";").split(";")
-                    if pos
-                ]
-            )
+            choices = [
+                (choice, choice)
+                for choice in format_str[1:-1].replace(",", ";").split(";")
+                if choice
+            ]
             kwargs = {"choices": choices}
     else:
         if line.endswith("?"):
@@ -137,46 +117,42 @@ def _read_form_line(line):
         else:
             field_type = forms.CharField
             line2 = line
+
     name, title, required = _get_name_and_title(line2)
     return name, field_type, title, required, kwargs
 
 
-def form_from_str(
-    input_str,
-    init_data={},
-    base_form_class=forms.Form,
-    prefix="",
-):
+def form_from_str(input_str, init_data=None, base_form_class=forms.Form, prefix=""):
+    """Generate a Django form from a string definition."""
+    if init_data is None:
+        init_data = {}
+
     if "make_form_class" in input_str:
-        l = locals()
-        exec(input_str, globals(), l)
-        return l["make_form_class"](base_form_class, init_data)
-    else:
+        locals_dict = {}
+        exec(input_str, globals(), locals_dict)
+        return locals_dict["make_form_class"](base_form_class, init_data)
 
-        class _Form(base_form_class):
-            def __init__(self, *args, **kwargs):
-                super(_Form, self).__init__(*args, **kwargs)
+    class _Form(base_form_class):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            lines = _scan_lines(input_str)
 
-                tab = _scan_lines(input_str)
-                for pos in tab:
-                    if pos:
-                        (
-                            name,
-                            field_type,
-                            title,
-                            required,
-                            form_kwargs,
-                        ) = _read_form_line(pos.strip())
-                        if name in init_data:
-                            self.fields[prefix + name] = field_type(
-                                label=title,
-                                required=required,
-                                initial=init_data[name],
-                                **form_kwargs,
-                            )
-                        else:
-                            self.fields[prefix + name] = field_type(
-                                label=title, required=required, **form_kwargs
-                            )
+            for line in lines:
+                if line:
+                    name, field_type, title, required, form_kwargs = _read_form_line(
+                        line.strip()
+                    )
+                    field_name = prefix + name
+                    if name in init_data:
+                        self.fields[field_name] = field_type(
+                            label=title,
+                            required=required,
+                            initial=init_data[name],
+                            **form_kwargs,
+                        )
+                    else:
+                        self.fields[field_name] = field_type(
+                            label=title, required=required, **form_kwargs
+                        )
 
-        return _Form
+    return _Form

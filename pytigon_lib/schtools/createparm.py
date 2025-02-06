@@ -1,96 +1,80 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
-try:
-    from urllib.parse import urlencode
-except:
-    from urllib import urlencode
+from urllib.parse import urlencode
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 class DictParm:
-    def __init__(self, d):
-        self.Dict = d
+    """A class to handle dictionary parameters."""
 
-    def get_parm(self, parm):
-        return self.Dict[parm]
+    def __init__(self, data: Dict[str, Any]) -> None:
+        """Initialize with a dictionary."""
+        self.data = data
 
-    def has_parm(self, parm):
-        return parm in self.Dict
+    def get_parm(self, param: str) -> Any:
+        """Get a parameter from the dictionary."""
+        if param not in self.data:
+            raise KeyError(f"Parameter '{param}' not found in dictionary.")
+        return self.data[param]
 
-
-def conwert_parm(parm):
-    if type(parm).__name__ == "DateTime":
-        return str(parm)[0:10]
-    if type(parm) == list:
-        return parm
-    if type(parm) == bool:
-        return parm
-    return parm
+    def has_parm(self, param: str) -> bool:
+        """Check if a parameter exists in the dictionary."""
+        return param in self.data
 
 
-def dict_from_parm(parm, fields):
-    ret = {}
-    for field in fields:
-        if parm.HasParm(field):
-            ret[field] = parm.HasParm(field)
-    return ret
+def convert_param(param: Any) -> Union[str, List, bool]:
+    """Convert a parameter to a suitable format for URL encoding."""
+    if hasattr(param, "__class__") and param.__class__.__name__ == "DateTime":
+        return str(param)[:10]
+    if isinstance(param, (list, bool)):
+        return param
+    return str(param)
 
 
-def create_parm(address, dic, no_encode=False):
-    l = address.split("|")
-    if len(l) > 1:
-        p = l[1].split(",")
-        parm = ""
-        if "?" in address:
-            znak = "&"
-        else:
-            znak = "?"
-        test = 0
-        en = dict()
-        for pos in p:
-            if dic.has_parm(pos):
-                if dic.get_parm(pos) != None:
-                    if "__" in pos:
-                        pos2 = pos.split("__")[0]
-                        if pos2 in en:
-                            if en[pos2].__class__ == list:
-                                en[pos2].append(conwert_parm(dic.get_parm(pos)))
-                            else:
-                                en[pos2] = [en[pos2], conwert_parm(dic.get_parm(pos))]
-                        else:
-                            en[pos2] = conwert_parm(dic.get_parm(pos))
-                    else:
-                        en[pos] = conwert_parm(dic.get_parm(pos))
-        if no_encode:
-            return (l[0], znak, en)
-        else:
-            parm = parm + urlencode(en, True)
-            return (l[0], znak, parm)
-    else:
+def dict_from_param(param: DictParm, fields: List[str]) -> Dict[str, Any]:
+    """Create a dictionary from a list of fields using the given DictParm object."""
+    return {field: param.get_parm(field) for field in fields if param.has_parm(field)}
+
+
+def create_parm(
+    address: str, dic: DictParm, no_encode: bool = False
+) -> Optional[Tuple[str, str, Union[Dict, str]]]:
+    """Create parameters from the address and dictionary."""
+    parts = address.split("|")
+    if len(parts) <= 1:
         return None
 
+    params = parts[1].split(",")
+    separator = "&" if "?" in address else "?"
+    encoded_params = {}
 
-def create_post_parm(address, dic):
-    l = address.split("|")
-    if len(l) > 1:
-        p = l[1].split(",")
-        return (l[0], dict_from_parm(p, dict))
+    for param in params:
+        if dic.has_parm(param):
+            value = dic.get_parm(param)
+            if value is not None:
+                if "__" in param:
+                    base_param = param.split("__")[0]
+                    if base_param in encoded_params:
+                        if isinstance(encoded_params[base_param], list):
+                            encoded_params[base_param].append(convert_param(value))
+                        else:
+                            encoded_params[base_param] = [
+                                encoded_params[base_param],
+                                convert_param(value),
+                            ]
+                    else:
+                        encoded_params[base_param] = convert_param(value)
+                else:
+                    encoded_params[param] = convert_param(value)
+
+    if no_encode:
+        return parts[0], separator, encoded_params
     else:
-        return (l, {})
+        return parts[0], separator, urlencode(encoded_params, doseq=True)
+
+
+def create_post_param(address: str, dic: DictParm) -> Tuple[str, Dict[str, Any]]:
+    """Create POST parameters from the address and dictionary."""
+    parts = address.split("|")
+    if len(parts) > 1:
+        params = parts[1].split(",")
+        return parts[0], dict_from_param(dic, params)
+    return parts[0], {}

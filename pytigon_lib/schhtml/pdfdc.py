@@ -1,69 +1,31 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 import os
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 import io
-
-try:
-    import PIL
-except:
-    pass
 import fpdf
-
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 from pytigon_lib.schfs.vfstools import get_temp_filename
 from pytigon_lib.schtools.main_paths import get_main_paths
 
+try:
+    import PIL
+except ImportError:
+    PIL = None
+
 _cfg = get_main_paths()
-# fpdf.fpdf.FPDF_FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../static/fonts")
 fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg["STATIC_PATH"], "fonts")
 
 
 class PDFSurface:
+    """Handles PDF surface creation and font management."""
+
     def __init__(self, output_name, output_stream, width, height):
+        """Initialize PDF surface with given dimensions and output settings."""
         self.output_name = output_name
         self.output_stream = output_stream
         self.width = width
         self.height = height
         self.pdf = fpdf.FPDF(unit="pt", orientation="L" if width > height else "P")
 
-        self.pdf.add_font("sans-serif", "", "DejaVuSansCondensed.ttf", uni=True)
-        self.pdf.add_font("sans-serif", "B", "DejaVuSansCondensed-Bold.ttf", uni=True)
-        self.pdf.add_font(
-            "sans-serif", "I", "DejaVuSansCondensed-Oblique.ttf", uni=True
-        )
-        self.pdf.add_font(
-            "sans-serif", "BI", "DejaVuSansCondensed-BoldOblique.ttf", uni=True
-        )
-
-        self.pdf.add_font("serif", "", "DejaVuSerifCondensed.ttf", uni=True)
-        self.pdf.add_font("serif", "B", "DejaVuSerifCondensed-Bold.ttf", uni=True)
-        self.pdf.add_font("serif", "I", "DejaVuSerifCondensed-Italic.ttf", uni=True)
-        self.pdf.add_font(
-            "serif", "BI", "DejaVuSerifCondensed-BoldItalic.ttf", uni=True
-        )
-
-        self.pdf.add_font("monospace", "", "DejaVuSansMono.ttf", uni=True)
-        self.pdf.add_font("monospace", "B", "DejaVuSansMono-Bold.ttf", uni=True)
-        self.pdf.add_font("monospace", "I", "DejaVuSansMono-Oblique.ttf", uni=True)
-        self.pdf.add_font("monospace", "BI", "DejaVuSansMono-BoldOblique.ttf", uni=True)
-
+        self._add_fonts()
         self.fonts_map = {
             "sans-serif": "sans-serif",
             "serif": "serif",
@@ -74,10 +36,31 @@ class PDFSurface:
 
         self.pdf.set_font("sans-serif", "", 11)
 
+    def _add_fonts(self):
+        """Add necessary fonts to the PDF."""
+        fonts = [
+            ("sans-serif", "", "DejaVuSansCondensed.ttf"),
+            ("sans-serif", "B", "DejaVuSansCondensed-Bold.ttf"),
+            ("sans-serif", "I", "DejaVuSansCondensed-Oblique.ttf"),
+            ("sans-serif", "BI", "DejaVuSansCondensed-BoldOblique.ttf"),
+            ("serif", "", "DejaVuSerifCondensed.ttf"),
+            ("serif", "B", "DejaVuSerifCondensed-Bold.ttf"),
+            ("serif", "I", "DejaVuSerifCondensed-Italic.ttf"),
+            ("serif", "BI", "DejaVuSerifCondensed-BoldItalic.ttf"),
+            ("monospace", "", "DejaVuSansMono.ttf"),
+            ("monospace", "B", "DejaVuSansMono-Bold.ttf"),
+            ("monospace", "I", "DejaVuSansMono-Oblique.ttf"),
+            ("monospace", "BI", "DejaVuSansMono-BoldOblique.ttf"),
+        ]
+        for family, style, filename in fonts:
+            self.pdf.add_font(family, style, filename, uni=True)
+
     def get_dc(self):
+        """Return the PDF drawing context."""
         return self.pdf
 
     def save(self):
+        """Save the PDF to the specified output."""
         if self.output_stream:
             self.pdf.output(self.output_stream)
         else:
@@ -85,6 +68,8 @@ class PDFSurface:
 
 
 class PdfDc(BaseDc):
+    """PDF drawing context that extends BaseDc."""
+
     def __init__(
         self,
         dc=None,
@@ -97,8 +82,8 @@ class PdfDc(BaseDc):
         notify_callback=None,
         record=False,
     ):
-        BaseDc.__init__(
-            self,
+        """Initialize the PDF drawing context."""
+        super().__init__(
             calc_only,
             width,
             height,
@@ -108,36 +93,34 @@ class PdfDc(BaseDc):
             notify_callback,
             record,
         )
-        if self.width >= 0:
-            width2 = self.width
-        else:
-            width2 = self.default_width
-        if self.height >= 0:
-            height2 = self.height
-        else:
-            height2 = self.default_height
+        width2 = self.width if self.width >= 0 else self.default_width
+        height2 = self.height if self.height >= 0 else self.default_height
+
         self.dc_info = PdfDcInfo(self)
         self.type = None
+
         if self.calc_only:
             self.surf = PDFSurface(None, None, 10, 10)
-            if not width or width < 0:
-                self.width = -1
-            if not height or height < 0:
-                self.height = 1000000000
+            self.width = -1 if not width or width < 0 else width
+            self.height = 1000000000 if not height or height < 0 else height
             self.dc = self.surf.get_dc()
         else:
             if dc:
                 self.surf = None
                 self.dc = dc
             else:
-                if output_name:
-                    name = output_name.lower()
-                    self.surf = PDFSurface(output_name, None, width2, height2)
-                else:
-                    self.surf = PDFSurface(None, output_stream, width2, height2)
-
+                self.surf = PDFSurface(output_name, output_stream, width2, height2)
                 self.dc = self.surf.get_dc()
 
+        self._init_drawing_state()
+
+        if self.notify_callback:
+            self.notify_callback("start", {"dc": self})
+
+        self.start_page()
+
+    def _init_drawing_state(self):
+        """Initialize the drawing state variables."""
         self.last_style_tab = None
         self._color = (0, 0, 0, 255)
         self._line_width = 0
@@ -145,64 +128,49 @@ class PdfDc(BaseDc):
         self._fill = False
         self._draw = False
         self._preserve = False
-
         self._last_pen = None
         self._last_brush = None
         self._last_pen_color = (0, 0, 0, 255)
         self._last_line_width = -1
         self._last_brush_color = (255, 255, 255, 255)
 
-        if self.notify_callback:
-            self.notify_callback(
-                "start",
-                {"dc": self},
-            )
-
-        self.start_page()
-
     def close(self):
+        """Close the PDF and save it."""
         if self.notify_callback:
-            self.notify_callback(
-                "end",
-                {"dc": self},
-            )
+            self.notify_callback("end", {"dc": self})
 
         if not self.calc_only:
             self.surf.save()
 
     def set_scale(self, scale):
+        """Set the scale for the drawing context."""
         self.scale = scale
         self._last_line_width = -1
         self._last_pen = None
-        return BaseDc.set_scale(self, scale)
+        return super().set_scale(scale)
 
     def _add(self, fun, args):
+        """Add a drawing function to the stack."""
         self._fun_stack.append((fun, args))
 
-    def _spline(self, points):
-        if self.fill:
-            self.dc.DrawSpline(points)
-        else:
-            self.dc.DrawSpline(points)
-
     def _draw_and_fill(self):
-        for fun_arg in self._fun_stack:
-            fun_arg[0](*fun_arg[1])
+        """Execute all drawing functions in the stack."""
+        for fun, args in self._fun_stack:
+            fun(*args)
 
     def start_page(self):
+        """Start a new page in the PDF."""
         self.dc.add_page()
-        BaseDc.start_page(self)
+        super().start_page()
 
     def end_page(self):
+        """End the current page in the PDF."""
         if self.notify_callback:
-            self.notify_callback(
-                "end_page",
-                {"dc": self},
-            )
-
-        BaseDc.end_page(self)
+            self.notify_callback("end_page", {"dc": self})
+        super().end_page()
 
     def draw(self, preserve=False):
+        """Draw the current stack of drawing functions."""
         self._draw = True
         self._fill = False
 
@@ -210,65 +178,69 @@ class PdfDc(BaseDc):
             self._last_pen_color != self._color
             or self._last_line_width != self._line_width
         ):
-            self.dc.set_draw_color(self._color[0], self._color[1], self._color[2])
-            self.dc.set_text_color(self._color[0], self._color[1], self._color[2])
+            self.dc.set_draw_color(*self._color[:3])
+            self.dc.set_text_color(*self._color[:3])
             self.dc.set_line_width(self._line_width)
             self._last_pen_color = self._color
             self._last_line_width = self._line_width
+
         self._draw_and_fill()
         self._draw = False
         if not preserve:
             self._fun_stack = []
-        return BaseDc.draw(self, preserve)
+        return super().draw(preserve)
 
     def fill(self, preserve=False):
+        """Fill the current stack of drawing functions."""
         self._draw = False
         self._fill = True
         if self._last_brush_color != self._color:
-            self.dc.set_fill_color(self._color[0], self._color[1], self._color[2])
+            self.dc.set_fill_color(*self._color[:3])
             self._last_brush_color = self._color
+
         self._draw_and_fill()
         self._fill = False
         if not preserve:
             self._fun_stack = []
-        return BaseDc.fill(self, preserve)
+        return super().fill(preserve)
 
     def set_color(self, r, g, b, a=255):
+        """Set the current drawing color."""
         self._color = (r, g, b, a)
-        BaseDc.set_color(self, r, g, b, a)
+        super().set_color(r, g, b, a)
 
     def set_line_width(self, width):
+        """Set the current line width."""
         self._line_width = width
-        BaseDc.set_line_width(self, width)
+        super().set_line_width(width)
 
     def set_style(self, style):
+        """Set the current text style."""
         if style == self.last_style:
             return self.last_style_tab
+
         style_tab = self.dc_info.styles[style].split(";")
         self.last_style_tab = style_tab
 
         style2 = ""
-
         if style_tab[3] == "1":
             style2 += "I"
         if style_tab[4] == "1":
             style2 += "B"
 
-        if style_tab[1] in self.surf.fonts_map:
-            font_name = self.surf.fonts_map[style_tab[1]]
-        else:
-            font_name = "sans-serif"
+        font_name = self.surf.fonts_map.get(style_tab[1], "sans-serif")
         self.dc.set_font(
             font_name,
             style2,
             int((self.scale * self.base_font_size * int(style_tab[2])) / 100),
         )
-        (r, g, b) = self.rgbfromhex(style_tab[0])
+        r, g, b = self.rgbfromhex(style_tab[0])
         self.dc.set_text_color(r, g, b)
-        BaseDc.set_style(self, style)
+        super().set_style(style)
         return style_tab
 
     def add_line(self, x, y, dx, dy):
+        """Add a line to the drawing stack."""
         self._add(
             self.dc.line,
             (
@@ -278,60 +250,61 @@ class PdfDc(BaseDc):
                 (y + dy) * self.scale,
             ),
         )
-        BaseDc.add_line(self, x, y, dx, dy)
+        super().add_line(x, y, dx, dy)
 
     def add_rectangle(self, x, y, dx, dy):
+        """Add a rectangle to the drawing stack."""
         self._add(
             self._rect,
             (x * self.scale, y * self.scale, dx * self.scale, dy * self.scale),
         )
-        BaseDc.add_rectangle(self, x, y, dx, dy)
+        super().add_rectangle(x, y, dx, dy)
 
     def add_rounded_rectangle(self, x, y, dx, dy, radius):
+        """Add a rounded rectangle to the drawing stack."""
         self._add(
             self._rect_rounded,
             (x * self.scale, y * self.scale, dx * self.scale, dy * self.scale),
         )
-        BaseDc.add_rounded_rectangle(self, x, y, dx, dy, radius)
+        super().add_rounded_rectangle(x, y, dx, dy, radius)
 
     def add_arc(self, x, y, radius, angle1, angle2):
-        BaseDc.add_arc(self, x, y, radius, angle1, angle2)
+        """Add an arc to the drawing stack."""
+        super().add_arc(x, y, radius, angle1, angle2)
 
     def add_ellipse(self, x, y, dx, dy):
-        BaseDc.add_ellipse(self, x, y, dx, dy)
+        """Add an ellipse to the drawing stack."""
+        super().add_ellipse(x, y, dx, dy)
 
     def add_polygon(self, xytab):
-        BaseDc.add_polygon(self, xytab)
+        """Add a polygon to the drawing stack."""
+        super().add_polygon(xytab)
 
     def add_spline(self, xytab, close):
-        BaseDc.add_spline(self, xytab)
+        """Add a spline to the drawing stack."""
+        super().add_spline(xytab)
 
     def draw_text(self, x, y, txt):
+        """Draw text at the specified coordinates."""
         dx, dx_space, dy_up, dy_down = self.dc_info.get_extents(txt)
         self.dc.text(x * self.scale, y * self.scale - dy_down - 2, txt)
-        BaseDc.draw_text(self, x, y, txt)
+        super().draw_text(x, y, txt)
 
     def draw_rotated_text(self, x, y, txt, angle):
-        (w, h, d, e) = self.dc_info.get_extents(txt)
-        BaseDc.draw_rotated_text(self, x, y, txt)
-
-    # scale: 0 - no scale, no repeat 1 - scale to dx, dy 2 - scale to dx or dy -
-    # preserve img scale 3 - scale to dx or dy - preserve img scale, fit fool image
-    # 4 - repeat x 5 - repeat y 6 - repeat x and y
+        """Draw rotated text at the specified coordinates."""
+        w, h, d, e = self.dc_info.get_extents(txt)
+        super().draw_rotated_text(x, y, txt)
 
     def draw_image(self, x, y, dx, dy, scale, png_data):
+        """Draw an image at the specified coordinates."""
+        if not PIL:
+            raise ImportError("PIL is required to draw images.")
+
         png_stream = io.BytesIO(png_data)
         image = PIL.Image.open(png_stream)
         w, h = image.size
-        (x_scale, y_scale) = self._scale_image(
-            x,
-            y,
-            dx,
-            dy,
-            scale,
-            w,
-            h,
-        )
+        x_scale, y_scale = self._scale_image(x, y, dx, dy, scale, w, h)
+
         if scale < 4:
             if scale != 0 and x_scale < 0.25 and y_scale < 0.25:
                 image.thumbnail((4 * w * x_scale, 4 * h * y_scale), PIL.Image.LANCZOS)
@@ -339,11 +312,10 @@ class PdfDc(BaseDc):
             image.save(file_name, "PNG")
             self.dc.image(file_name, x, y, w * x_scale, h * y_scale)
             os.remove(file_name)
-        else:
-            pass
-        BaseDc.draw_image(self, x, y, dx, dy, scale, png_data)
+        super().draw_image(x, y, dx, dy, scale, png_data)
 
     def _polygon(self, points):
+        """Draw a polygon from a list of points."""
         old_point = None
         for point in points:
             if old_point:
@@ -353,17 +325,19 @@ class PdfDc(BaseDc):
             old_point = point
 
     def _rect(self, x, y, dx, dy):
-        if self._fill == True and self._draw == False:
+        """Draw a rectangle."""
+        if self._fill and not self._draw:
             return self.dc.rect(x, y, dx, dy, "F")
-        elif self._fill == False and self._draw == True:
+        elif not self._fill and self._draw:
             return self.dc.rect(x, y, dx, dy, "D")
         else:
             return self.dc.rect(x, y, dx, dy, "DF")
 
     def _rect_rounded(self, x, y, dx, dy):
-        if self._fill == True and self._draw == False:
+        """Draw a rounded rectangle."""
+        if self._fill and not self._draw:
             return self.dc.rect(x, y, dx, dy, "F")
-        elif self._fill == False and self._draw == True:
+        elif not self._fill and self._draw:
             delta = 12
             points = [
                 (x + delta, y),
@@ -390,14 +364,19 @@ class PdfDc(BaseDc):
 
 
 class PdfDcInfo(BaseDcInfo):
+    """PDF drawing context information."""
+
     def __init__(self, dc):
-        BaseDcInfo.__init__(self, dc)
+        """Initialize the PDF drawing context information."""
+        super().__init__(dc)
 
     def get_line_dy(self, height):
+        """Get the line height."""
         return height
 
     def get_extents(self, word, style=None):
-        if style != None:
+        """Get the extents of a word."""
+        if style is not None:
             self.dc.set_style(style)
 
         w = self.dc.dc.get_string_width(word)
@@ -407,26 +386,25 @@ class PdfDcInfo(BaseDcInfo):
         dx_space = self.dc.dc.get_string_width(" ")
         if not word or word[-1] != " ":
             dx_space = 0
-        return (dx, dx_space, dy_up, dy_down)
+        return dx, dx_space, dy_up, dy_down
 
     def get_text_width(self, txt, style=None):
-        if style != None:
+        """Get the width of a text string."""
+        if style is not None:
             self.dc.set_style(style)
         return self.dc.dc.get_string_width(txt)
 
     def get_text_height(self, txt, style=None):
+        """Get the height of a text string."""
         if style:
             self.dc.set_style(style)
         return self.dc.dc.font_size_pt
 
     def get_img_size(self, png_data):
+        """Get the size of an image."""
         try:
             png_stream = io.BytesIO(png_data)
             image = PIL.Image.open(png_stream)
-        except:
+        except Exception:
             image = None
-        if image:
-            w, h = image.size
-            return (w, h)
-        else:
-            return (0, 0)
+        return image.size if image else (0, 0)

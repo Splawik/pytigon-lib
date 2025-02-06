@@ -1,5 +1,4 @@
 from itertools import chain
-
 from django.forms.widgets import (
     CheckboxSelectMultiple,
     CheckboxInput,
@@ -9,19 +8,21 @@ from django.forms.widgets import (
 )
 from django.utils.safestring import mark_safe
 from django.utils.html import conditional_escape, format_html, html_safe
+from django.utils.encoding import force_str
 
 
 @html_safe
-class SubWidget(object):
+class SubWidget:
     """
-    Some widgets are made of multiple HTML elements -- namely, RadioSelect.
-    This is a class that represents the "inner" HTML element of a widget.
+    Represents the "inner" HTML element of a widget, used for widgets like RadioSelect.
     """
 
     def __init__(self, parent_widget, name, value, attrs, choices):
         self.parent_widget = parent_widget
-        self.name, self.value = name, value
-        self.attrs, self.choices = attrs, choices
+        self.name = name
+        self.value = value
+        self.attrs = attrs
+        self.choices = choices
 
     def __str__(self):
         args = [self.name, self.value, self.attrs]
@@ -33,8 +34,7 @@ class SubWidget(object):
 @html_safe
 class ChoiceInput(SubWidget):
     """
-    An object used by ChoiceFieldRenderer that represents a single
-    <input type='$input_type'>.
+    Represents a single <input type='$input_type'> element used by ChoiceFieldRenderer.
     """
 
     input_type = None  # Subclasses must define this
@@ -43,21 +43,20 @@ class ChoiceInput(SubWidget):
         self.name = name
         self.value = value
         self.attrs = attrs
-        self.choice_value = force_text(choice[0])
-        self.choice_label = force_text(choice[1])
+        self.choice_value = force_str(choice[0])
+        self.choice_label = force_str(choice[1])
         self.index = index
         if "id" in self.attrs:
-            self.attrs["id"] += "_%d" % self.index
+            self.attrs["id"] += f"_{self.index}"
 
     def __str__(self):
         return self.render()
 
     def render(self, name=None, value=None, attrs=None):
-        if self.id_for_label:
-            label_for = format_html(' for="{}"', self.id_for_label)
-        else:
-            label_for = ""
-        attrs = dict(self.attrs, **attrs) if attrs else self.attrs
+        label_for = (
+            format_html(' for="{}"', self.id_for_label) if self.id_for_label else ""
+        )
+        attrs = dict(self.attrs, **(attrs or {}))
         return format_html(
             "<label{}>{} {}</label>", label_for, self.tag(attrs), self.choice_label
         )
@@ -83,8 +82,8 @@ class RadioChoiceInput(ChoiceInput):
     input_type = "radio"
 
     def __init__(self, *args, **kwargs):
-        super(RadioChoiceInput, self).__init__(*args, **kwargs)
-        self.value = force_text(self.value)
+        super().__init__(*args, **kwargs)
+        self.value = force_str(self.value)
 
 
 class CheckboxSelectMultipleWithIcon(CheckboxSelectMultiple):
@@ -94,63 +93,62 @@ class CheckboxSelectMultipleWithIcon(CheckboxSelectMultiple):
         has_id = attrs and "id" in attrs
         final_attrs = self.build_attrs(attrs)
         output = ["<ul>"]
-        str_values = set([str(v) for v in value])
-        for (i, (option_value, option_label)) in enumerate(
-            chain(self.choices, choices)
-        ):
+        str_values = {str(v) for v in value}
+
+        for i, (option_value, option_label) in enumerate(chain(self.choices, choices)):
             if has_id:
-                final_attrs = dict(final_attrs, id="%s_%s" % (attrs["id"], i))
-                label_for = ' for="%s"' % final_attrs["id"]
+                final_attrs = dict(final_attrs, id=f"{attrs['id']}_{i}")
+                label_for = f' for="{final_attrs["id"]}"'
             else:
                 label_for = ""
+
             cb = CheckboxInput(
                 final_attrs, check_test=lambda value: str(value) in str_values
             )
             rendered_cb = cb.render(name, option_value)
             option_label = conditional_escape(option_label)
-            x = option_label.split("|")
-            if len(x) > 1:
-                icon = x[0]
-                option_label = x[1]
-            else:
-                icon = None
-            if icon:
-                image = "<img src='%s' />" % icon
-            else:
-                image = ""
+            parts = option_label.split("|")
+            icon = parts[0] if len(parts) > 1 else None
+            option_label = parts[1] if len(parts) > 1 else parts[0]
+            image = f"<img src='{icon}' />" if icon else ""
+
             output.append(
-                "<li><label%s>%s %s %s</label></li>"
-                % (label_for, rendered_cb, image, option_label)
+                f"<li><label{label_for}>{rendered_cb} {image} {option_label}</label></li>"
             )
+
         output.append("</ul>")
         return mark_safe("\n".join(output))
 
 
 class RadioInput2(RadioChoiceInput):
     def __str__(self):
-        if "id" in self.attrs:
-            label_for = ' for="%s_%s"' % (self.attrs["id"], self.index)
-        else:
-            label_for = ""
+        label_for = (
+            f' for="{self.attrs["id"]}_{self.index}"' if "id" in self.attrs else ""
+        )
         choice_label = conditional_escape(self.choice_label)
-        x = choice_label.split("|")
-        if len(x) > 1:
-            label = "<img src='%s' /> &nbsp; " % x[0] + x[1]
-        else:
-            label = x[0]
+        parts = choice_label.split("|")
+        label = (
+            f"<img src='{parts[0]}' /> &nbsp; {parts[1]}"
+            if len(parts) > 1
+            else parts[0]
+        )
         self.attrs["class"] = "radioselectwithicon"
-        return mark_safe("<div><label>%s %s</label></div>" % (self.tag(), label))
+        return mark_safe(f"<div><label>{self.tag()} {label}</label></div>")
 
 
-class RadioFieldRendererWithIcon(object):
-    """An object used by RadioSelect to enable customization of radio widgets."""
+class RadioFieldRendererWithIcon:
+    """
+    Enables customization of radio widgets used by RadioSelect.
+    """
 
     def __init__(self, name, value, attrs, choices):
-        (self.name, self.value, self.attrs) = (name, value, attrs)
+        self.name = name
+        self.value = value
+        self.attrs = attrs
         self.choices = choices
 
     def __iter__(self):
-        for (i, choice) in enumerate(self.choices):
+        for i, choice in enumerate(self.choices):
             yield RadioInput2(self.name, self.value, self.attrs.copy(), choice, i)
 
     def __getitem__(self, idx):
@@ -161,10 +159,8 @@ class RadioFieldRendererWithIcon(object):
         return self.render()
 
     def render(self):
-        """Outputs a <ul> for this set of radio fields."""
         return mark_safe(
-            "<ul class='radio' width=\"100%%\">%s</ul>"
-            % " ".join(['<li li-symbol="">%s</li>' % w for w in self])
+            f"<ul class='radio' width=\"100%\">{' '.join(f'<li li-symbol="">{w}</li>' for w in self)}</ul>"
         )
 
 

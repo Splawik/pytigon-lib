@@ -1,31 +1,23 @@
-#! /usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY  ; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2013 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-import environ
 import os
+import environ
+from typing import Optional
 
+# Global environment variable instance
 ENV = None
 
 
-def get_environ(path=None):
+def get_environ(path: Optional[str] = None) -> environ.Env:
+    """Initialize and return the environment configuration.
+
+    Args:
+        path (Optional[str]): Path to the directory containing .env or env file.
+
+    Returns:
+        environ.Env: The environment configuration instance.
+    """
     global ENV
-    if not ENV:
+
+    if ENV is None:
         ENV = environ.Env(
             DEBUG=(bool, False),
             PYTIGON_DEBUG=(bool, False),
@@ -52,10 +44,12 @@ def get_environ(path=None):
         )
 
     if path:
-        env_path = os.path.join(path, ".env")
-        if os.path.exists(env_path):
-            environ.Env.read_env(env_path)
-        env_path = os.path.join(path, "env")
-        if os.path.exists(env_path):
-            environ.Env.read_env(env_path)
+        env_paths = [os.path.join(path, ".env"), os.path.join(path, "env")]
+        for env_path in env_paths:
+            if os.path.exists(env_path):
+                try:
+                    ENV.read_env(env_path)
+                except Exception as e:
+                    print(f"Error reading environment file {env_path}: {e}")
+
     return ENV

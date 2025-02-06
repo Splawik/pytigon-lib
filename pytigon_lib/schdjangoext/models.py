@@ -1,26 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 """Module contains many additional db models."""
 
 import sys
+from typing import Any, Dict, List, Optional, Type
 
 from django.db import models
 from django import forms
@@ -32,21 +13,24 @@ from pytigon_lib.schdjangoext.fastform import form_from_str
 
 
 class CallProxy:
-    def __init__(self, obj, parameters):
+    """Proxy class to call methods dynamically based on parameters."""
+
+    def __init__(self, obj: Any, parameters: str):
         self.obj = obj
         x = parameters.split("__")
         self.fun = getattr(obj, x[0])
-        if len(x) > 0:
-            self.parameters = x[1:]
+        self.parameters = x[1:] if len(x) > 1 else None
 
-    def call(self, *args):
+    def call(self, *args: Any) -> Any:
+        """Call the method with the provided arguments."""
         if self.parameters:
-            return self.fun(*(self.args + args))
-        else:
-            return self.fun(*args)
+            return self.fun(*(self.parameters + args))
+        return self.fun(*args)
 
 
 class JSONModel(models.Model):
+    """Abstract model to handle JSON data fields."""
+
     class Meta:
         abstract = True
 
@@ -59,7 +43,8 @@ class JSONModel(models.Model):
         editable=False,
     )
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name: str) -> Any:
+        """Override to handle JSON data access."""
         if name.startswith("json_"):
             if self.jsondata and name[5:] in self.jsondata:
                 return self.jsondata[name[5:]]
@@ -68,72 +53,80 @@ class JSONModel(models.Model):
             return CallProxy(self, name[6:])
         return super().__getattribute__(name)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Override to handle JSON data assignment."""
         if name.startswith("json_"):
             if self.jsondata:
                 self.jsondata[name[5:]] = value
             else:
                 self.jsondata = {name[5:]: value}
             return
-        return super().__setattr__(name, value)
+        super().__setattr__(name, value)
 
-    def get_json_data(self):
-        if self.jsondata:
-            return self.jsondata
-        else:
-            return {}
+    def get_json_data(self) -> Dict[str, Any]:
+        """Return the JSON data associated with the model."""
+        return self.jsondata if self.jsondata else {}
 
-    def get_form(self, view, request, form_class, adding=False):
+    def get_form(
+        self,
+        view: Any,
+        request: Any,
+        form_class: Type[forms.Form],
+        adding: bool = False,
+    ) -> forms.Form:
+        """Generate a form based on JSON data."""
         data = self.get_json_data()
         if hasattr(self, "get_form_source"):
             txt = self.get_form_source()
             if txt:
-                if data:
-                    form_class2 = form_from_str(
-                        txt, init_data=data, base_form_class=form_class, prefix="json_"
-                    )
-                else:
-                    form_class2 = form_from_str(
-                        txt, init_data={}, base_form_class=form_class, prefix="json_"
-                    )
+                form_class2 = form_from_str(
+                    txt,
+                    init_data=data if data else {},
+                    base_form_class=form_class,
+                    prefix="json_",
+                )
                 return view.get_form(form_class2)
-            else:
-                return view.get_form(form_class)
         elif data:
 
             class form_class2(form_class):
-                def __init__(self, *args, **kwargs):
-                    nonlocal data
+                def __init__(self, *args: Any, **kwargs: Any):
                     super().__init__(*args, **kwargs)
                     for key, value in data.items():
-                        self.fields["json_%s" % key] = forms.CharField(
+                        self.fields[f"json_{key}"] = forms.CharField(
                             label=key, initial=value
                         )
 
             return view.get_form(form_class2)
         return view.get_form(form_class)
 
-    def get_derived_object(self, param=None):
+    def get_derived_object(self, param: Any = None) -> Any:
+        """Return the derived object."""
         return self
 
-    def set_field_value(self, field_name, attr_name, value):
+    def set_field_value(
+        self, field_name: str, attr_name: str, value: Any
+    ) -> Optional[Any]:
+        """Set a field's attribute value."""
         for f in self._meta.fields:
             if f.name == field_name:
                 setattr(f, attr_name, value)
                 return f
-        else:
-            return None
+        return None
 
 
 class TreeModel(JSONModel):
+    """Abstract model for tree-like structures."""
+
     class Meta:
         abstract = True
 
 
-ASSOCIATED_MODEL_CACHE = {}
+ASSOCIATED_MODEL_CACHE: Dict[str, Any] = {}
 
 
 class AssociatedModel(models.Model):
+    """Abstract model to handle associations with other models."""
+
     class Meta:
         abstract = True
 
@@ -171,9 +164,10 @@ class AssociatedModel(models.Model):
         db_index=True,
     )
 
-    def get_associated_model(self):
+    def get_associated_model(self) -> Optional[Type[models.Model]]:
+        """Retrieve the associated model class."""
         global ASSOCIATED_MODEL_CACHE
-        key = self.application.lower() + "/" + self.table.lower()
+        key = f"{self.application.lower()}/{self.table.lower()}"
         if key in ASSOCIATED_MODEL_CACHE:
             return ASSOCIATED_MODEL_CACHE[key]
         model_obj = ContentType.objects.filter(
@@ -185,13 +179,13 @@ class AssociatedModel(models.Model):
             return model_class
         return None
 
-    def get_associated_obj(self):
+    def get_associated_obj(self) -> Optional[models.Model]:
+        """Retrieve the associated object."""
         model = self.get_associated_model()
-        if model:
-            return model.objects.filter(pk=self.parent_id).first()
-        return None
+        return model.objects.filter(pk=self.parent_id).first() if model else None
 
-    def get_associated_obj_to_parent(self):
+    def get_associated_obj_to_parent(self) -> Optional[models.Model]:
+        """Retrieve the associated object's parent."""
         model = self.get_associated_model()
         if model:
             parent = model.objects.filter(pk=self.parent_id).first()
@@ -199,9 +193,11 @@ class AssociatedModel(models.Model):
                 return parent.get_associated_obj()
         return None
 
-    def init_new(self, request, view, value=None):
+    def init_new(
+        self, request: Any, view: Any, value: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Initialize a new associated model instance."""
         if value:
-            app = None
             x = value.split("__")
             if len(x) == 4:
                 app, tbl, id, grp = x
@@ -218,9 +214,11 @@ class AssociatedModel(models.Model):
         }
 
     @classmethod
-    def filter(cls, value, view=None, request=None):
+    def filter(
+        cls, value: Optional[str], view: Any = None, request: Any = None
+    ) -> models.QuerySet:
+        """Filter the associated model instances."""
         if value:
-            app = None
             x = value.split("__")
             if len(x) == 4:
                 app, tbl, id, grp = x
@@ -235,11 +233,20 @@ class AssociatedModel(models.Model):
 
 
 class AssociatedJSONModel(AssociatedModel, JSONModel):
+    """Abstract model combining JSON and associated model features."""
+
     class Meta:
         abstract = True
 
 
-def standard_table_action(cls, list_view, request, data, operations):
+def standard_table_action(
+    cls: Type[models.Model],
+    list_view: Any,
+    request: Any,
+    data: Dict[str, Any],
+    operations: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Handle standard table actions like copy, paste, and delete."""
     if "action" in data and data["action"] in operations:
         if data["action"] == "copy":
             if "pk" in request.GET:
@@ -248,20 +255,18 @@ def standard_table_action(cls, list_view, request, data, operations):
                 return serializers.serialize(
                     "json", list_view.get_queryset().filter(pk__in=x2)
                 )
-            else:
-                return serializers.serialize("json", list_view.get_queryset())
+            return serializers.serialize("json", list_view.get_queryset())
         if data["action"] == "paste":
             if "data" in data:
                 data2 = data["data"]
                 for obj in data2:
                     obj2 = cls()
                     for key, value in obj["fields"].items():
-                        if not key in ("id", "pk"):
-                            if key == "parent":
-                                if "parent_pk" in list_view.kwargs:
-                                    setattr(
-                                        obj2, "parent_id", list_view.kwargs["parent_pk"]
-                                    )
+                        if key not in ("id", "pk"):
+                            if key == "parent" and "parent_pk" in list_view.kwargs:
+                                setattr(
+                                    obj2, "parent_id", list_view.kwargs["parent_pk"]
+                                )
                             else:
                                 setattr(obj2, key, value)
                     obj2.save()
@@ -276,60 +281,55 @@ def standard_table_action(cls, list_view, request, data, operations):
     return None
 
 
-def get_form(obj, fields_list=None, widgets_dict=None):
+def get_form(
+    obj: models.Model,
+    fields_list: Optional[List[str]] = None,
+    widgets_dict: Optional[Dict[str, Any]] = None,
+) -> Type[forms.ModelForm]:
+    """Generate a ModelForm for the given object."""
+
     class _Form(forms.ModelForm):
         class Meta:
-            nonlocal obj, fields_list, widgets_dict
             model = obj.__class__
-            if fields_list:
-                fields = fields_list
-            else:
-                fields = "__all__"
-            if widgets_dict:
-                widgets = widgets_dict
+            fields = fields_list if fields_list else "__all__"
+            widgets = widgets_dict if widgets_dict else {}
 
     return _Form
 
 
-def extend_class(main, base):
-    if (
-        "makemigrations" in sys.argv
-        or "makeallmigrations" in sys.argv
-        or "exporttolocaldb" in sys.argv
+def extend_class(main: Type[Any], base: Type[Any]) -> None:
+    """Extend a class with a base class."""
+    if not any(
+        cmd in sys.argv
+        for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb"]
     ):
-        pass
-    else:
-        main.__bases__ = tuple(
-            [
-                base,
-            ]
-            + list(main.__bases__)
-        )
+        main.__bases__ = (base,) + main.__bases__
 
 
-if (
-    "makemigrations" in sys.argv
-    or "makeallmigrations" in sys.argv
-    or "exporttolocaldb" in sys.argv
-    or "migrate" in sys.argv
+if any(
+    cmd in sys.argv
+    for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb", "migrate"]
 ):
 
-    def OverwritableCallable(func):
-        def __none__(fun):
+    def OverwritableCallable(func: Any) -> Any:
+        """Dummy decorator for migration commands."""
+
+        def __none__(fun: Any) -> None:
             pass
 
         func.set_function = __none__
-
         return func
 
 else:
 
     class OverwritableCallable:
-        def __init__(self, func):
+        """Callable class that allows function overwriting."""
+
+        def __init__(self, func: Any):
             self.func = func
 
-        def __call__(self, *argi, **kwargs):
-            return self.func(*argi, **kwargs)
+        def __call__(self, *args: Any, **kwargs: Any) -> Any:
+            return self.func(*args, **kwargs)
 
-        def set_function(self, func):
+        def set_function(self, func: Any) -> None:
             self.func = func

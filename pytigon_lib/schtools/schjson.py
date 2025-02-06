@@ -1,39 +1,14 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
+"""Helper class for JSON encoding and decoding."""
 
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
-"""Helper class for json encoder"""
-
-try:
-    import json
-except:
-    import django.utils.simplejson as json
-try:
-    from urllib.parse import quote_plus, unquote_plus
-except:
-    from urllib import quote_plus, unquote_plus
-
+import json
+from urllib.parse import quote_plus, unquote_plus
 import datetime
 from decimal import Decimal
 
 
 class ComplexEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles complex types like datetime and Decimal."""
+
     standard_types = (
         "list",
         "unicode",
@@ -46,64 +21,98 @@ class ComplexEncoder(json.JSONEncoder):
     )
 
     def default(self, obj):
-        if not obj.__class__.__name__ in self.standard_types:
-            if obj.__class__.__name__ == "datetime":
+        """Convert non-standard types to a JSON-compatible format."""
+        if obj.__class__.__name__ not in self.standard_types:
+            if isinstance(obj, datetime.datetime):
                 return {"object": repr(obj).replace(", tzinfo=<UTC>", "")}
-            elif obj.__class__.__name__ == "ndarray":
+            elif hasattr(obj, "tolist"):  # Handle numpy arrays or similar
                 return obj.tolist()
-                # json.JSONEncoder.default(self, obj.tolist())
             else:
                 return {"object": repr(obj)}
-        return json.JSONEncoder.default(self, obj)
+        return super().default(obj)
 
 
 def as_complex(dct):
+    """Convert JSON objects back to their original Python types."""
     if "object" in dct:
         try:
             return eval(dct["object"])
-        except:
+        except (NameError, SyntaxError):
             return None
     return dct
 
 
 def dumps(obj):
-    """Encode python object to json format. Return enquoted json string
+    """Encode a Python object to a JSON string and URL-encode it.
 
     Args:
-        obj - python object to encode
+        obj: Python object to encode.
+
+    Returns:
+        str: URL-encoded JSON string.
     """
-    return quote_plus(json.dumps(obj, cls=ComplexEncoder))
+    try:
+        return quote_plus(json.dumps(obj, cls=ComplexEncoder))
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Failed to encode object: {e}")
 
 
 def loads(json_str):
-    """Load json str and return decoded structure.
+    """Decode a URL-encoded JSON string to a Python object.
 
     Args:
-        json_str: enquoted json encoded string
+        json_str: URL-encoded JSON string.
 
+    Returns:
+        object: Decoded Python object.
     """
-    return json.loads(unquote_plus(json_str), object_hook=as_complex)
+    try:
+        return json.loads(unquote_plus(json_str), object_hook=as_complex)
+    except (ValueError, json.JSONDecodeError) as e:
+        raise ValueError(f"Failed to decode JSON string: {e}")
 
 
 def json_dumps(obj, indent=None):
-    """Encode python object to json format. Return encoded string.
+    """Encode a Python object to a JSON string.
 
     Args:
-        obj - python object to encode
+        obj: Python object to encode.
+        indent: Optional indentation for pretty-printing.
+
+    Returns:
+        str: JSON-encoded string.
     """
-    return json.dumps(obj, cls=ComplexEncoder, indent=indent)
+    try:
+        return json.dumps(obj, cls=ComplexEncoder, indent=indent)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Failed to encode object: {e}")
 
 
 def json_loads(json_str):
-    """Load json str and return decoded structure.
+    """Decode a JSON string to a Python object.
 
     Args:
-        json_str: json encoded string
+        json_str: JSON-encoded string.
 
+    Returns:
+        object: Decoded Python object.
     """
-    return json.loads(json_str, object_hook=as_complex)
+    try:
+        return json.loads(json_str, object_hook=as_complex)
+    except (ValueError, json.JSONDecodeError) as e:
+        raise ValueError(f"Failed to decode JSON string: {e}")
 
 
 class ComplexDecoder(json.JSONDecoder):
+    """Custom JSON decoder that uses the as_complex function for object conversion."""
+
     def decode(self, s):
+        """Decode a JSON string to a Python object.
+
+        Args:
+            s: JSON-encoded string.
+
+        Returns:
+            object: Decoded Python object.
+        """
         return json_loads(s)

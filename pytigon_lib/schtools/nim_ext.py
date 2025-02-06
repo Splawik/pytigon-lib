@@ -7,77 +7,91 @@ ffi = FFI()
 
 
 class Module:
+    """A placeholder class for dynamically adding module functions."""
+
     pass
 
 
 def def_module_function(module, lib, fun_name, t, n):
+    """
+    Dynamically defines a function in the module based on the type signature.
+
+    Args:
+        module: The module to which the function will be added.
+        lib: The shared library containing the function.
+        fun_name: The name of the function to be added.
+        t: The type signature of the function.
+        n: The function ID.
+    """
     if t == "jj":
 
-        def tmp(**argv):
-            nonlocal n
-            ret = lib.fun_jj(n, json.dumps(argv).encode("utf-8"))
+        def tmp(**kwargs):
+            ret = lib.fun_jj(n, json.dumps(kwargs).encode("utf-8"))
             ret_str = ffi.string(ret)
             return json.loads(ret_str)
 
-        setattr(module, fun_name, tmp)
-    elif t in "ii":
+    elif t == "ii":
 
         def tmp(arg):
-            nonlocal n
             return lib.fun_ii(n, arg)
 
-        setattr(module, fun_name, tmp)
-    elif t in "ff":
+    elif t == "ff":
 
         def tmp(arg):
-            nonlocal n
             return lib.fun_ff(n, arg)
 
-        setattr(module, fun_name, tmp)
-    elif t in "vi":
+    elif t == "vi":
 
         def tmp():
-            nonlocal n
             return lib.fun_vi(n)
 
-        setattr(module, fun_name, tmp)
-    elif t in "ss":
+    elif t == "ss":
 
         def tmp(s):
-            nonlocal n
-            ret = lib.fun_ss(n, s)
-            ret_str = ffi.string(ret)
-            return ret_str
-
-        setattr(module, fun_name, tmp)
-
-        def tmp2(s):
-            nonlocal n
             ret = lib.fun_ss(n, s.encode("utf-8"))
             ret_str = ffi.string(ret)
             return ret_str.decode("utf-8")
 
-        setattr(module, fun_name + "_str", tmp2)
-    elif t in "si":
+        setattr(module, fun_name + "_str", tmp)
 
         def tmp(s):
-            nonlocal n
+            ret = lib.fun_ss(n, s)
+            ret_str = ffi.string(ret)
+            return ret_str
+
+    elif t == "si":
+
+        def tmp(s):
             return lib.fun_si(n, s.encode("utf-8"))
 
-        setattr(module, fun_name, tmp)
+    else:
+        raise ValueError(f"Unsupported type signature: {t}")
+
+    setattr(module, fun_name, tmp)
 
 
 def load_nim_lib(lib_name, python_name):
+    """
+    Loads a Nim shared library and initializes the corresponding Python module.
+
+    Args:
+        lib_name: The base name of the shared library.
+        python_name: The name of the Python module to be created.
+
+    Returns:
+        The loaded shared library.
+    """
     lib_name2 = lib_name
     if not (lib_name.endswith(".dll") or lib_name.endswith(".so")):
-        if os.name == "nt":
-            lib_name2 = lib_name + ".dll"
-        else:
-            lib_name2 = lib_name + ".so"
+        lib_name2 = lib_name + (".dll" if os.name == "nt" else ".so")
 
-    lib = ffi.dlopen(lib_name2)
+    try:
+        lib = ffi.dlopen(lib_name2)
+    except OSError as e:
+        raise OSError(f"Failed to load library {lib_name2}: {e}")
 
-    ffi.cdef("""
+    ffi.cdef(
+        """
         char* library_init();
         void library_deinit();
         int fun_vi(int fun_id);
@@ -86,15 +100,25 @@ def load_nim_lib(lib_name, python_name):
         int fun_ii(int fun_id, int arg); 
         double fun_ff(int fun_id, double arg); 
         char* fun_jj(int fun_id, char* arg);
-    """)
+    """
+    )
+
     module = Module()
     setattr(sys.modules[__name__], python_name, module)
 
-    x = lib.library_init()
-    z = ffi.string(x)
-    config = json.loads(z)
+    try:
+        x = lib.library_init()
+        z = ffi.string(x)
+        config = json.loads(z)
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize library: {e}")
+
     for item in config:
-        name, t = item["name"].split(":")
-        n = item["n"]
-        def_module_function(module, lib, name, t, n)
+        try:
+            name, t = item["name"].split(":")
+            n = item["n"]
+            def_module_function(module, lib, name, t, n)
+        except Exception as e:
+            raise RuntimeError(f"Failed to define function {item['name']}: {e}")
+
     return lib

@@ -1,18 +1,59 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
+import sys
+import logging
+from typing import Optional, Any
 
-# Pytigon - wxpython and django application framework
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
+
+class PytigonApp:
+    """Main application class for Pytigon framework."""
+
+    def __init__(self, name: str = "PytigonApp"):
+        """Initialize the Pytigon application.
+
+        Args:
+            name (str): Name of the application. Defaults to "PytigonApp".
+        """
+        self.name = name
+        self._initialized = False
+
+    def initialize(self) -> None:
+        """Initialize the application components."""
+        try:
+            # Placeholder for initialization logic
+            self._initialized = True
+            logging.info(f"{self.name} initialized successfully.")
+        except Exception as e:
+            logging.error(f"Failed to initialize {self.name}: {e}")
+            raise
+
+    def run(self) -> None:
+        """Run the application."""
+        if not self._initialized:
+            logging.error("Application not initialized. Call initialize() first.")
+            return
+
+        try:
+            # Placeholder for main application logic
+            logging.info(f"{self.name} is running.")
+        except Exception as e:
+            logging.error(f"Error running {self.name}: {e}")
+            raise
+
+
+def main() -> None:
+    """Entry point for the Pytigon application."""
+    app = PytigonApp()
+    try:
+        app.initialize()
+        app.run()
+    except Exception as e:
+        logging.error(f"Application error: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

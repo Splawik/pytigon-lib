@@ -1,31 +1,10 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 import io
-
 from docx import Document
-from docx.shared import Inches
-from docx.text.run import Font
-from docx.shared import Pt, RGBColor
-
+from docx.shared import Inches, Pt, RGBColor
 import docx.enum.text
+import pytest
+from unittest.mock import MagicMock
 
 
 class DocxDc(BaseDc):
@@ -42,8 +21,7 @@ class DocxDc(BaseDc):
         docx_template_path=None,
         record=False,
     ):
-        BaseDc.__init__(
-            self,
+        super().__init__(
             calc_only,
             -1,
             -1,
@@ -56,10 +34,8 @@ class DocxDc(BaseDc):
         self.dc_info = DocxDcinfo(self)
         self.type = None
 
-        if width < 0:
-            self.width = -1
-        if height < 0:
-            self.height = 1000000000
+        self.width = width if width >= 0 else -1
+        self.height = height if height >= 0 else 1000000000
 
         self.last_style_tab = None
         self.handle_html_directly = True
@@ -72,8 +48,6 @@ class DocxDc(BaseDc):
         self.map = {
             "body": self.body,
             "p": self.p,
-            #            "code": self.p,
-            #            "pre": self.p,
             "div": self.div,
             "h1": self.h1,
             "h2": self.h2,
@@ -85,26 +59,18 @@ class DocxDc(BaseDc):
             "tr": self.tr,
             "td": self.td,
             "th": self.th,
-            # "img": self.image,
         }
         self.last_ = None
 
         if self.notify_callback:
-            self.notify_callback(
-                "start",
-                {"dc": self},
-            )
+            self.notify_callback("start", {"dc": self})
 
     def set_margins(self, top, right, bottom, left):
         current_section = self.document.sections[-1]
-        if top:
-            current_section.top_margin = Inches(top)
-        if right:
-            current_section.right_margin = Inches(right)
-        if bottom:
-            current_section.bottom_margin = Inches(bottom)
-        if left:
-            current_section.left_margin = Inches(left)
+        current_section.top_margin = Inches(top)
+        current_section.right_margin = Inches(right)
+        current_section.bottom_margin = Inches(bottom)
+        current_section.left_margin = Inches(left)
         self.body_width = (
             self.page_width
             - current_section.left_margin.inches
@@ -118,57 +84,48 @@ class DocxDc(BaseDc):
 
     def close(self):
         if self.notify_callback:
-            self.notify_callback(
-                "end",
-                {"dc": self},
-            )
-        if self.output_stream:
-            self.document.save(self.output_stream)
-        elif self.output_name:
-            self.document.save(self.output_name)
+            self.notify_callback("end", {"dc": self})
+        try:
+            if self.output_stream:
+                self.document.save(self.output_stream)
+            elif self.output_name:
+                self.document.save(self.output_name)
+        except Exception as e:
+            raise RuntimeError(f"Failed to save document: {e}")
 
     def annotate(self, what, data):
         if what == "end_tag":
             element = data["element"]
             parent = element.parent
-            if element and parent:
-                if element.tag in self.map:
-                    self.map[element.tag](element, parent)
+            if element and parent and element.tag in self.map:
+                self.map[element.tag](element, parent)
 
     def _handle_width_and_height(self, element):
-        width = None
-        height = None
-
+        width = height = None
         if "width" in element.attrs:
             w = element.attrs["width"]
-            if "%" in w:
-                width = (self.body_width - 0.2) * int(w.replace("%", "")) / 100
-            else:
-                width = (
-                    int(w.replace("px", "").replace("rem", "").replace("em", "")) / 300
-                )
-
+            width = (
+                (self.body_width - 0.2) * int(w.replace("%", "")) / 100
+                if "%" in w
+                else int(w.replace("px", "").replace("rem", "").replace("em", "")) / 300
+            )
         if "height" in element.attrs:
             h = element.attrs["height"]
-            if "%" in h:
-                height = self.body_height * int(w.replace("%", "")) / 100
-            else:
-                height = (
-                    int(h.replace("px", "").replace("rem", "").replace("em", "")) / 300
-                )
-        return (width, height)
+            height = (
+                self.body_height * int(h.replace("%", "")) / 100
+                if "%" in h
+                else int(h.replace("px", "").replace("rem", "").replace("em", "")) / 300
+            )
+        return width, height
 
-    # orientation 0 - vertical, 1 - horizontal
     def _inch_from_param(self, param, orientation):
         if "%" in param:
-            x = (
+            return (
                 (self.body_height if orientation == 0 else self.body_width)
                 * int(param.replace("%", ""))
                 / 100
             )
-        else:
-            x = int(param.replace("px", "").replace("rem", "").replace("em", "")) / 300
-        return x
+        return int(param.replace("px", "").replace("rem", "").replace("em", "")) / 300
 
     def _add_style(self, dest_element, source_element):
         if "classes" in source_element.attrs:
@@ -176,13 +133,16 @@ class DocxDc(BaseDc):
                 if attr.startswith("Style-"):
                     dest_element.style = attr[6:].replace("-", " ")
 
-        padding = None
-        margin = None
-
-        if "padding" in source_element.attrs:
-            padding = source_element.attrs["padding"].split(" ")
-        if "margin" in source_element.attrs:
-            margin = source_element.attrs["margin"].split(" ")
+        padding = (
+            source_element.attrs.get("padding", "").split(" ")
+            if "padding" in source_element.attrs
+            else None
+        )
+        margin = (
+            source_element.attrs.get("margin", "").split(" ")
+            if "margin" in source_element.attrs
+            else None
+        )
 
         if hasattr(dest_element, "paragraph_format") and (padding or margin):
             dest_element.paragraph_format.left_indent = Inches(0)
@@ -231,20 +191,16 @@ class DocxDc(BaseDc):
                         dest_element.paragraph_format.space_after += Inches(
                             self._inch_from_param(tab[0], 0)
                         )
-        if "align" in source_element.attrs:
-            attr = source_element.attrs["align"]
-        else:
-            if "text-align" in source_element.attrs:
-                attr = source_element.attrs["text-align"]
-            else:
-                attr = ""
-        if attr == "center":
+
+        align = source_element.attrs.get(
+            "align", source_element.attrs.get("text-align", "")
+        )
+        if align == "center":
             dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
+        elif align == "right":
+            dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.RIGHT
         else:
-            if attr == "right":
-                dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.RIGHT
-            else:
-                dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.LEFT
+            dest_element.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.LEFT
 
     def _add_image(self, img, dest_element, width=None, height=None):
         img_stream = io.BytesIO(img)
@@ -253,14 +209,6 @@ class DocxDc(BaseDc):
             width=Inches(width) if width else None,
             height=Inches(height) if height else None,
         )
-
-    def _any_parent_is_pre(self, element):
-        e = element
-        while e:
-            if hasattr(e, "tag") and e.tag == "pre":
-                return True
-            e = e.parent
-        return False
 
     def _process_atom_list(self, dest_element, source_element):
         if source_element.atom_list and source_element.atom_list.atom_list:
@@ -279,25 +227,18 @@ class DocxDc(BaseDc):
                     style = None
                 if type(atom).__name__ == "BrAtom":
                     dest_element.add_run("\n")
-                elif type(atom.data) == str:
+                elif isinstance(atom.data, str):
                     s = atom.data.replace("»", " ")
                     x = dest_element.add_run(s)
                     if style:
-                        if int(font_weight) > 0:
-                            x.font.bold = True
-                        if int(font_style) == 1:
-                            x.font.italic = True
+                        x.font.bold = int(font_weight) > 0
+                        x.font.italic = int(font_style) == 1
                         x.font.size = Pt(int(int(font_size) * 10 / 100))
-                        (r, g, b) = self.rgbfromhex(color)
-                        x.font.color.rgb = RGBColor(r, g, b)
-
+                        x.font.color.rgb = RGBColor(*self.rgbfromhex(color))
                 elif type(atom.data).__name__ == "ImgDraw":
                     width, height = self._handle_width_and_height(atom.data.img_tag)
                     self._add_image(
-                        atom.data.image,
-                        dest_element.add_run(),
-                        width,
-                        height,
+                        atom.data.image, dest_element.add_run(), width, height
                     )
                 else:
                     self._process_atom_list(dest_element, atom.data)
@@ -318,14 +259,6 @@ class DocxDc(BaseDc):
         par.paragraph_format.right_indent = 0
         self._add_style(par, element)
         self._process_atom_list(par, element)
-
-    # def image(self, element, parent):
-    #    if element.img:
-    #        img_stream = io.BytesIO(element.img)
-    #        width, height = self._handle_width_and_height(element)
-    #        self.document.add_picture(
-    #            img_stream,
-    #        )
 
     def body(self, element, parent):
         pass
@@ -349,26 +282,23 @@ class DocxDc(BaseDc):
         return self.h(element, 5)
 
     def table(self, element, parent):
-        tr = element.tr_list
-        if len(tr) > 0:
-            table = self.document.add_table(rows=len(tr), cols=len(tr[0].td_list))
+        if element.tr_list:
+            table = self.document.add_table(
+                rows=len(element.tr_list), cols=len(element.tr_list[0].td_list)
+            )
             self._add_style(table, element)
-            i = 0
-            for row in tr:
-                j = 0
+            for i, row in enumerate(element.tr_list):
                 row_dest = table.rows[i].cells
-                for td in row.td_list:
+                for j, td in enumerate(row.td_list):
                     try:
                         c = row_dest[j]
                         c._tc.clear_content()
                         p = c.add_paragraph(None)
                         self._add_style(p, td)
                         self._process_atom_list(p, td)
-                    except:
+                    except Exception:
                         pass
-                    j += 1
-                i += 1
-        element.tr_list = []
+            element.tr_list = []
 
     def tr(self, element, parent):
         if parent.tag == "table":
@@ -385,19 +315,17 @@ class DocxDc(BaseDc):
 
 class DocxDcinfo(BaseDcInfo):
     def __init__(self, dc):
-        BaseDcInfo.__init__(self, dc)
+        super().__init__(dc)
 
     def get_text_height(self, word, style):
         return 1
 
     def get_img_size(self, png_data):
         try:
+            import PIL.Image
+
             png_stream = io.BytesIO(png_data)
             image = PIL.Image.open(png_stream)
-        except:
-            image = None
-        if image:
-            w, h = image.size
-            return (w, h)
-        else:
+            return image.size
+        except Exception:
             return (0, 0)

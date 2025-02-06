@@ -7,6 +7,8 @@ django-environ
 pyexcel
 pyexcel-xlsx
 pyexcel-ods3
+xlsxwriter
+openpyxl
 python-docx
 fpdf2
 python-dateutil

@@ -1,23 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 from pytigon_lib.schhtml.basehtmltags import (
     BaseHtmlElemParser,
     BaseHtmlAtomParser,
@@ -72,7 +52,7 @@ class TdEmptyTag(object):
         return 0
 
     def render(self, dc):
-        dc.annotate("render_tag", {'element': self })
+        dc.annotate("render_tag", {"element": self})
         if dc.handle_html_directly:
             return (0, False)
         return (0, False)
@@ -450,7 +430,7 @@ class TableTag(BaseHtmlAtomParser):
         self.reg_id(dc_parm)
         self.reg_end()
 
-        dc_parm.annotate("render_tag", {'element': self })
+        dc_parm.annotate("render_tag", {"element": self})
 
         if dc_parm.handle_html_directly:
             return (0, False)
@@ -691,6 +671,7 @@ class TdTag(Par):
         if max > 0:
             max -= self.border[0] + self.border[1] + self.padding[0] + self.padding[1]
         return [opt, min, max]
+
 
 class CaptionTag(BaseHtmlElemParser):
     def __init__(

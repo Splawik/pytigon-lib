@@ -1,82 +1,104 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
+"""
+This module provides generic templates and utility functions for handling views and URL patterns in a Django application.
 
-# Pytigon - wxpython and django application framework
+Classes:
+    GenericTable: Handles URL patterns and views for a table.
+    GenericRows: Handles rows in a table.
 
-# author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
+Functions:
+    make_path(view_name: str, args: Optional[List[Any]] = None) -> str:
+        Generate a URL path for a given view name and optional arguments.
 
-"""Generic templates
+    make_path_lazy: Lazy version of make_path.
 
+    convert_str_to_model_field(s: str, field: Any) -> Any:
+        Convert a string to the appropriate type based on the model field type.
+
+    gen_tab_action(table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None) -> path:
+        Generate a URL pattern for a table action.
+
+    gen_tab_field_action(table: str, field: str, action: str, fun: Callable, extra_context: Optional[Dict] = None) -> path:
+        Generate a URL pattern for a table field action.
+
+    gen_row_action(table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None) -> path:
+        Generate a URL pattern for a row action.
+
+    transform_extra_context(context1: Dict, context2: Optional[Dict]) -> Dict:
+        Merge two context dictionaries, evaluating callables in context2.
+
+    save(obj: Any, request: Any, view_type: str, param: Optional[Dict] = None) -> None:
+        Save an object, optionally using a custom save method.
+
+    view_editor(request: Any, pk: int, app: str, tab: str, model: Any, template_name: str, field_edit_name: str, post_save_redirect: str, ext: str = "py", extra_context: Optional[Dict] = None, target: Optional[str] = None, parent_pk: int = 0, field_name: Optional[str] = None) -> HttpResponse:
+        Handle editor view for a model field.
+
+    generic_table(urlpatterns, app, tab, title="", title_plural="", template_name=None, extra_context=None, queryset=None, views_module=None):
+        Create a generic table with standard views.
+
+    generic_table_start(urlpatterns, app, views_module=None):
+        Start generic table URLs.
+
+    extend_generic_view(view_name, model, method_name, new_method):
+        Extend a generic view with a new method.
 """
 
-import collections
 import uuid
 import datetime
+import django
+from typing import Any, Callable, Dict, List, Optional, Type
 
-from django.urls import get_script_prefix
+from django.urls import get_script_prefix, reverse
 from django.apps import apps
 from django.views import generic
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, Http404
-from django.urls import reverse
 from django.utils.functional import lazy
 from django.conf import settings
 from django.urls import path, re_path
-
-import django.db.models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from pytigon_lib.schviews.actions import new_row_ok, update_row_ok, delete_row_ok
 from pytigon_lib.schviews.viewtools import render_to_response
-from pytigon_lib.schtools.schjson import json_loads, json_dumps
+from pytigon_lib.schtools.schjson import json_loads
 from pytigon_lib.schtools.tools import is_in_cancan_rules
 
 from .viewtools import (
-    transform_template_name,
     LocalizationTemplateResponse,
     ExtTemplateResponse,
     DOC_TYPES,
 )
-from .form_fun import form_with_perms
+
 from .perms import make_perms_test_fun, filter_by_permissions, default_block
-
-
-# url:  /table/TableName/filter/target/list url width field:
-# /table/TableName/parent_pk/field/filter/target/list
 
 VIEWS_REGISTER = {"list": {}, "detail": {}, "edit": {}, "create": {}, "delete": {}}
 
 
-def make_path(view_name, args=None):
+def make_path(view_name: str, args: Optional[List[Any]] = None) -> str:
+    """
+    Generate a URL path for a given view name and optional arguments.
+
+    Args:
+        view_name (str): The name of the view for which to generate the URL path.
+        args (Optional[List[Any]]): A list of optional arguments to include in the URL path.
+
+    Returns:
+        str: The generated URL path.
+    """
     if settings.URL_ROOT_FOLDER:
-        return settings.URL_ROOT_FOLDER + "/" + reverse(view_name, args=args)
-    else:
-        return reverse(view_name, args=args)
+        return f"{settings.URL_ROOT_FOLDER}/{reverse(view_name, args=args)}"
+    return reverse(view_name, args=args)
 
 
 make_path_lazy = lazy(make_path, str)
 
 
-def _isinstance(field, instances):
-    for instance in instances:
-        if isinstance(field, instance):
-            return True
-    return False
+def _isinstance(field: Any, instances: List[Type]) -> bool:
+    """Check if a field is an instance of any type in the given list."""
+    return any(isinstance(field, instance) for instance in instances)
 
 
-def convert_str_to_model_field(s, field):
+def convert_str_to_model_field(s: str, field: Any) -> Any:
+    """Convert a string to the appropriate type based on the model field type."""
     if _isinstance(field, (django.db.models.CharField, django.db.models.TextField)):
         return s
     elif _isinstance(field, (django.db.models.DateTimeField,)):
@@ -86,56 +108,63 @@ def convert_str_to_model_field(s, field):
     elif _isinstance(field, (django.db.models.FloatField,)):
         return float(s)
     elif _isinstance(
-        field,
-        (
-            django.db.models.IntegerField,
-            django.db.models.BigAutoField,
-        ),
+        field, (django.db.models.IntegerField, django.db.models.BigAutoField)
     ):
         return int(s)
     elif _isinstance(field, (django.db.models.BooleanField,)):
-        return True if s and s != "0" and s != "False" else False
-    else:
-        return s
+        return s and s != "0" and s != "False"
+    return s
 
 
-def gen_tab_action(table, action, fun, extra_context=None):
+def gen_tab_action(
+    table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None
+) -> path:
+    """Generate a URL pattern for a table action."""
     return path(
-        r"table/%s/action/%s/" % (table, action),
+        f"table/{table}/action/{action}/",
         fun,
         extra_context,
-        name="tab_action_" + table.lower() + "_" + action,
+        name=f"tab_action_{table.lower()}_{action}",
     )
 
 
-def gen_tab_field_action(table, field, action, fun, extra_context=None):
+def gen_tab_field_action(
+    table: str,
+    field: str,
+    action: str,
+    fun: Callable,
+    extra_context: Optional[Dict] = None,
+) -> path:
+    """Generate a URL pattern for a table field action."""
     return path(
-        r"table/%s/<int:parent_pk>/%s/action/%s/" % (table, field, action),
+        f"table/{table}/<int:parent_pk>/{field}/action/{action}/",
         fun,
         extra_context,
     )
 
 
-def gen_row_action(table, action, fun, extra_context=None):
+def gen_row_action(
+    table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None
+) -> path:
+    """Generate a URL pattern for a row action."""
     return path(
-        "table/%s/<int:pk>/action/%s/" % (table, action),
+        f"table/{table}/<int:pk>/action/{action}/",
         fun,
         extra_context,
-        name="row_action_" + table.lower() + "_" + action,
+        name=f"row_action_{table.lower()}_{action}",
     )
 
 
-def transform_extra_context(context1, context2):
+def transform_extra_context(context1: Dict, context2: Optional[Dict]) -> Dict:
+    """Merge two context dictionaries, evaluating callables in context2."""
     if context2:
         for key, value in context2.items():
-            if isinstance(value, collections.abc.Callable):
-                context1[key] = value()
-            else:
-                context1[key] = value
+            context1[key] = value() if callable(value) else value
     return context1
 
 
-def save(obj, request, view_type, param=None):
+def save(obj: Any, request: Any, view_type: str, param: Optional[Dict] = None) -> None:
+    """Save an object, optionally using a custom save method."""
     if hasattr(obj, "save_from_request"):
         obj.save_from_request(request, view_type, param)
     else:
@@ -143,23 +172,23 @@ def save(obj, request, view_type, param=None):
 
 
 def view_editor(
-    request,
-    pk,
-    app,
-    tab,
-    model,
-    template_name,
-    field_edit_name,
-    post_save_redirect,
-    ext="py",
-    extra_context=None,
-    target=None,
-    parent_pk=0,
-    field_name=None,
-):
-    if request.POST:
+    request: Any,
+    pk: int,
+    app: str,
+    tab: str,
+    model: Any,
+    template_name: str,
+    field_edit_name: str,
+    post_save_redirect: str,
+    ext: str = "py",
+    extra_context: Optional[Dict] = None,
+    target: Optional[str] = None,
+    parent_pk: int = 0,
+    field_name: Optional[str] = None,
+) -> HttpResponse:
+    """Handle editor view for a model field."""
+    if request.method == "POST":
         if target == "editable":
-            name = request.POST["name"]
             value = request.POST["value"]
             pk = request.POST["pk"]
             obj = model.objects.get(id=pk)
@@ -169,7 +198,7 @@ def view_editor(
                 and hasattr(settings, "CANCAN")
                 and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
             ):
-                if not request.ability.can("editor_%s" % field_edit_name, obj):
+                if not request.ability.can(f"editor_{field_edit_name}", obj):
                     return default_block(request)
 
             setattr(obj, field_edit_name, value)
@@ -178,8 +207,6 @@ def view_editor(
         else:
             data = request.POST["data"]
             buf = data.replace("\r\n", "\n")
-            # if type(buf)==str:
-            #    buf = buf.encode('utf-8')
             obj = model.objects.get(id=pk)
 
             if (
@@ -187,18 +214,16 @@ def view_editor(
                 and hasattr(settings, "CANCAN")
                 and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
             ):
-                if not request.ability.can("editor_%s" % field_edit_name, obj):
+                if not request.ability.can(f"editor_{field_edit_name}", obj):
                     return default_block(request)
 
             if "fragment" in request.GET:
-                buf2 = getattr(obj, field_edit_name)
-                if buf2 == None:
-                    buf2 = ""
+                buf2 = getattr(obj, field_edit_name) or ""
                 if request.GET["fragment"] == "header":
                     if "$$$" in buf2:
-                        buf = buf + "$$$" + buf2.split("$$$")[1]
+                        buf = f"{buf}$$${buf2.split('$$$')[1]}"
                 elif request.GET["fragment"] == "footer":
-                    buf = buf2.split("$$$")[0] + "$$$" + buf
+                    buf = f"{buf2.split('$$$')[0]}$$${buf}"
                 setattr(obj, field_edit_name, buf)
             else:
                 setattr(obj, field_edit_name, buf)
@@ -212,66 +237,34 @@ def view_editor(
             and hasattr(settings, "CANCAN")
             and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
         ):
-            if not request.ability.can("editor_%s" % field_edit_name, obj):
+            if not request.ability.can(f"editor_{field_edit_name}", obj):
                 return default_block(request)
 
         table_name = model._meta.object_name
-        txt = getattr(obj, field_edit_name)
-        if txt == None:
-            txt = ""
+        txt = getattr(obj, field_edit_name) or ""
 
         if "fragment" in request.GET:
             if request.GET["fragment"] == "header":
                 txt = txt.split("$$$")[0]
             elif request.GET["fragment"] == "footer":
-                if "$$$" in txt:
-                    txt = txt.split("$$$")[1]
-                else:
-                    txt = ""
+                txt = txt.split("$$$")[1] if "$$$" in txt else ""
 
-        f = None
-        for field in obj._meta.fields:
-            if field.name == field_edit_name:
-                f = field
-                break
+        f = next(
+            (field for field in obj._meta.fields if field.name == field_edit_name), None
+        )
 
         x = request.get_full_path().split("?", 1)
-        if len(x) > 1:
-            get_param = "?" + x[1]
-        else:
-            get_param = ""
+        get_param = f"?{x[1]}" if len(x) > 1 else ""
 
         if field_name:
-            save_path = (
-                app
-                + "/table/"
-                + tab
-                + "/"
-                + str(parent_pk)
-                + "/"
-                + table_name
-                + "/"
-                + str(pk)
-                + "/"
-                + field_edit_name
-                + "/py/editor/"
-                + get_param
-            )
+            save_path = f"{app}/table/{tab}/{parent_pk}/{table_name}/{pk}/{field_edit_name}/py/editor/{get_param}"
         else:
             save_path = (
-                app
-                + "/table/"
-                + table_name
-                + "/"
-                + str(pk)
-                + "/"
-                + field_edit_name
-                + "/py/editor/"
-                + get_param
+                f"{app}/table/{table_name}/{pk}/{field_edit_name}/py/editor/{get_param}"
             )
 
-        if not txt and hasattr(obj, "get_" + field_edit_name + "_if_empty"):
-            txt = getattr(obj, "get_" + field_edit_name + "_if_empty")(
+        if not txt and hasattr(obj, f"get_{field_edit_name}_if_empty"):
+            txt = getattr(obj, f"get_{field_edit_name}_if_empty")(
                 request, template_name, ext, extra_context, target
             )
 
@@ -284,34 +277,24 @@ def view_editor(
             "ext": ext,
             "save_path": save_path,
             "txt": txt,
-            "verbose_field_name": f.verbose_name,
+            "verbose_field_name": f.verbose_name if f else "",
         }
-        t = None
-        if hasattr(obj, "template_for_object"):
-            t = obj.template_for_object(view_editor, c, ext)
-        if not t:
-            t = "schsys/db_field_edt.html"
 
-        return render_to_response(
-            # transform_template_name(obj, request, "schsys/db_field_edt.html"),
-            t,
-            context=c,
-            request=request,
+        t = (
+            obj.template_for_object(view_editor, c, ext)
+            if hasattr(obj, "template_for_object")
+            else None
         )
+        t = t or "schsys/db_field_edt.html"
+
+        return render_to_response(t, context=c, request=request)
 
 
-class GenericTable(object):
-    """GenericTable"""
+class GenericTable:
+    """GenericTable class for handling URL patterns and views."""
 
-    def __init__(self, urlpatterns, app, views_module=None):
-        """Constructor
-
-        Args:
-            urlpatterns -
-            app - application
-            views_module - module
-
-        """
+    def __init__(self, urlpatterns: Any, app: str, views_module: Optional[Any] = None):
+        """Initialize GenericTable."""
         self.urlpatterns = urlpatterns
         self.app = app
         self.base_url = get_script_prefix()
@@ -319,21 +302,22 @@ class GenericTable(object):
 
     def new_rows(
         self,
-        tab,
-        field=None,
-        title="",
-        title_plural="",
-        template_name=None,
-        extra_context=None,
-        queryset=None,
-        prefix=None,
-    ):
+        tab: str,
+        field: Optional[str] = None,
+        title: str = "",
+        title_plural: str = "",
+        template_name: Optional[str] = None,
+        extra_context: Optional[Dict] = None,
+        queryset: Optional[Any] = None,
+        prefix: Optional[str] = None,
+    ) -> "GenericRows":
+        """Create a new GenericRows instance."""
         rows = GenericRows(self, prefix, title, title_plural)
         rows.tab = tab
         if field:
             rows.set_field(field)
         rows.extra_context = extra_context
-        rows.base_path = "table/" + tab + "/"
+        rows.base_path = f"table/{tab}/"
         if template_name:
             rows.template_name = template_name
         else:
@@ -344,58 +328,49 @@ class GenericTable(object):
                 else:
                     m = apps.get_model(self.app, tab)
                 try:
-                    try:
-                        f = getattr(m, field).rel
-                    except:
-                        f = getattr(m, field).related
-                except:
-                    for item in dir(m):
-                        print(item)
-                    print("----------")
-                    print(field)
-                    print("----------")
-
-                try:
-                    table_name = f.name
-                except:
-                    table_name = f.var_name
+                    f = getattr(m, field).related
+                except AttributeError:
+                    f = getattr(m, field).rel
+                table_name = f.name if hasattr(f, "name") else f.var_name
             else:
                 table_name = tab.lower()
             if ":" in table_name:
                 rows.template_name = (
-                    self.app.lower() + "/" + table_name.split(":")[-1] + ".html"
+                    f"{self.app.lower()}/{table_name.split(':')[-1]}.html"
                 )
             else:
-                rows.template_name = self.app.lower() + "/" + table_name + ".html"
+                rows.template_name = f"{self.app.lower()}/{table_name}.html"
         if "." in tab:
             rows.base_model = apps.get_model(tab)
         else:
-            rows.base_model = apps.get_model(self.app + "." + tab)
+            rows.base_model = apps.get_model(f"{self.app}.{tab}")
         rows.queryset = queryset
         if "." in tab:
             pos = tab.rfind(".")
-            rows.base_perm = tab[:pos] + ".%s_" + tab[pos + 1 :].lower()
+            rows.base_perm = f"{tab[:pos]}.%s_{tab[pos + 1 :].lower()}"
         else:
-            rows.base_perm = self.app + ".%s_" + tab.lower()
+            rows.base_perm = f"{self.app}.%s_{tab.lower()}"
         return rows
 
-    def append_from_schema(self, rows, schema):
+    def append_from_schema(self, rows: "GenericRows", schema: str) -> None:
+        """Append actions to rows based on a schema."""
         for char in schema.split(";"):
             if hasattr(rows, char):
-                rows = getattr(rows, char)()
+                getattr(rows, char)()
 
     def from_schema(
         self,
-        schema,
-        tab,
-        field=None,
-        title="",
-        title_plural="",
-        template_name=None,
-        extra_context=None,
-        queryset=None,
-        prefix=None,
-    ):
+        schema: str,
+        tab: str,
+        field: Optional[str] = None,
+        title: str = "",
+        title_plural: str = "",
+        template_name: Optional[str] = None,
+        extra_context: Optional[Dict] = None,
+        queryset: Optional[Any] = None,
+        prefix: Optional[str] = None,
+    ) -> "GenericRows":
+        """Create a GenericRows instance from a schema."""
         if not title_plural:
             title_plural = title
         rows = self.new_rows(
@@ -413,14 +388,15 @@ class GenericTable(object):
 
     def standard(
         self,
-        tab,
-        title="",
-        title_plural="",
-        template_name=None,
-        extra_context=None,
-        queryset=None,
-        prefix=None,
-    ):
+        tab: str,
+        title: str = "",
+        title_plural: str = "",
+        template_name: Optional[str] = None,
+        extra_context: Optional[Dict] = None,
+        queryset: Optional[Any] = None,
+        prefix: Optional[str] = None,
+    ) -> "GenericRows":
+        """Create a standard set of views for a table."""
         schema = "add"
         rows = self.from_schema(
             schema,
@@ -451,15 +427,16 @@ class GenericTable(object):
 
     def for_field(
         self,
-        tab,
-        field,
-        title="",
-        title_plural="",
-        template_name=None,
-        extra_context=None,
-        queryset=None,
-        prefix=None,
-    ):
+        tab: str,
+        field: str,
+        title: str = "",
+        title_plural: str = "",
+        template_name: Optional[str] = None,
+        extra_context: Optional[Dict] = None,
+        queryset: Optional[Any] = None,
+        prefix: Optional[str] = None,
+    ) -> "GenericRows":
+        """Create views for a specific field in a table."""
         rows = self.new_rows(
             tab,
             field,
@@ -476,19 +453,30 @@ class GenericTable(object):
 
     def tree(
         self,
-        tab,
-        title="",
-        title_plural="",
-        template_name=None,
-        extra_context=None,
-        queryset=None,
-        prefix=None,
-    ):
+        tab: str,
+        title: str = "",
+        title_plural: str = "",
+        template_name: Optional[str] = None,
+        extra_context: Optional[Dict] = None,
+        queryset: Optional[Any] = None,
+        prefix: Optional[str] = None,
+    ) -> None:
+        """Create tree views for a table."""
         return None
 
 
-class GenericRows(object):
-    def __init__(self, table, prefix, title="", title_plural="", parent_rows=None):
+class GenericRows:
+    """GenericRows class for handling rows in a table."""
+
+    def __init__(
+        self,
+        table: GenericTable,
+        prefix: Optional[str],
+        title: str = "",
+        title_plural: str = "",
+        parent_rows: Optional["GenericRows"] = None,
+    ):
+        """Initialize GenericRows."""
         self.table = table
         self.prefix = prefix
         self.field = None
@@ -507,76 +495,83 @@ class GenericRows(object):
             self.extra_context = parent_rows.extra_context
             self.queryset = parent_rows.queryset
 
-    def _get_base_path(self):
+    def _get_base_path(self) -> str:
+        """Get the base path for URL patterns."""
         if self.field:
             if self.prefix:
-                return (
-                    self.base_path[:-1]
-                    + "_"
-                    + self.prefix
-                    + "/"
-                    + "(?P<parent_pk>-?\d+)/%s/" % self.field
-                )
-            else:
-                return self.base_path + "(?P<parent_pk>-?\d+)/%s/" % self.field
-        else:
-            if self.prefix:
-                return self.base_path[:-1] + "_" + self.prefix + "/"
-            else:
-                return self.base_path
+                return f"{self.base_path[:-1]}_{self.prefix}/(?P<parent_pk>-?\d+)/{self.field}/"
+            return f"{self.base_path}(?P<parent_pk>-?\d+)/{self.field}/"
+        if self.prefix:
+            return f"{self.base_path[:-1]}_{self.prefix}/"
+        return self.base_path
 
-    def table_paths_to_context(self, view_class, context):
+    def table_paths_to_context(self, view_class: Any, context: Dict) -> None:
+        """Add table paths to the context."""
         x = view_class.request.path.split("/table/", 1)
         x2 = x[1].split("/")
 
         bf = 0
         if (
             "base_filter" in view_class.kwargs
-            and view_class.kwargs["base_filter"] != None
+            and view_class.kwargs["base_filter"] is not None
         ):
             bf = 1
 
         if "parent_pk" in view_class.kwargs:
-            context["table_path"] = x[0] + "/table/" + "/".join(x2[:3]) + "/"
+            context["table_path"] = f"{x[0]}/table/{'/'.join(x2[:3])}/"
             context["table_path_and_base_filter"] = (
-                x[0] + "/table/" + "/".join(x2[: 3 + bf]) + "/"
+                f"{x[0]}/table/{'/'.join(x2[: 3 + bf])}/"
             )
-            context["table_path_and_filter"] = (
-                x[0] + "/table/" + "/".join(x2[:-3]) + "/"
-            )
+            context["table_path_and_filter"] = f"{x[0]}/table/{'/'.join(x2[:-3])}/"
         else:
-            context["table_path"] = x[0] + "/table/" + x2[0] + "/"
-            if bf:
-                context["table_path_and_base_filter"] = (
-                    context["table_path"] + x2[1] + "/"
-                )
-            else:
-                context["table_path_and_base_filter"] = context["table_path"]
-            context["table_path_and_filter"] = (
-                x[0] + "/table/" + "/".join(x2[:-3]) + "/"
+            context["table_path"] = f"{x[0]}/table/{x2[0]}/"
+            context["table_path_and_base_filter"] = (
+                f"{context['table_path']}{x2[1]}/" if bf else context["table_path"]
             )
+            context["table_path_and_filter"] = f"{x[0]}/table/{'/'.join(x2[:-3])}/"
 
-    def set_field(self, field=None):
+    def set_field(self, field: Optional[str] = None) -> "GenericRows":
+        """Set the field for the rows."""
         self.field = field
         return self
 
-    def _append(self, url_str, fun, parm=None):
+    def _append(
+        self, url_str: str, fun: Callable, parm: Optional[Dict] = None
+    ) -> "GenericRows":
+        """Append a URL pattern to the urlpatterns."""
         if parm:
-            self.table.urlpatterns += [
-                re_path(self._get_base_path() + url_str, fun, parm),
-            ]
+            self.table.urlpatterns.append(
+                re_path(self._get_base_path() + url_str, fun, parm)
+            )
         else:
-            self.table.urlpatterns += [
-                re_path(self._get_base_path() + url_str, fun),
-            ]
+            self.table.urlpatterns.append(re_path(self._get_base_path() + url_str, fun))
         return self
 
-    def gen(self):
+    def gen(self) -> "GenericRows":
+        """Generate the URL patterns."""
         return self
 
-    def list(self):
+    def list(self) -> "GenericRows":
+        """
+        Generate URL patterns for the list view.
+
+        This function generates URL patterns for the list view with the following
+        format:
+            <base_path>/<filter>/<target>/<vtype>/
+        where:
+            <base_path> is the value of the base_path attribute of the GenericRows
+                object;
+            <filter> is the value of the filter attribute of the GenericRows object
+                or the value of the base_filter keyword argument if it is provided;
+            <target> is the value of the target keyword argument;
+            <vtype> is the value of the vtype keyword argument.
+
+        The function also registers the view in the VIEWS_REGISTER dictionary.
+
+        Returns:
+            self
+        """
         url = r"((?P<base_filter>[\w=_,;-]*)/|)(?P<filter>[\w=_,;-]*)/(?P<target>[\w_-]*)/[_]?(?P<vtype>list|sublist|tree|get|gettree|treelist|table_action)/$"
-
         parent_class = self
 
         class ListView(generic.ListView):
@@ -605,23 +600,23 @@ class GenericRows(object):
             order = None
             search = None
 
-            def _context_for_tree(self):
+            def _context_for_tree(self) -> Dict:
                 try:
                     parent_pk = int(self.kwargs["filter"])
-                    if parent_pk > 0:
-                        parent = self.model.objects.get(pk=parent_pk)
-                    else:
-                        parent = None
-                except:
+                    parent = (
+                        self.model.objects.get(pk=parent_pk) if parent_pk > 0 else None
+                    )
+                except (ValueError, self.model.DoesNotExist):
                     parent_pk = None
                     parent = None
                 try:
                     base_parent_pk = int(self.kwargs["base_filter"])
-                    if base_parent_pk > 0:
-                        base_parent = self.model.objects.get(pk=base_parent_pk)
-                    else:
-                        base_parent = None
-                except:
+                    base_parent = (
+                        self.model.objects.get(pk=base_parent_pk)
+                        if base_parent_pk > 0
+                        else None
+                    )
+                except:  # (ValueError, self.model.DoesNotExist):
                     base_parent_pk = None
                     base_parent = None
                 if not parent_pk and base_parent_pk:
@@ -634,7 +629,7 @@ class GenericRows(object):
                     "base_parent": base_parent,
                 }
 
-            def doc_type(self):
+            def doc_type(self) -> str:
                 for doc_type in DOC_TYPES:
                     if self.kwargs["target"].startswith(doc_type):
                         return doc_type
@@ -642,7 +637,7 @@ class GenericRows(object):
                     return "json"
                 return "html"
 
-            def get_template_names(self):
+            def get_template_names(self) -> List[str]:
                 names = super().get_template_names()
                 if "target" in self.kwargs and "__" in self.kwargs["target"]:
                     target2 = self.kwargs["target"].split("__", 1)[1]
@@ -650,11 +645,7 @@ class GenericRows(object):
                         app, t = target2.split("__")
                         names.insert(
                             0,
-                            app
-                            + "/"
-                            + self.template_name.split("/")[-1].replace(
-                                ".html", t + ".html"
-                            ),
+                            f"{app}/{self.template_name.split('/')[-1].replace('.html', t + '.html')}",
                         )
                     else:
                         names.insert(
@@ -665,20 +656,18 @@ class GenericRows(object):
                     if "__" in v:
                         x = v.split("__", 1)
                         y = self.template_name.split("/")
-                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                        template2 = f"{x[0]}/{y[-1].replace('.html', x[1] + '.html')}"
                     else:
                         template2 = self.template_name.replace(".html", v + ".html")
                     names.insert(0, template2)
-
                 return names
 
-            def get_paginate_by(self, queryset):
+            def get_paginate_by(self, queryset: Any) -> Optional[int]:
                 if self.doc_type() in DOC_TYPES and self.doc_type() != "json":
                     return None
-                else:
-                    return self.paginate_by
+                return self.paginate_by
 
-            def get(self, request, *args, **kwargs):
+            def get(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
                 if "init" in kwargs:
                     kwargs["init"](self)
 
@@ -687,7 +676,7 @@ class GenericRows(object):
                     try:
                         try:
                             parent_id = int(self.kwargs["filter"])
-                        except:
+                        except ValueError:
                             parent_id = 0
                         if parent_id > 0:
                             parent = self.model.objects.get(id=parent_id)
@@ -704,67 +693,46 @@ class GenericRows(object):
                                 parent = self.model.objects.get(
                                     id=int(self.kwargs["parent_pk"])
                                 )
-
-                    except:
+                    except self.model.DoesNotExist:
                         parent = None
 
                     model = self.get_queryset().model
                     if parent and hasattr(model, "get_derived_object"):
-                        obj2 = model(parent=parent).get_derived_object(
-                            {
-                                "view": self,
-                            }
-                        )
+                        obj2 = model(parent=parent).get_derived_object({"view": self})
                         model = type(obj2)
 
                     if hasattr(model, "table_action"):
                         data = request.POST
                         if request.content_type == "application/json":
                             try:
-                                if type(request.body) == str:
+                                if isinstance(request.body, str):
                                     data = json_loads(request.body.strip())
                                 else:
                                     data = json_loads(
                                         request.body.decode("utf-8").strip()
                                     )
-                            except:
-                                print("+++++++++++++++++++++++++++++++++++++++++")
-                                print(request.body)
-                                print("-----------------------------------------")
+                            except ValueError:
                                 raise Http404("Invalid data format")
 
                         ret = getattr(model, "table_action")(self, request, data)
-                        if ret == None:
+                        if ret is None:
                             raise Http404("Action doesn't exists")
-                        else:
-                            if type(ret) == str:
-                                return HttpResponse(
-                                    ret, content_type="application/json"
-                                )
-                            elif isinstance(ret, HttpResponse):
-                                return ret
-                            else:
-                                return JsonResponse(ret, safe=False)
+                        if isinstance(ret, str):
+                            return HttpResponse(ret, content_type="application/json")
+                        if isinstance(ret, HttpResponse):
+                            return ret
+                        return JsonResponse(ret, safe=False)
                     raise Http404("Action doesn't exists")
 
                 if "tree" in self.kwargs["vtype"]:
                     c = self._context_for_tree()
-
-                    # try:
-                    #    parent = int(kwargs['filter'])
-                    # except:
-                    #    try:
-                    #        parent = int(kwargs['base_filter'])
-                    #    except:
-                    #        parent = None
-
-                    if c["parent_pk"] != None and c["parent_pk"] < 0:
+                    if c["parent_pk"] is not None and c["parent_pk"] < 0:
                         parent_old = c["parent_pk"]
                         try:
                             parent = self.model.objects.get(
                                 id=-1 * parent_old
                             ).parent.id
-                        except:
+                        except (self.model.DoesNotExist, AttributeError):
                             parent = 0
 
                         path2 = ("/" + str(parent) + "/").join(
@@ -772,11 +740,9 @@ class GenericRows(object):
                                 "/" + str(parent_old) + "/", 1
                             )
                         )
-                        # path2 = request.get_full_path().replace(str(parent_old), str(parent))
                         return HttpResponseRedirect(path2)
 
                 offset = request.GET.get("offset")
-
                 self.sort = request.GET.get("sort")
                 self.order = request.GET.get("order")
                 self.search = request.GET.get("search")
@@ -790,36 +756,29 @@ class GenericRows(object):
                 if "target" in self.kwargs and "__" in self.kwargs["target"]:
                     template_name = self.kwargs["target"].split("__")[-1]
                     form_name = (
-                        "_FilterForm"
-                        + self.model._meta.object_name
-                        + "_"
-                        + template_name
+                        f"_FilterForm{self.model._meta.object_name}_{template_name}"
                     )
                     if not hasattr(views_module, form_name):
                         form_name = None
                 if not form_name:
-                    form_name = "_FilterForm" + self.model._meta.object_name
-                    form_name_alt = None
+                    form_name = f"_FilterForm{self.model._meta.object_name}"
 
                 if hasattr(views_module, form_name):
                     if request.method == "POST":
                         self.form = getattr(views_module, form_name)(request.POST)
-                        if self.form.is_valid():
-                            self.form_valid = True
-                        else:
-                            self.form_valid = False
+                        self.form_valid = self.form.is_valid()
                     else:
                         self.form = getattr(views_module, form_name)()
                         self.form_valid = None
 
-                return super(ListView, self).get(request, *args, **kwargs)
+                return super().get(request, *args, **kwargs)
 
-            def post(self, request, *args, **kwargs):
+            def post(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
                 return self.get(request, *args, **kwargs)
 
-            def get_context_data(self, **kwargs):
+            def get_context_data(self, **kwargs: Any) -> Dict:
                 nonlocal parent_class
-                context = super(ListView, self).get_context_data(**kwargs)
+                context = super().get_context_data(**kwargs)
                 context["view"] = self
                 context["title"] = self.title
                 context["rel_field"] = self.rel_field
@@ -864,14 +823,13 @@ class GenericRows(object):
                 ret = transform_extra_context(context, self.extra_context)
                 return ret
 
-            def get_queryset(self):
+            def get_queryset(self) -> Any:
                 ret = None
                 if "tree" in self.kwargs["vtype"]:
                     filter = self.kwargs["filter"]
-                    parent = None
                     c = self._context_for_tree()
                     if hasattr(self.model, "filter") and not (
-                        type(filter) == str and filter.isdigit()
+                        isinstance(filter, str) and filter.isdigit()
                     ):
                         ret = self.model.filter(filter, self, self.request)
                     else:
@@ -886,7 +844,7 @@ class GenericRows(object):
                                 )
                             else:
                                 ret = self.model.objects.all()
-                        if not "pk" in self.request.GET:
+                        if "pk" not in self.request.GET:
                             if c["parent_pk"]:
                                 if c["parent_pk"] > 0:
                                     ret = ret.filter(parent=c["parent_pk"])
@@ -895,15 +853,13 @@ class GenericRows(object):
                             else:
                                 ret = ret.filter(parent=None)
 
-                    if not "pk" in self.request.GET:
+                    if "pk" not in self.request.GET:
                         if (
                             (not filter or filter == "-")
                             and c["base_parent_pk"]
                             and c["base_parent_pk"] > 0
                         ):
                             ret = ret.filter(parent=c["base_parent_pk"])
-                    # if not 'pk' in self.request.GET:
-                    #    ret =  ret.filter(parent=parent)
                     ret = filter_by_permissions(self, self.model, ret, self.request)
                 else:
                     if self.queryset:
@@ -946,7 +902,7 @@ class GenericRows(object):
                         try:
                             parent = int(self.kwargs["base_filter"])
                             ret = ret.filter(parent=parent)
-                        except:
+                        except ValueError:
                             pass
                 if self.search:
                     fields = [
@@ -974,19 +930,13 @@ class GenericRows(object):
                 if "pk" in self.request.GET:
                     ret = ret.filter(pk=self.request.GET["pk"])
                     return ret
-                else:
-                    if self.form and not self.rel_field:
-                        if self.form_valid == True:
-                            return self.form.process(self.request, ret)
-                        else:
-                            if hasattr(self.form, "process_empty_or_invalid"):
-                                return self.form.process_empty_or_invalid(
-                                    self.request, ret
-                                )
-                            else:
-                                return ret
-                    else:
-                        return ret
+                if self.form and not self.rel_field:
+                    if self.form_valid:
+                        return self.form.process(self.request, ret)
+                    if hasattr(self.form, "process_empty_or_invalid"):
+                        return self.form.process_empty_or_invalid(self.request, ret)
+                    return ret
+                return ret
 
         VIEWS_REGISTER["list"][self.base_model] = ListView
 
@@ -1000,7 +950,17 @@ class GenericRows(object):
 
         return self
 
-    def detail(self):
+    def detail(self) -> "GenericRows":
+        """
+        Generate a detail view for a specific element.
+
+        The detail view allows the user to view detailed information about an element
+        of the table. It is accessible to users with the "view" permission on the table.
+
+        :return: The detail view as a class.
+        :rtype: generic.DetailView
+        """
+
         url = r"(?P<pk>\d+)/(?P<target>[\w_]*)/(?P<vtype>view|row_action)/$"
         parent_class = self
 
@@ -1010,7 +970,7 @@ class GenericRows(object):
             if self.field:
                 try:
                     f = getattr(self.base_model, self.field).related
-                except:
+                except AttributeError:
                     f = getattr(self.base_model, self.field).rel
                 model = f.related_model
             else:
@@ -1020,20 +980,15 @@ class GenericRows(object):
             title = self.title
             response_class = ExtTemplateResponse
 
-            def get_object(self, queryset=None):
+            def get_object(self, queryset: Optional[Any] = None) -> Any:
                 obj = super().get_object(queryset)
                 if hasattr(obj, "get_derived_object"):
-                    obj2 = obj.get_derived_object(
-                        {
-                            "view": self,
-                        }
-                    )
+                    obj2 = obj.get_derived_object({"view": self})
                     self.model = type(obj2)
                     return obj2
-                else:
-                    return obj
+                return obj
 
-            def doc_type(self):
+            def doc_type(self) -> str:
                 for doc_type in DOC_TYPES:
                     if self.kwargs["target"].startswith(doc_type):
                         return doc_type
@@ -1041,7 +996,7 @@ class GenericRows(object):
                     return "json"
                 return "html"
 
-            def get_template_names(self):
+            def get_template_names(self) -> List[str]:
                 names = super().get_template_names()
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
                     names.insert(
@@ -1055,17 +1010,17 @@ class GenericRows(object):
                     if "__" in v:
                         x = v.split("__", 1)
                         y = self.template_name.split("/")
-                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
+                        template2 = f"{x[0]}/{y[-1].replace('.html', x[1] + '.html')}"
                     else:
                         template2 = self.template_name.replace(".html", v + ".html")
                     names.insert(0, template2)
                 return names
 
-            def get_context_data(self, **kwargs):
+            def get_context_data(self, **kwargs: Any) -> Dict:
                 nonlocal parent_class
-                context = super(DetailView, self).get_context_data(**kwargs)
+                context = super().get_context_data(**kwargs)
                 context["view"] = self
-                context["title"] = self.title + " - " + str(_("element information"))
+                context["title"] = f"{self.title} - {str(_('element information'))}"
                 if "version" in self.request.GET:
                     context["version"] = self.request.GET["version"]
 
@@ -1073,17 +1028,17 @@ class GenericRows(object):
 
                 return context
 
-            def get(self, request, *args, **kwargs):
+            def get(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
                 self.object = self.get_object()
 
                 if (
                     self.object
                     and hasattr(settings, "CANCAN")
                     and is_in_cancan_rules(
-                        type(self.object), self.request.ability.access_rules.rules
+                        type(self.object), request.ability.access_rules.rules
                     )
                 ):
-                    if not self.request.ability.can("detail", self.object):
+                    if not request.ability.can("detail", self.object):
                         return default_block(request)
 
                 if self.kwargs["vtype"] == "row_action":
@@ -1091,15 +1046,14 @@ class GenericRows(object):
                         ret = getattr(self.model, "row_action")(
                             self.model, request, args, kwargs
                         )
-                        if ret == None:
+                        if ret is None:
                             raise Http404("Action doesn't exists")
-                        else:
-                            return JsonResponse(ret)
+                        return JsonResponse(ret)
                     raise Http404("Action doesn't exists")
 
-                return super(generic.DetailView, self).get(request, *args, **kwargs)
+                return super().get(request, *args, **kwargs)
 
-            def post(self, request, *args, **kwargs):
+            def post(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
                 return self.get(request, *args, **kwargs)
 
         VIEWS_REGISTER["detail"][self.base_model] = DetailView
@@ -1112,18 +1066,28 @@ class GenericRows(object):
         )
         return self._append(url, fun)
 
-    def edit(self):
+    def edit(self) -> "GenericRows":
+        """
+        Generate an edit view.
+
+        The edit view allows the user to modify an existing element of the
+        table. The view is accessible to users with the "change" permission on
+        the table.
+
+        :return: The edit view as a class.
+        :rtype: generic.UpdateView
+        """
         url = r"(?P<pk>\d+)/edit/$"
         parent_class = self
 
         class UpdateView(generic.UpdateView):
-            doc_type = "html"
+            # doc_type = "html"
             response_class = ExtTemplateResponse
 
             if self.field:
                 try:
                     f = getattr(self.base_model, self.field).related
-                except:
+                except AttributeError:
                     f = getattr(self.base_model, self.field).rel
                 model = f.related_model
             else:
@@ -1304,6 +1268,13 @@ class GenericRows(object):
         return self._append(url, fun)
 
     def add(self):
+        """
+        Add a new element to the table.
+
+        URL: /table/<app>/<model>/add/<add_param>/
+        URL parameters:
+            - add_param: optional parameter used to initialize the form
+        """
         url = r"(?P<add_param>[\w=_-]*)/add/$"
         parent_class = self
 
@@ -1312,7 +1283,7 @@ class GenericRows(object):
             if self.field and self.field != "this":
                 try:
                     f = getattr(self.base_model, self.field).related
-                except:
+                except AttributeError:
                     f = getattr(self.base_model, self.field).rel
                 model = f.related_model
                 pmodel = self.base_model
@@ -1383,7 +1354,7 @@ class GenericRows(object):
                             try:
                                 self.object.parent = m.objects.get(id=ppk)
                                 m = None
-                            except:
+                            except self.pmodel.DoesNotExist:
                                 m = m.__bases__[0]
                         # try:
                         #    self.object.parent = self.pmodel.objects.get(id=ppk)
@@ -1411,7 +1382,7 @@ class GenericRows(object):
                             if hasattr(self.object, pos):
                                 try:
                                     setattr(self.object, pos, self.init_form[pos])
-                                except:
+                                except self.pmodel.DoesNotExist:
                                     pass
                 else:
                     self.init_form = None
@@ -1537,10 +1508,10 @@ class GenericRows(object):
                     p = {}
                 if self.init_form:
                     for pos in self.init_form:
-                        if hasattr(self.object, pos) and not pos in p:
+                        if hasattr(self.object, pos) and pos not in p:
                             try:
                                 setattr(self.object, pos, self.init_form[pos])
-                            except:
+                            except self.pmodel.DoesNotExist:
                                 pass
 
                 if hasattr(self.object, "post_form"):
@@ -1594,6 +1565,24 @@ class GenericRows(object):
         return self._append(url, fun)
 
     def delete(self):
+        """
+        Generate a delete view.
+
+        This method sets up a delete view that allows users with the appropriate
+        permissions to delete an element from the table. The view is registered
+        with the appropriate URL pattern and permissions are checked before allowing
+        the delete operation.
+
+        The DeleteView class provides methods to handle GET and POST requests,
+        ensuring that the user has the necessary permissions and performing any
+        additional actions needed during the delete operation.
+
+        The view is accessible via the URL pattern: /<pk>/delete/
+
+        :return: The delete view as a class.
+        :rtype: generic.DeleteView
+        """
+
         url = r"(?P<pk>\d+)/delete/$"
         parent_class = self
 
@@ -1602,7 +1591,7 @@ class GenericRows(object):
             if self.field:
                 try:
                     f = getattr(self.base_model, self.field).related
-                except:
+                except AttributeError:
                     f = getattr(self.base_model, self.field).rel
                 model = f.related_model
             else:
@@ -1710,6 +1699,18 @@ class GenericRows(object):
         return self._append(url, fun)
 
     def editor(self):
+        """
+        Generate URL patterns for the editor view.
+
+        The editor view allows the user to edit specific fields of an element.
+        The view is accessible to users with the "change" permission on the table.
+
+        The URL pattern is as follows:
+            /table/<app>/<model>/<pk>/<field_edit_name>/<target>/editor/
+
+        :return: The URL pattern as a string.
+        :rtype: str
+        """
         url = r"(?P<pk>\d+)/(?P<field_edit_name>[\w_]*)/(?P<target>[\w_]*)/editor/$"
         fun = make_perms_test_fun(
             self.table.app, self.base_model, self.base_perm % "change", view_editor
@@ -1717,7 +1718,7 @@ class GenericRows(object):
         if self.field:
             try:
                 f = getattr(self.base_model, self.field).related
-            except:
+            except AttributeError:
                 f = getattr(self.base_model, self.field).rel
             model = f.related_model
         else:
@@ -1749,6 +1750,23 @@ def generic_table(
     queryset=None,
     views_module=None,
 ):
+    """
+    Generate generic table urls
+
+    Args:
+        urlpatterns - urlpatterns object defined in urls.py
+        app - application name
+        tab - table name
+        title - title of the table (default: '')
+        title_plural - plural title of the table (default: '')
+        template_name - template name (default: None)
+        extra_context - extra context (default: None)
+        queryset - queryset (default: None)
+        views_module - views module (default: None)
+
+    Returns:
+        None
+    """
     GenericTable(urlpatterns, app, views_module).new_rows(
         tab, None, title, title_plural, template_name, extra_context, queryset
     ).list().detail().edit().add().delete().editor().gen()
@@ -1766,9 +1784,23 @@ def generic_table_start(urlpatterns, app, views_module=None):
 
 
 def extend_generic_view(view_name, model, method_name, new_method):
+    """
+    Extend a generic view by replacing an existing method with a new method.
+
+    Args:
+        view_name (str): The name of the view to be extended.
+        model (str): The model associated with the view.
+        method_name (str): The name of the method to be replaced.
+        new_method (Callable): The new method to replace the existing one.
+
+    The function updates the specified method of the class retrieved from
+    VIEWS_REGISTER with the new method. It also archives the old method
+    under a new attribute name prefixed with "old_" if the old method exists.
+    """
+
     try:
         cls = VIEWS_REGISTER[view_name][model]
-    except:
+    except KeyError:
         cls = None
     if cls:
         old_method = getattr(cls, method_name)

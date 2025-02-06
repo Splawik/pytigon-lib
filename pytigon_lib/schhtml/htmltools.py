@@ -1,56 +1,40 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-
 from pytigon_lib.schhtml.parser import Parser
-
-try:
-    from urllib.request import urlopen
-except:
-    from urllib import urlopen
+from urllib.request import urlopen
+from urllib.error import URLError
+import pytest
 
 
 def superstrip(s):
+    """Remove extra whitespace from the string."""
     f = (16, 8, 4, 2)
     s2 = s.replace("\n", " ").replace("\r", " ").replace("\t", " ")
     for pos in f:
-        oldlen = -1
-        newlen = 0
-        while newlen != oldlen:
+        while True:
             oldlen = len(s2)
             s2 = s2.replace(" " * pos, " ")
-            newlen = len(s2)
+            if len(s2) == oldlen:
+                break
     return s2.strip()
 
 
 class HtmlModParser(Parser):
+    """Parser for modifying HTML content."""
+
     def __init__(self, url=None):
-        Parser.__init__(self)
+        super().__init__()
         if url:
-            req = urlopen(url)
-            self.feed(req.read().decode("utf-8"))
+            try:
+                req = urlopen(url)
+                self.feed(req.read().decode("utf-8"))
+            except URLError as e:
+                raise ValueError(f"Failed to fetch URL: {e}")
 
 
 class HtmlProxyParser(Parser):
-    def __init__(self, tag):
-        Parser.__init__(self)
+    """Proxy parser for handling HTML tags."""
 
+    def __init__(self, tag):
+        super().__init__()
         self.tag_obj = tag
         self.parser = tag.parser
         self.org_tag_parser = self.parser.tag_parser
@@ -86,9 +70,11 @@ class HtmlProxyParser(Parser):
 
 
 class Td:
-    def __init__(self, data, attrs={}, children=None):
+    """Represents a table data cell."""
+
+    def __init__(self, data, attrs=None, children=None):
         self.data = data
-        self.attrs = attrs
+        self.attrs = attrs if attrs is not None else {}
         self.children = children
 
     @property
@@ -96,4 +82,4 @@ class Td:
         return ""
 
     def __repr__(self):
-        return "Td:" + self.data
+        return f"Td: {self.data}"

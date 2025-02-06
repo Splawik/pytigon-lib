@@ -1,24 +1,17 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2020 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.103"
-
 from django.contrib.staticfiles.finders import AppDirectoriesFinder
 
 
 class AppPackDirectoriesFinder(AppDirectoriesFinder):
+    """Custom static file finder that looks for files in a specific directory."""
+
     source_dir = "../static"
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the finder with the custom source directory."""
+        super().__init__(*args, **kwargs)
+        self.storages = {
+            app_config.name: self.storage_class(
+                os.path.join(app_config.path, self.source_dir)
+            )
+            for app_config in self.app_configs
+        }

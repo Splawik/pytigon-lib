@@ -1,22 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 import binascii
 import datetime
 import re
@@ -40,21 +21,21 @@ from pytigon_lib.schtable.table import Table
 from pytigon_lib.schtools import schjson
 from pytigon_lib.schtools.tools import bencode, bdecode, is_null
 
-
 from django_q.tasks import async_task, result
 
 _ = gettext.gettext
 
 
 def str_cmp(x, y, ts):
+    """Compare two strings based on the given sorting criteria."""
     (id, znak) = ts[0]
-    if x[id] == ".." or (type(x[id]) == tuple and x[id][0] == ".."):
+    if x[id] == ".." or (isinstance(x[id], tuple) and x[id][0] == ".."):
         return -1
-    if y[id] == ".." or (type(y[id]) == tuple and y[id][0] == ".."):
+    if y[id] == ".." or (isinstance(y[id], tuple) and y[id][0] == ".."):
         return 1
-    if type(x[id]) == str and type(y[id]) == tuple:
+    if isinstance(x[id], str) and isinstance(y[id], tuple):
         return 1
-    elif type(x[id]) == tuple and type(y[id]) == str:
+    elif isinstance(x[id], tuple) and isinstance(y[id], str):
         return -1
     try:
         if x[id] > y[id]:
@@ -65,18 +46,18 @@ def str_cmp(x, y, ts):
             return str_cmp(x, y, ts[1:])
         else:
             return 0
-    except:
-        print("X: ", x[id])
-        print("Y: ", y[id])
+    except Exception as e:
+        print(f"Error comparing {x[id]} and {y[id]}: {e}")
         return 0
 
 
 class VfsTable(Table):
-    def __init__(self, folder):
-        self.var_count = -1
-        # self.folder = replace_dot(folder).replace('%20', ' ')
-        self.folder = norm_path(folder)
+    """A table representation of a virtual file system."""
 
+    def __init__(self, folder):
+        """Initialize the VfsTable with the given folder."""
+        self.var_count = -1
+        self.folder = norm_path(folder)
         self.auto_cols = []
         self.col_length = [10, 10, 10]
         self.col_names = ["ID", "Name", "Size", "Created"]
@@ -85,9 +66,11 @@ class VfsTable(Table):
         self.task_href = None
 
     def set_task_href(self, href):
+        """Set the task href."""
         self.task_href = href
 
     def _size_to_color(self, size):
+        """Convert file size to a color code."""
         colors = (
             (1024, "#fff"),
             (1048576, "#fdd"),
@@ -100,6 +83,7 @@ class VfsTable(Table):
         return colors[-1][1]
 
     def _time_to_color(self, time):
+        """Convert file modification time to a color code."""
         if time:
             size = (datetime.datetime.today() - time).days
             colors = (
@@ -117,101 +101,88 @@ class VfsTable(Table):
             return "#FFF,#F00"
 
     def _get_table(self, value=None):
+        """Get the table data for the current folder."""
         try:
             f = default_storage.fs.listdir(automount(self.folder))
-        except:
+        except Exception as e:
+            print(f"Error listing directory: {e}")
             return []
 
         elements = []
         files = []
-        if value:
-            cmp = re.compile(value, re.IGNORECASE)
-        else:
-            cmp = None
+        cmp = re.compile(value, re.IGNORECASE) if value else None
 
         if self.folder != "/":
-            f = [
-                "..",
-            ] + f
+            f = [".."] + f
+
         for p in f:
             pos = fs.path.join(self.folder, p)
             if default_storage.fs.isdir(pos) or p.lower().endswith(".zip"):
-                if cmp and cmp.match(p) or not cmp:
+                if not cmp or cmp.match(p):
                     try:
                         id = bencode(pos)
                         info = default_storage.fs.getdetails(pos)
-                        # if not ha'created_time' in info:
-                        #    info['created_time'] = ''
                         elements.append(
                             [
                                 id,
                                 (p, ",#fdd"),
                                 "",
-                                # (info['created_time'], ',,#f00,s'),
                                 (info.modified.replace(tzinfo=None), ",,#f00,s"),
                                 info.raw,
                                 {
                                     "edit": (
                                         "tableurl",
-                                        "../../%s/_/" % id,
+                                        f"../../{id}/_/",
                                         _("Change folder"),
                                     )
                                 },
                             ]
                         )
-                    except Exception as exception:
-                        print(str(exception))
+                    except Exception as e:
+                        print(f"Error processing directory {p}: {e}")
             else:
                 files.append((p, pos))
-        for pp in files:
-            p = pp[0]
-            pos = pp[1]
-            if cmp and cmp.match(p) or not cmp:
+
+        for p, pos in files:
+            if not cmp or cmp.match(p):
                 try:
                     id = bencode(pos)
                     info = default_storage.fs.getdetails(pos)
-                    # size = info['size']
-                    # ctime = info['created_time']
                     size = info.size
                     ctime = info.modified.replace(tzinfo=None)
                     elements.append(
                         [
                             id,
                             p,
-                            (size, ">," + self._size_to_color(size)),
-                            (ctime, "," + self._time_to_color(ctime)),
+                            (size, f">,{self._size_to_color(size)}"),
+                            (ctime, f",{self._time_to_color(ctime)}"),
                             info.raw,
-                            {"edit": ("command", "../../%s/_/" % id, _("Open file"))},
+                            {"edit": ("command", f"../../{id}/_/", _("Open file"))},
                         ]
                     )
-                except Exception as exception:
-                    print(str(exception))
+                except Exception as e:
+                    print(f"Error processing file {p}: {e}")
 
         return elements
 
     def page(self, nr, sort=None, value=None):
-        key = "FOLDER_" + bencode(self.folder) + "_TAB"
-        tabvalue = None
-        if tabvalue:
-            tab = tabvalue
-        else:
-            tab = self._get_table(value)[nr * 256 : (nr + 1) * 256]
-            cache.set(key + "::" + is_null(value, ""), tab, 300)
+        """Get a page of the table data."""
+        key = f"FOLDER_{bencode(self.folder)}_TAB"
+        tab = self._get_table(value)[nr * 256 : (nr + 1) * 256]
+        cache.set(f"{key}::{is_null(value, '')}", tab, 300)
 
         self.var_count = len(tab)
-        if sort != None:
+        if sort:
             s = sort.split(",")
             ts = []
             for pos in s:
-                if pos != "":
-                    id = 0
-                    znak = 0
-                    if pos[0] == "-":
-                        id = self.col_names.index(pos[1:])
-                        znak = -1
-                    else:
-                        id = self.col_names.index(pos)
-                        znak = 1
+                if pos:
+                    id = (
+                        self.col_names.index(pos[1:])
+                        if pos[0] == "-"
+                        else self.col_names.index(pos)
+                    )
+                    znak = -1 if pos[0] == "-" else 1
                     ts.append((id, znak))
 
             def _cmp(x, y):
@@ -221,51 +192,38 @@ class VfsTable(Table):
         return tab
 
     def count(self, value):
-        key = "FOLDER_" + bencode(self.folder) + "_COUNT"
-        # countvalue = cache.get(key + '::' + is_null(value, ''))
-        countvalue = None
-
-        if countvalue:
-            return countvalue
-        else:
-            countvalue = len(self._get_table(value))
-            cache.set(key + "::" + is_null(value, ""), countvalue, 300)
-            return countvalue
-
-        return len(self._get_table(value))
+        """Get the count of items in the table."""
+        key = f"FOLDER_{bencode(self.folder)}_COUNT"
+        countvalue = len(self._get_table(value))
+        cache.set(f"{key}::{is_null(value, '')}", countvalue, 300)
+        return countvalue
 
     def insert_rec(self, rec):
+        """Insert a record into the table."""
         pass
 
     def update_rec(self, rec):
+        """Update a record in the table."""
         pass
 
     def delete_rec(self, nr):
+        """Delete a record from the table."""
         pass
 
     def auto(self, col_name, col_names, rec):
+        """Automatically fill a column."""
         pass
 
     def exec_command(self, value):
-        """exec:
-        COPY(source_folder, dest_folder, files, mask);
-        DEL(source_folder, files);
-        MKDIR(source_folder, folder_name);
-        MOVE(source_folder, dest_folder, files, mask):
-        RENAME(source_path, new_name);
-        NEWFILE(source_path, new_name);
-        """
-
+        """Execute a command on the table."""
         thread_commands = ("COPY", "MOVE", "DELETE")
         if value[0] in thread_commands:
-            parm = {}
-            parm["cmd"] = value[0]
-            if value[1][1]:
-                parm["files"] = [bdecode(v) for v in value[1][1]]
-            else:
-                parm["files"] = [
-                    bdecode(value[1][0]),
-                ]
+            parm = {"cmd": value[0]}
+            parm["files"] = (
+                [bdecode(v) for v in value[1][1]]
+                if value[1][1]
+                else [bdecode(value[1][0])]
+            )
             if len(value[2]) > 1:
                 parm["dest"] = bdecode(value[2][1])
 
@@ -273,24 +231,23 @@ class VfsTable(Table):
             task_id = async_task(
                 "schcommander.tasks.vfs_action", task_publish_id=publish_id, param=parm
             )
-            c = {"task_id": task_id, "process_id": "vfs_action__" + publish_id}
+            c = {"task_id": task_id, "process_id": f"vfs_action__{publish_id}"}
         elif value[0] == "MKDIR":
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
-            default_storage.fs.makedir(path + "/" + name)
+            default_storage.fs.makedir(f"{path}/{name}")
             c = {}
         elif value[0] == "NEWFILE":
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
-            with default_storage.fs.open(path + "/" + name, "wb") as f:
+            with default_storage.fs.open(f"{path}/{name}", "wb") as f:
                 pass
-            # default_storage.fs.createfile(path+"/"+name)
             c = {}
         elif value[0] == "RENAME":
             source = bdecode(value[1][0])
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
-            default_storage.fs.move(source, path + "/" + name)
+            default_storage.fs.move(source, f"{path}/{name}")
             c = {}
         else:
             c = {}
@@ -298,38 +255,33 @@ class VfsTable(Table):
 
 
 def vfstable_view(request, folder, value=None):
+    """Handle requests for the VFS table view."""
     if request.POST:
-        p = request.POST.copy()
-        d = {}
-        for (key, val) in list(p.items()):
-            if key != "csrfmiddlewaretoken":
-                d[str(key)] = schjson.loads(val)
+        d = {
+            key: schjson.loads(val)
+            for key, val in request.POST.items()
+            if key != "csrfmiddlewaretoken"
+        }
     else:
         d = {}
-    if value and value != "" and value != "_":
+
+    if value and value not in ("", "_"):
         d["value"] = bdecode(value)
-    if folder and folder != "" and folder != "_":
-        folder2 = bdecode(folder)
-    else:
-        folder2 = "/"
-    # folder2 = replace_dot(folder2)
-    folder2 = norm_path(folder2)
+    folder2 = norm_path(bdecode(folder)) if folder and folder not in ("", "_") else "/"
     tabview = VfsTable(folder2)
     retstr = tabview.command(d)
     return HttpResponse(retstr)
 
 
 def vfsopen(request, file):
+    """Handle requests to open a file."""
     try:
-        try:
-            file2 = bdecode(file)
-        except:
-            file2 = bdecode(file)
-        plik = default_storage.fs.open(automount(file2), "rb")
-        buf = plik.read()
-        plik.close()
-    except:
-        buf = ""
+        file2 = bdecode(file)
+        with default_storage.fs.open(automount(file2), "rb") as plik:
+            buf = plik.read()
+    except Exception as e:
+        print(f"Error opening file {file}: {e}")
+        buf = b""
 
     headers = {}
     if file2.endswith(".pdf"):
@@ -358,70 +310,62 @@ def vfsopen(request, file):
             mt = mimetypes.types_map[ext]
             headers = {
                 "Content-Type": mt,
-                "Content-Disposition": 'attachment; filename="file' + ext + '"',
+                "Content-Disposition": f'attachment; filename="file{ext}"',
             }
 
     return HttpResponse(buf, headers=headers)
 
 
 def vfsopen_page(request, file, page):
+    """Handle requests to open a specific page of a file."""
     try:
         file2 = bdecode(file)
         page2 = int(page)
-        plik = default_storage.fs.open(automount(file2), "rb")
-        try:
+        with default_storage.fs.open(automount(file2), "rb") as plik:
             plik.seek(page2 * 4096)
             buf = binascii.hexlify(plik.read(4096))
-            plik.close()
-        except:
-            buf = ""
-    except:
-        buf = ""
+    except Exception as e:
+        print(f"Error opening page {page} of file {file}: {e}")
+        buf = b""
     return HttpResponse(buf)
 
 
 def vfssave(request, file):
+    """Handle requests to save a file."""
     buf = "ERROR"
-    plik = None
     if request.POST:
         try:
             data = request.POST["data"]
             file2 = bdecode(file)
-            plik = default_storage.fs.open(automount(file2), "w")
-            plik.write(data)
-            plik.close()
+            with default_storage.fs.open(automount(file2), "w") as plik:
+                plik.write(data)
             x = file2.split("/")[-1].split(".")
-            if len(x) > 2:
-                if x[-1].lower() in ("imd", "md", "ihtml", "html"):
-                    if x[-2].lower() in ("html", "pdf", "spdf", "docx", "xlsx"):
-                        file3 = file2.replace("." + x[-1], "")
-                        convert_file(file2, file3)
+            if len(x) > 2 and x[-1].lower() in ("imd", "md", "ihtml", "html"):
+                if x[-2].lower() in ("html", "pdf", "spdf", "docx", "xlsx"):
+                    file3 = file2.replace(f".{x[-1]}", "")
+                    convert_file(file2, file3)
             buf = "OK"
-        except:
-            buf = "ERROR: " + str(sys.exc_info()[0])
-            if plik:
-                plik.close()
+        except Exception as e:
+            buf = f"ERROR: {e}"
     return HttpResponse(buf)
 
 
 def vfsview(request, file):
-    buf = "ERROR"
-    # try:
-    if True:
+    """Handle requests to view a file."""
+    try:
         file2 = bdecode(file)
-        if file2.endswith(".ithm") or file2.endswith(".imd") or file2.endswith(".md"):
+        if file2.endswith((".ithm", ".imd", ".md")):
             return vfsconvert(request, file, "html")
         with default_storage.fs.open(automount(file2), "r") as f:
             buf = f.read()
-    # except:
-    #    buf = "ERROR: " + str(sys.exc_info()[0])
-    return buf
+    except Exception as e:
+        buf = f"ERROR: {e}"
+    return HttpResponse(buf)
 
 
-# input formats: ihtml, html, imd, md
-# output formats: html, pdf, xlsx, docx
 def vfsconvert(request, file, output_format="pdf"):
+    """Handle requests to convert a file to a different format."""
     file2 = bdecode(file)
     output_stream = io.BytesIO()
     convert_file(file2, output_stream, output_format=output_format)
-    return output_stream.getvalue()
+    return HttpResponse(output_stream.getvalue())

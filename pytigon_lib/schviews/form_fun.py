@@ -1,34 +1,9 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Sławomir Chołaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Sławomir Chołaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
-"""Module contains views for form processing
-
-"""
-
+"""Module contains views for form processing."""
 
 from django.http import HttpResponse
-from django.template import RequestContext
-from django.template import loader
+from django.template import RequestContext, loader
 from django.conf import settings
-
 from pytigon_lib.schviews.viewtools import render_to_response
-
 from .perms import make_perms_url_test_fun
 from .viewtools import render_to_response_ext
 
@@ -43,112 +18,106 @@ def form(
     param=None,
     mimetype=None,
 ):
-    """Function make new form views
+    """Create and process a form view.
 
     Args:
-        request
-        app_name
-        form_class
-        template_name
-        object_id
-        form_end
-        param
-        mimetype
+        request: The HTTP request object.
+        app_name: The name of the application.
+        form_class: The form class to instantiate.
+        template_name: The template to render.
+        object_id: Optional object ID for the form.
+        form_end: Optional flag indicating form end.
+        param: Optional parameters for form processing.
+        mimetype: Optional mimetype for the response.
+
+    Returns:
+        HttpResponse: The rendered response.
     """
-    template_name2 = template_name
-    # prj = ""
-    # for app in settings.APPS:
-    #    if '.' in app and app_name in app:
-    #        _app = app.split('.')[0]
-    #        if not _app.startswith('_'):
-    #            prj = app.split('.')[0]
-    #        break
+    try:
+        form_instance = None
+        if hasattr(form_class, "get_form_arguments"):
+            form_args = form_class.get_form_arguments(request)
+            if form_args:
+                form_instance = form_class(**form_args)
 
-    f = None
-    if hasattr(form_class, "get_form_arguments"):
-        argv = form_class.get_form_arguments(request)
-        if argv != None:
-            f = form_class(**argv)
-    if f == None:
-        if request.POST or request.FILES:
-            f = form_class(request.POST, request.FILES)
+        if not form_instance:
+            form_instance = form_class(request.POST or None, request.FILES or None)
+
+        if hasattr(form_instance, "preprocess_request"):
+            post_data = form_instance.preprocess_request(request)
         else:
-            f = form_class()
+            post_data = request.POST
 
-    if hasattr(f, "preprocess_request"):
-        post = f.preprocess_request(request)
-    else:
-        post = request.POST
+        if post_data:
+            if hasattr(form_instance, "init"):
+                form_instance.init(request)
 
-    if post:
-        if hasattr(f, "init"):
-            f.init(request)
-        if f.is_valid():
-            if param:
-                user_dict = f.process(request, param)
-            else:
-                user_dict = f.process(request)
-            if not issubclass(type(user_dict), dict):
-                return user_dict
-            user_dict.update({"form": f})
-            if object_id:
-                user_dict.update({"object_id": object_id})
-
-            c = RequestContext(request, user_dict)
-            if hasattr(f, "render_to_response"):
-                return f.render_to_response(request, template_name2, c)
-            else:
-                if "doc_type" in user_dict:
-                    doc_type = user_dict["doc_type"]
-                else:
-                    doc_type = "html"
-                return render_to_response_ext(
-                    request, template_name2, context=user_dict, doc_type=doc_type
+            if form_instance.is_valid():
+                result = (
+                    form_instance.process(request, param)
+                    if param
+                    else form_instance.process(request)
                 )
-        else:
-            if hasattr(f, "process_invalid"):
-                if param:
-                    user_dict = f.process(request, param)
-                else:
-                    user_dict = f.process(request)
-                user_dict.update({"form": f})
-                if not issubclass(type(user_dict), dict):
-                    return user_dict
+                if not isinstance(result, dict):
+                    return result
+
+                result.update({"form": form_instance})
                 if object_id:
-                    user_dict.update({"object_id": object_id})
-                return render_to_response(
-                    template_name2, context=user_dict, request=request
-                )
-            else:
-                return render_to_response(
-                    template_name2, context={"form": f}, request=request
-                )
-    else:
-        if hasattr(f, "init"):
-            f.init(request)
-        if object_id:
-            f.object_id = object_id
+                    result.update({"object_id": object_id})
 
-        if hasattr(f, "process_empty"):
-            if param:
-                user_dict = f.process_empty(request, param)
+                if hasattr(form_instance, "render_to_response"):
+                    return form_instance.render_to_response(
+                        request, template_name, RequestContext(request, result)
+                    )
+                else:
+                    doc_type = result.get("doc_type", "html")
+                    return render_to_response_ext(
+                        request, template_name, context=result, doc_type=doc_type
+                    )
             else:
-                user_dict = f.process_empty(request)
-            user_dict["form"] = f
-            # user_dict['prj'] = prj
+                if hasattr(form_instance, "process_invalid"):
+                    result = (
+                        form_instance.process(request, param)
+                        if param
+                        else form_instance.process(request)
+                    )
+                    result.update({"form": form_instance})
+                    if object_id:
+                        result.update({"object_id": object_id})
+                    return render_to_response(
+                        template_name, context=result, request=request
+                    )
+                else:
+                    return render_to_response(
+                        template_name, context={"form": form_instance}, request=request
+                    )
         else:
-            # user_dict = {'form': f,  'prj': prj}
-            user_dict = {
-                "form": f,
-            }
+            if hasattr(form_instance, "init"):
+                form_instance.init(request)
             if object_id:
-                user_dict.update({"object_id": object_id})
-            if param:
-                user_dict.update(param)
-        return render_to_response(template_name2, context=user_dict, request=request)
+                form_instance.object_id = object_id
+
+            if hasattr(form_instance, "process_empty"):
+                result = (
+                    form_instance.process_empty(request, param)
+                    if param
+                    else form_instance.process_empty(request)
+                )
+                result["form"] = form_instance
+            else:
+                result = {"form": form_instance}
+                if object_id:
+                    result.update({"object_id": object_id})
+                if param:
+                    result.update(param)
+
+            return render_to_response(template_name, context=result, request=request)
+    except Exception as e:
+        return HttpResponse(f"An error occurred: {str(e)}", status=500)
 
 
 def form_with_perms(app):
+    """Create a form view with permissions."""
     return make_perms_url_test_fun(app, form)
 
 
@@ -167,95 +136,78 @@ def list_and_form(
     mimetype=None,
     param=None,
 ):
-    """List form
+    """List and process a form view.
 
     Args:
-        request
-        queryset
-        form_class
-        template_name
-        table_always
-        paginate_by
-        page
-        allow_empty
-        extra_context
-        context_processors
-        template_object_name
-        mimetype
-        param
+        request: The HTTP request object.
+        queryset: The queryset to display.
+        form_class: The form class to instantiate.
+        template_name: The template to render.
+        table_always: Whether to always display the table.
+        paginate_by: Number of items per page.
+        page: The current page number.
+        allow_empty: Whether to allow empty querysets.
+        extra_context: Additional context data.
+        context_processors: Context processors to apply.
+        template_object_name: The name of the object in the template.
+        mimetype: Optional mimetype for the response.
+        param: Optional parameters for form processing.
+
+    Returns:
+        HttpResponse: The rendered response.
     """
-
-    queryset2 = queryset
-    if request.POST:
-        new_data = request.POST.copy()
-        f = form_class(new_data)
-        if f.is_valid():
-            if param:
-                queryset2 = f.Process(request, queryset, param)
-            else:
-                queryset2 = f.Process(request, queryset)
-            if extra_context:
-                extra_context.update({"form": f})
-            else:
-                extra_context = {"form": f}
-            return list(
-                request=request,
-                queryset=queryset2,
-                paginate_by=paginate_by,
-                page=page,
-                allow_empty=allow_empty,
-                template_loader=loader,
-                template_name=template_name,
-                extra_context=extra_context,
-                context_processors=context_processors,
-                template_object_name=template_object_name,
-                mimetype=mimetype,
+    try:
+        form_instance = form_class(request.POST or None)
+        if request.POST and form_instance.is_valid():
+            queryset = (
+                form_instance.Process(request, queryset, param)
+                if param
+                else form_instance.Process(request, queryset)
             )
-    else:
-        f = form_class()
-        if table_always:
-            if extra_context:
-                extra_context.update({"form": f})
-            else:
-                extra_context = {"form": f}
+            extra_context = extra_context or {}
+            extra_context.update({"form": form_instance})
+        elif table_always:
+            extra_context = extra_context or {}
+            extra_context.update({"form": form_instance})
+            if hasattr(form_instance, "ProcessEmpty"):
+                queryset = (
+                    form_instance.ProcessEmpty(request, queryset, param)
+                    if param
+                    else form_instance.ProcessEmpty(request, queryset)
+                )
 
-            if hasattr(f, "ProcessEmpty"):
-                if param:
-                    queryset2 = f.ProcessEmpty(request, queryset, param)
-                else:
-                    queryset2 = f.ProcessEmpty(request, queryset)
-
-            return list(
-                request=request,
-                queryset=queryset2,
-                paginate_by=paginate_by,
-                page=page,
-                allow_empty=allow_empty,
-                template_loader=loader,
-                template_name=template_name,
-                extra_context=extra_context,
-                context_processors=context_processors,
-                template_object_name=template_object_name,
-                mimetype=mimetype,
-            )
-
-    return render_to_response(template_name, context={"form": f}, request=request)
+        return render_to_response(
+            template_name,
+            context={
+                "form": form_instance,
+                "object_list": queryset,
+                **(extra_context or {}),
+            },
+            request=request,
+        )
+    except Exception as e:
+        return HttpResponse(f"An error occurred: {str(e)}", status=500)
 
 
 def direct_to_template(request, template, extra_context=None, mimetype=None, **kwargs):
+    """Render a template directly with additional context.
+
+    Args:
+        request: The HTTP request object.
+        template: The template to render.
+        extra_context: Additional context data.
+        mimetype: Optional mimetype for the response.
+        **kwargs: Additional URL parameters.
+
+    Returns:
+        HttpResponse: The rendered response.
     """
-    Render a given template with any extra URL parameters in the context as
-    ``{{ params }}``.
-    """
-    if extra_context is None:
-        extra_context = {}
-    dictionary = {"params": kwargs}
-    for key, value in extra_context.items():
-        if callable(value):
-            dictionary[key] = value()
-        else:
-            dictionary[key] = value
-    c = RequestContext(request, dictionary)
-    t = loader.get_template(template)
-    s = t.render(c)
-    return HttpResponse(s, mimetype=mimetype)
+    try:
+        context = {"params": kwargs}
+        if extra_context:
+            context.update(
+                {k: v() if callable(v) else v for k, v in extra_context.items()}
+            )
+        return render_to_response(template, context=context, request=request)
+    except Exception as e:
+        return HttpResponse(f"An error occurred: {str(e)}", status=500)

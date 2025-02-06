@@ -1,85 +1,82 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# copyright: "Copyright (C) ????/2012 Slawomir Cholaj"
-# license: "LGPL 3.0"
-# version: "0.1a"
-
 import logging
 from html.parser import HTMLParser
 
 
 class OnlyTxtParser(HTMLParser):
+    """HTML parser that extracts and concatenates text content from HTML."""
+
     def __init__(self):
-        HTMLParser.__init__(self)
+        super().__init__()
         self.txt = []
 
     def handle_data(self, data):
+        """Append stripped text data to the list."""
         self.txt.append(data.strip())
 
     def to_txt(self):
+        """Return concatenated text content."""
         return " ".join(self.txt)
 
 
 def to_txt(html_txt):
+    """Convert HTML text to plain text."""
     try:
         parser = OnlyTxtParser()
         parser.feed(html_txt)
         return parser.to_txt()
-    except:
+    except Exception as e:
+        logging.error(f"Error converting HTML to text: {e}")
         return ""
 
 
 class RemoteScreen:
-    def __init__(self, cproxy, direction="down"):
+    """Class for handling remote screen logging and printing."""
+
+    def __init__(self, cproxy=None, direction="down"):
+        """Initialize RemoteScreen with a proxy and direction."""
         self.cproxy = cproxy
         self.direction = direction
 
     def __enter__(self):
+        """Enter the context manager."""
         self.raw_print("<div class='log'></div>===>>")
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exit the context manager."""
         pass
 
     def raw_print(self, html_txt):
+        """Print raw HTML text or send it via proxy."""
         if self.cproxy:
             self.cproxy.send_event(html_txt)
         else:
             print(html_txt)
 
-    def _log(self, html_txt, p_class, fun, operator):
-        if self.direction == "down":
-            operator2 = operator
-        else:
-            operator2 = operator.replace(">>", "<<")
+    def _log(self, html_txt, p_class, log_func, operator):
+        """Internal method to log messages with specified class and operator."""
+        operator2 = (
+            operator.replace(">>", "<<") if self.direction != "down" else operator
+        )
 
         if self.cproxy:
-            self.raw_print(f"<p class='{p_class}'>" + html_txt + "</p>" + operator2)
+            self.raw_print(f"<p class='{p_class}'>{html_txt}</p>{operator2}")
         else:
-            if fun:
-                fun(to_txt(html_txt))
+            if log_func:
+                log_func(to_txt(html_txt))
 
     def log(self, html_txt):
-        return self._log(html_txt, "log-line", logging.info, "===>>.log")
+        """Log a standard message."""
+        self._log(html_txt, "log-line", logging.info, "===>>.log")
 
     def info(self, html_txt):
-        return self._log(html_txt, "text-info", logging.info, "===>>.log")
+        """Log an informational message."""
+        self._log(html_txt, "text-info", logging.info, "===>>.log")
 
     def warning(self, html_txt):
-        return self._log(html_txt, "text-warning", logging.warning, "===>>.log")
+        """Log a warning message."""
+        self._log(html_txt, "text-warning", logging.warning, "===>>.log")
 
     def error(self, html_txt):
-        return self._log(html_txt, "text-white bg-danger", logging.error, "===>>.log")
+        """Log an error message."""
+        self._log(html_txt, "text-white bg-danger", logging.error, "===>>.log")
