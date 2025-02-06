@@ -1,18 +1,29 @@
 import os
+import os.path
 import io
 import gettext
 import codecs
 from pytigon_lib.schindent.py_to_js import compile
 from pytigon_lib.schtools.tools import norm_indent
+
 from .indent_tools import convert_js
 from django.conf import settings
-from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
+from pytigon_lib.schtools.main_paths import get_prj_name
+
 
 try:
     import markdown
 
     def convert_md(stream_in, stream_out):
+        """
+        Convert Markdown code to HTML and write to a stream.
+
+        :param stream_in: Input stream with Markdown code
+        :param stream_out: Output stream with HTML code
+        :return: True if conversion was successful, False otherwise
+        """
         if stream_in and stream_out:
+            # print(norm_indent(stream_in.getvalue()))
             buf = markdown.markdown(
                 norm_indent(stream_in.getvalue()),
                 extensions=[
@@ -31,16 +42,18 @@ try:
             return True
         return False
 
-except ImportError:
+except:
     pass
 
+PY_TO_JS = None
 
-def list_with_next_generator(lst):
-    old = lst[0]
-    for pos in lst[1:]:
+
+def list_with_next_generator(l):
+    old = l[0]
+    for pos in l[1:]:
         yield (old, pos)
         old = pos
-    yield (lst[-1], None)
+    yield (l[-1], None)
 
 
 def translate(s):
@@ -48,57 +61,71 @@ def translate(s):
 
 
 def iter_lines(f, f_name, lang):
+    in_table = 0
     base_path = os.path.join(settings.PRJ_PATH, get_prj_name())
     locale_path = os.path.join(base_path, "locale")
-    tab_translate = []
 
-    if f:
-        f2 = f
-    else:
-        f2 = open(f_name, "rt", encoding="utf-8")
+    tab_translate = []
 
     if lang != "en":
         try:
-            t = gettext.translation("django", locale_path, languages=[lang])
-            t.install()
+            try:
+                t = gettext.translation(
+                    "django",
+                    locale_path,
+                    languages=[
+                        lang,
+                    ],
+                )
+                t.install()
+            except:
+                t = None
+            try:
+                with open(
+                    os.path.join(base_path, "translate.py"), "rt", encoding="utf-8"
+                ) as p:
+                    for line in p.readlines():
+                        fr = line.split('_("')
+                        if len(fr) > 1:
+                            fr = fr[1].split('")')
+                            if len(fr) == 2:
+                                tab_translate.append(fr[0])
+            except:
+                tab_translate = []
+
+            def trans(word):
+                if len(word) < 2:
+                    return word
+                if word[0] == word[-1] == '"' or word[0] == word[-1] == "'":
+                    if word[0] == "'":
+                        strtest = "'"
+                    else:
+                        strtest = '"'
+                    word2 = word[1:-1]
+                else:
+                    strtest = None
+                    word2 = word
+
+                if not word2 in tab_translate:
+                    tab_translate.append(word2)
+                if t:
+                    ret = t.gettext(word2)
+                    if strtest != None:
+                        return strtest + ret + strtest
+                    else:
+                        return ret
+                else:
+                    return translate(word)
+
+            gt = trans
         except:
-            t = None
-
-        try:
-            with open(
-                os.path.join(base_path, "translate.py"), "rt", encoding="utf-8"
-            ) as p:
-                for line in p.readlines():
-                    fr = line.split('_("')
-                    if len(fr) > 1:
-                        fr = fr[1].split('")')
-                        if len(fr) == 2:
-                            tab_translate.append(fr[0])
-        except:
-            tab_translate = []
-
-        def trans(word):
-            if len(word) < 2:
-                return word
-            if word[0] == word[-1] == '"' or word[0] == word[-1] == "'":
-                strtest = word[0]
-                word2 = word[1:-1]
-            else:
-                strtest = None
-                word2 = word
-
-            if word2 not in tab_translate:
-                tab_translate.append(word2)
-            if t:
-                ret = t.gettext(word2)
-                return f"{strtest}{ret}{strtest}" if strtest else ret
-            return translate(word)
-
-        gt = trans
+            gt = translate
     else:
         gt = translate
 
-    for line in f2:
+    for line in f:
+        # if len(line.lstrip()) == 0:
+        #    continue
         if line.lstrip().startswith("_") and not line.lstrip().startswith("_("):
             nr = line.find("_")
             line2 = " " * nr + "." + gt(line.strip()[1:])
@@ -122,20 +149,44 @@ def iter_lines(f, f_name, lang):
             else:
                 line2 = line
 
+        line3 = line2.strip()
+        if len(line3) > 0 and (line3[0] == "[" or line3[-1] == "]" or "|" in line3):
+            if line3[0] == "[" and (
+                line3[-1] == "|" or (line3[-1] == "]" and "|" in line3)
+            ):
+                if line3[1] == "[":
+                    in_table = 2
+                else:
+                    in_table = 1
+            if in_table == 1:
+                line2 = (
+                    line2.replace("[", "<tr><td>")
+                    .replace("]", "</td></tr>")
+                    .replace(" |", " </td><td>")
+                )
+            if in_table == 2:
+                line2 = (
+                    line2.replace("[[", "<tr><th>")
+                    .replace("]]", "</th></tr>")
+                    .replace(" |", " </th><th>")
+                )
+            if line3[-1] == "]":
+                in_table = False
         yield line2
-    if not f:
-        f2.close()
     yield "."
+    if len(tab_translate) > 0:
+        if "site-packages" not in base_path:
+            try:
+                with open(
+                    os.path.join(base_path, "translate.py"), "wt", encoding="utf-8"
+                ) as p:
+                    for word in tab_translate:
+                        p.write('_("' + word + '")\n')
+            except:
+                import sys, traceback
 
-    if tab_translate and "site-packages" not in base_path:
-        try:
-            with open(
-                os.path.join(base_path, "translate.py"), "wt", encoding="utf-8"
-            ) as p:
-                for word in tab_translate:
-                    p.write(f'_("{word}")\n')
-        except Exception as e:
-            print(f"Error writing translation file: {e}")
+                print(sys.exc_info())
+                traceback.print_exc()
 
 
 class ConwertToHtml:
@@ -170,12 +221,20 @@ class ConwertToHtml:
                 break
 
     def _space_count(self, buf):
-        return len(buf) - len(buf.lstrip())
+        i = 0
+        for z in buf:
+            if z == " ":
+                i = i + 1
+            else:
+                break
+        return i
 
     def _get_elem(self, elem):
         elem2 = elem.lstrip()
         id = elem2.find(" ")
-        return elem2[:id] if id > 0 else elem2
+        if id > 0:
+            return elem2[:id]
+        return elem2
 
     def _transform_elem(self, elem):
         id = elem.find(" ")
@@ -233,37 +292,58 @@ class ConwertToHtml:
                     code = self._transform_elem(code)
         return [(n, code, html, 0)]
 
+    def _status_close(self, status, line, next_line):
+        if status == 0:
+            return 0
+        if status == 1:
+            return 1
+        if status == 2:
+            return 0
+        if status == 3:
+            return 2
+        if status == 4:
+            if next_line[0] > line[0]:
+                return 3
+            else:
+                return 1
+        return status
+
     def transform_line(self, line, next_line):
-        if not (line[1] is None and line[2] is None):
+        if not (line[1] == None and line[2] == None):
             self._output_buf(line[0])
 
         if line[1]:
             if line[1][0] == "%":
                 if line[1][1] == "%":
                     if next_line[0] <= line[0] and not (
-                        next_line[1] is None and next_line[2] is None
+                        next_line[1] == None and next_line[2] == None
                     ):
                         self.output.append(
                             [
                                 line[0],
-                                f"{{% block {line[1][2:].lstrip()} %}}{line[2] if line[2] else ''}{{% endblock %}}",
+                                "{% block "
+                                + (line[1])[2:].lstrip()
+                                + " %}"
+                                + (line[2] if line[2] else "")
+                                + "{% endblock %}",
                                 line[3],
                             ]
                         )
                     else:
                         self.output.append(
-                            [line[0], f"{{% block {line[1][2:].lstrip()} %}}", line[3]]
+                            [
+                                line[0],
+                                "{% block " + (line[1])[2:].lstrip() + " %}",
+                                line[3],
+                            ]
                         )
                         if line[2]:
                             self.output.append([line[0], line[2], line[3]])
                         self.bufor.append([line[0], "{% endblock %}", line[3]])
                 else:
                     auto_end = False
-                    tag = line[1][1:].split()[0].strip()
-                    full_tag = line[1][1:].strip()
-                    # auto_end = (
-                    #    full_tag.endswith(":") and tag not in self.no_auto_close_elem
-                    # )
+                    tag = (line[1])[1:].split()[0].strip()
+                    full_tag = (line[1])[1:].strip()
                     if full_tag.endswith(":"):
                         auto_end = True
                         tag = tag.replace(":", "")
@@ -271,77 +351,89 @@ class ConwertToHtml:
                         if tag in self.no_auto_close_elem:
                             auto_end = False
 
-                    self.output.append([line[0], f"{{% {full_tag} %}}", line[3]])
+                    self.output.append([line[0], "{% " + full_tag + " %}", line[3]])
+
                     if auto_end or tag in self.auto_close_elem or "_ext" in tag:
-                        self.bufor.append([line[0], f"{{% end{tag} %}}", line[3]])
+                        self.bufor.append([line[0], "{% end" + tag + " %}", line[3]])
                     if line[2]:
                         self.output.append([line[0], line[2], line[3]])
             else:
                 if next_line[0] <= line[0] and not (
-                    next_line[1] is None and next_line[2] is None
+                    next_line[1] == None and next_line[2] == None
                 ):
-                    if line[2] or self._get_elem(line[1]) not in self.simple_close_elem:
+                    if line[2] or not self._get_elem(line[1]) in self.simple_close_elem:
                         s = line[2] if line[2] else ""
                         self.output.append(
                             [
                                 line[0],
-                                f"<{line[1]}>{s}</{self._get_elem(line[1])}>",
-                                line[3],
+                                "<"
+                                + line[1]
+                                + ">"
+                                + s
+                                + "</"
+                                + self._get_elem(line[1])
+                                + ">",
+                                self._status_close(line[3], line, next_line),
                             ]
                         )
                     else:
-                        self.output.append([line[0], f"<{line[1]} />", line[3]])
+                        self.output.append([line[0], "<" + line[1] + " />", line[3]])
                 else:
-                    self.output.append([line[0], f"<{line[1]}>", line[3]])
+                    self.output.append([line[0], "<" + line[1] + ">", line[3]])
                     if line[2]:
                         self.output.append([line[0], line[2], line[3]])
                     self.bufor.append(
-                        [line[0], f"</{self._get_elem(line[1])}>", line[3]]
+                        [
+                            line[0],
+                            "</" + self._get_elem(line[1]) + ">",
+                            self._status_close(line[3], line, next_line),
+                        ]
                     )
         else:
             self.output.append([line[0], line[2], line[3]])
 
     def transform(self):
         old_line = None
+        # breakpoint()
         for line in self.code:
-            if old_line is not None:
+            if old_line == None:
+                old_line = line
+            else:
                 self.transform_line(old_line, line)
-            old_line = line
+                old_line = line
         if old_line:
             self.transform_line(old_line, (0, None, None))
         self._output_buf(-1)
 
     def process(self):
         if self.file_name:
-            file1 = codecs.open(self.file_name, "r", encoding="utf-8")
-            x = file1.readline()
-            file1.seek(0, 0)
+            file = codecs.open(self.file_name, "r", encoding="utf-8")
+            x = file.readline()
+            file.seek(0, 0)
             if x.startswith("@@@"):
                 fname = x[3:].strip()
                 fpath = os.path.join(os.path.dirname(self.file_name), fname) + ".ihtml"
-                with codecs.open(fpath, "r", encoding="utf-8") as file2:
-                    content2 = file1.read()[len(x) :]
-                    content = file2.read().replace("@@@", content2)
+                file2 = codecs.open(fpath, "r", encoding="utf-8")
+                content2 = file.read()[len(x) :]
+                content = file2.read().replace("@@@", content2)
+                file2.close()
+                file.close()
                 file = io.StringIO(content)
-                file1.close()
-            else:
-                file = file1
         else:
             file = io.StringIO(self.input_str)
-
         old_pos = 0
         buf = None
         buf0 = ""
         test = 0
         cont = False
         indent_pos = 0
-
         for _line in iter_lines(file, self.file_name, self.lang):
             line = _line.replace("\n", "").replace("\r", "").replace("\t", "        ")
-            if line.replace(" ", "") in ("%else", "%else:"):
+            if line.replace(" ", "") == "%else" or line.replace(" ", "") == "%else:":
                 line = " " + line
             if "^^^" in line:
                 self.no_conwert = True
+                file.close()
                 return
 
             if test:
@@ -353,7 +445,13 @@ class ConwertToHtml:
                     cont = True
                 if cont or "<<<" in line:
                     if test == 1:
-                        l = line.replace("<<<", "").rstrip()
+                        l = (
+                            line.replace("\n", "")
+                            .replace("\r", "")
+                            .replace("\t", "        ")
+                            .replace("<<<", "")
+                            .rstrip()
+                        )
                         buf.write(l)
                         x = self._pre_process_line(buf0 + buf.getvalue())
                         for pos in x:
@@ -367,7 +465,13 @@ class ConwertToHtml:
                         continue
                     if test > 1:
                         if not cont:
-                            l = line.replace("<<<", "").rstrip()
+                            l = (
+                                line.replace("\n", "")
+                                .replace("\r", "")
+                                .replace("\t", "        ")
+                                .replace("<<<", "")
+                                .rstrip()
+                            )
                             buf.write(l)
                         if test == 2:
                             buf2 = io.StringIO()
@@ -413,36 +517,75 @@ class ConwertToHtml:
                         buf2 = None
                         test = 0
                 else:
-                    buf.write(line.rstrip() + "\n")
+                    buf.write(
+                        line.replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                        + "\n"
+                    )
                     continue
             if cont or not test:
                 cont = False
                 if ">>>" in line:
                     pos = line.find(">>>")
-                    buf0 = line[: pos + 3].replace(">>>", "...|||")
+                    if len(line[:pos].strip()) > 0:
+                        buf0 = line[: pos + 3].replace(">>>", "...|||")
+                    else:
+                        buf0 = line[: pos + 3].replace(">>>", ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 3 :].rstrip())
+                    buf.write(
+                        line[pos + 3 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = 1
                 elif "{:}" in line:
                     indent_pos = self._space_count(line)
                     pos = line.find("{:}")
-                    buf0 = line[: pos + 4].replace("{:}", "...|||")
+                    if len(line[:pos].strip()) > 0:
+                        buf0 = line[: pos + 4].replace("{:}", "...|||")
+                    else:
+                        buf0 = line[: pos + 4].replace("{:}", ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 4 :].rstrip())
+                    buf.write(
+                        line[pos + 4 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = 2
                 elif "===>" in line:
                     indent_pos = self._space_count(line)
                     pos = line.find("===>")
-                    buf0 = line[: pos + 4].replace("===>", "...|||")
+                    if len(line[:pos].strip()) > 0:
+                        buf0 = line[: pos + 4].replace("===>", "...|||")
+                    else:
+                        buf0 = line[: pos + 4].replace("===>", ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 4 :].rstrip())
+                    buf.write(
+                        line[pos + 4 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = 3
                 elif "script language=python" in line:
                     indent_pos = self._space_count(line)
                     pos = line.find("script language=python")
                     buf0 = line + "...|||"
                     buf = io.StringIO()
-                    buf.write(line[pos + 22 :].rstrip())
+                    buf.write(
+                        line[pos + 22 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = 3
                 elif "pscript" in line:
                     indent_pos = self._space_count(line)
@@ -463,12 +606,26 @@ class ConwertToHtml:
                 elif "###>" in line:
                     indent_pos = self._space_count(line)
                     pos = line.find("###>")
-                    buf0 = line[: pos + 4].replace("###>", "...|||")
+                    if len(line[:pos].strip()) > 0:
+                        buf0 = line[: pos + 4].replace("###>", "...|||")
+                    else:
+                        buf0 = line[: pos + 4].replace("###>", ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 4 :].rstrip())
+                    buf.write(
+                        line[pos + 4 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = 6
                 else:
-                    l = line.rstrip()
+                    l = (
+                        line.replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     x = self._pre_process_line(l)
                     for pos in x:
                         if pos:
@@ -476,14 +633,16 @@ class ConwertToHtml:
                             old_pos = pos[0]
                         else:
                             self.code.append((old_pos * 4, None, None, 1))
+        file.close()
         self.code.append((0, None, None, 1))
         self.transform()
 
     def to_str(self, beauty=True):
         if self.no_conwert:
             if self.file_name:
-                with codecs.open(self.file_name, "r", encoding="utf-8") as file:
-                    output = file.read().replace("^^^", "")
+                file = codecs.open(self.file_name, "r", encoding="utf-8")
+                output = file.read().replace("^^^", "")
+                file.close()
             else:
                 output = self.input_str.replace("^^^", "")
             output = output.replace("\r", "").replace("\\\n", "")
@@ -491,40 +650,43 @@ class ConwertToHtml:
         else:
             output = ""
             if beauty:
-                for line, nextline in list_with_next_generator(self.output):
-                    if line[0] >= 0 and (line[2] == 0 or line[2] == 3):
-                        output += " " * int(line[0] / 2)
-                    if line[1]:
-                        output += line[1]
-                    if line[2] == 0 or line[2] == 2:
-                        output += "\n"
-                    if line[2] == 4 and nextline and nextline[0] > line[0]:
-                        output += "\n"
+                if len(self.output) > 0:
+                    for line, nextline in list_with_next_generator(self.output):
+                        if line[0] >= 0 and (line[2] == 0 or line[2] == 3):
+                            output = output + " " * int(line[0] / 2)
+                        if line[1]:
+                            output = output + line[1]
+                        if line[2] == 0 or line[2] == 2:
+                            output = output + "\n"
+                        if line[2] == 4 and nextline and nextline[0] > line[0]:
+                            output = output + "\n"
                 ret = output.replace("|||", "\n")
             else:
-                for line, nextline in list_with_next_generator(self.output):
-                    if line[0] >= 0 and line[2] == 3:
-                        output += " " * int(line[0] / 2)
-                    if line[1]:
-                        output += line[1]
-                    if line[2] == 2:
-                        output += "\n"
-                    elif line[2] == 4 and nextline and nextline[0] > line[0]:
-                        output += "\n"
-                    elif (
-                        line[1]
-                        and nextline[1]
-                        and not (
-                            line[1].strip().startswith("<")
-                            or line[1].strip().startswith("{")
-                        )
-                        and not (
-                            nextline[1].strip().startswith("<")
-                            or nextline[1].strip().startswith("{")
-                        )
-                    ):
-                        output += "\n"
-                ret = output.replace("|||", "\n")
+                if len(self.output) > 0:
+                    for line, nextline in list_with_next_generator(self.output):
+                        if line[0] >= 0 and line[2] == 3:
+                            output = output + " " * int(line[0] / 2)
+                        if line[1]:
+                            output = output + line[1]
+                        if line[2] == 2:
+                            output = output + "\n"
+                        elif line[2] == 4 and nextline and nextline[0] > line[0]:
+                            output = output + "\n"
+                        elif (
+                            line[1]
+                            and nextline[1]
+                            and not (
+                                line[1].strip().startswith("<")
+                                or line[1].strip().startswith("{")
+                            )
+                            and not (
+                                nextline[1].strip().startswith("<")
+                                or nextline[1].strip().startswith("{")
+                            )
+                        ):
+                            output = output + "\n"
+                ret = output
+                ret = ret.replace("|||", "\n")
 
             if self.output_processors and "@@(" in ret:
                 tab_tmp1 = ret.split("@@(")
@@ -547,23 +709,42 @@ class ConwertToHtml:
                             ret2.append(pos)
                     else:
                         ret2.append(pos)
+
                 ret = "".join(ret2)
 
             ret = ret.replace("\r", "").replace("\\\n", "")
+
             return ret
 
 
 def ihtml_to_html_base(file_name, input_str=None, lang="en"):
+    """Convert file in ihtml format and return standard html
+
+    Args:
+        file_name - ihtml file name
+        input_str - if not None - convert input_str instead input file
+    Returns:
+        converted html string
+    """
     conwert = ConwertToHtml(file_name, ["br", "meta", "input"], [], [], input_str, lang)
     try:
         conwert.process()
         return conwert.to_str()
-    except Exception as e:
-        print(f"Error during conversion: {e}")
+    except:
+        import sys, traceback
+
+        print(sys.exc_info())
+        traceback.print_exc()
         return ""
 
 
 def py_to_js(script, module_path):
+    """Compile python script to javascript. Additional indentation are removed from python scrip before compile.
+
+    Args:
+        script - python script source
+        module_path - path for target script
+    """
     tab = -1
     out_tab = []
     for line in script.split("\n"):
@@ -574,6 +755,7 @@ def py_to_js(script, module_path):
                 continue
         out_tab.append(line[tab:])
     script2 = "\n".join(out_tab)
+    # code = py2js(script2, module_path)
     spec_format = False
     if '"""' in script2:
         spec_format = True
