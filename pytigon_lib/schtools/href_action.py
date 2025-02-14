@@ -395,8 +395,9 @@ def standard_dict(context, parm=None):
     if parm:
         d.update(parm)
 
-    d["path"] = d["request"].path
-    d["bp"] = d["base_path"]
+    if "request" in d:
+        d["path"] = d["request"].path
+    d["bp"] = d.get("base_path", "")
     if "app_path" in d:
         d["ap"] = d["app_path"]
     if "table_path" in d:

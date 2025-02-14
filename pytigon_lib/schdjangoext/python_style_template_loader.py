@@ -87,14 +87,23 @@ class FSLoader(django.template.loaders.filesystem.Loader):
         for template_dir in self.get_dirs():
             try:
                 name = safe_join(template_dir, template_name)
-                yield Origin(name=name, template_name=template_name, loader=self)
-                if "_" in name:
-                    base_name = name.rsplit("_", 1)[0] + ".html"
-                    yield Origin(
-                        name=base_name, template_name=template_name, loader=self
-                    )
             except SuspiciousFileOperation:
                 continue
+
+            yield Origin(
+                name=name,
+                template_name=template_name,
+                loader=self,
+            )
+
+            if "_" in name:
+                x = name.rsplit("_", 1)
+                if len(x[1]) == 7 and x[1].endswith(".html"):
+                    yield Origin(
+                        name=x[0] + ".html",
+                        template_name=template_name,
+                        loader=self,
+                    )
 
     def get_contents(self, origin):
         """Read template contents."""
