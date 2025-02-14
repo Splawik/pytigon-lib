@@ -3,8 +3,6 @@ import io
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 import docx.enum.text
-import pytest
-from unittest.mock import MagicMock
 
 
 class DocxDc(BaseDc):

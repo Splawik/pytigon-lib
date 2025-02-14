@@ -1,6 +1,5 @@
 from html.parser import HTMLParser
 import io
-import pytest
 
 
 def _convert_strings(lines):

@@ -3,7 +3,6 @@ import os
 from os import environ
 import sys
 from typing import Dict, Optional
-import pytest
 
 PRJ_NAME = ""
 

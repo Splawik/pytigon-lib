@@ -2,7 +2,6 @@ from pytigon_lib.schtools.images import svg_to_png, spec_resize
 from django.core.files.storage import default_storage
 import PIL
 import io
-import pytest
 
 
 class RenderBase:
