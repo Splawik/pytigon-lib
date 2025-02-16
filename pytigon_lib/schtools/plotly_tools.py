@@ -16,17 +16,17 @@ async def make_chart(fig):
         str: The file path of the generated PNG image.
     """
 
-    html_file = tempfile.NamedTemporaryFile(suffix=".html").name
-    png_file = tempfile.NamedTemporaryFile(suffix=".png").name
-    fig.write_html(html_file)
+    html_file_name = tempfile.NamedTemporaryFile(suffix=".html").name
+    png_file_name = tempfile.NamedTemporaryFile(suffix=".png").name
+    fig.write_html(html_file_name)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
-        await page.goto("file://" + html_file)
-        await page.screenshot(path=png_file, full_page=True)
-    os.unlink(html_file)
-    return png_file
+        await page.goto("file://" + html_file_name)
+        await page.screenshot(path=png_file_name, full_page=True)
+    os.unlink(html_file_name)
+    return png_file_name
 
 
 def sync_make_chart(fig):
@@ -47,6 +47,6 @@ if __name__ == "__main__":
     import plotly.express as px
 
     fig = px.scatter(x=range(10), y=range(10))
-    png_file = sync_make_chart(fig)
+    png_file_name = sync_make_chart(fig)
     # process
-    os.unlink(png_file)
+    os.unlink(png_file_name)
