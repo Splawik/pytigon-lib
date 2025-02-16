@@ -1,7 +1,7 @@
 import io
 from PIL import Image
 from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
+import numpy as np
 
 
 def spec_resize(image, width=0, height=0):
@@ -122,3 +122,49 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
 
     except Exception as e:
         raise ValueError(f"Error during SVG to PNG conversion: {e}")
+
+
+def mse(image_array1, image_array2):
+    """
+    The mean squared error between two images.
+
+    Parameters
+    ----------
+    image_array1, image_array2 : ndarray
+        Input images.
+
+    Returns
+    -------
+    err : float
+        The mean squared error (MSE) between the two input images.
+    """
+    err = np.sum((image_array1.astype("float") - image_array2.astype("float")) ** 2)
+    err /= float(image_array1.shape[0] * image_array1.shape[1])
+    return err
+
+
+def compare_images(img1, img2):
+    """
+    Compare the similarity of two images.
+
+    Parameters
+    ----------
+    img1, img2 : PIL.Image
+        Input images. img1 is the reference image.
+
+    Returns
+    -------
+    err : float
+        The mean squared error (MSE) between the two input images.
+    """
+    np.array(img1), np.array(img2)
+    img2_mod = img2.convert("RGB").resize(
+        (img1.size[0], img1.size[1]), Image.Resampling.LANCZOS
+    )
+    return mse(np.array(img1.convert("RGB")), np.array(img2_mod))
+
+
+if __name__ == "__main__":
+    img1 = Image.open("image_1.png")
+    img2 = Image.open("image_2.jpeg")
+    print(compare_images(img1, img2))
