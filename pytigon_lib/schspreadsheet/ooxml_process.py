@@ -108,87 +108,138 @@ class OOXmlDocTransform(OdfDocTransform):
             self.to_update.append((xml_name, xml))
 
     def add_comments(self, sheet):
-        """Add comments to the sheet."""
-        if not self.comments:
-            return
+        """
+        Add comments to the given sheet based on the stored comments.
 
-        labels = [
-            pos.attrib["r"]
-            for pos in sheet.findall(".//c", namespaces=sheet.nsmap)
-            if "r" in pos.attrib
-        ]
-        labels.sort(key=key_for_addr)
+        This function iterates through the cells in the provided sheet and adds
+        comments from the `self.comments` dictionary to the appropriate cells.
+        The comments are added based on their cell references, ensuring that
+        comments are placed in the correct order. The function processes each
+        comment, splitting it into multiple parts if necessary, and inserts
+        these parts at specified positions relative to the existing content
+        within the cell's parent element.
 
-        for key, value in self.comments.items():
-            key2 = key.upper()
-            value2 = value.strip()
-            label = (
-                key
-                if key in labels
-                else next((l for l in labels + [key] if l == key), labels[0])
-            )
-            d = filter_attr(sheet.findall(".//c", namespaces=sheet.nsmap), "r", label)
-            if d:
-                parent = d[0].getparent()
-                values = (
-                    [value2.split("@")[0], value2.split("@")[1]]
-                    if "@" in value2
-                    else [value2]
-                )
-                for v in values:
-                    if v.startswith("^") or v.startswith("!!"):
-                        value3 = v[2:] if v.startswith("!!") else v[1:]
-                        gparent = parent.getparent()
-                        gparent.insert(
-                            gparent.index(parent),
-                            etree.XML(f"<tmp>{escape(value3)}</tmp>"),
-                        )
-                    elif v.startswith("$"):
-                        gparent = parent.getparent()
-                        gparent.insert(
-                            gparent.index(parent) + 1,
-                            etree.XML(f"<tmp>{escape(v[1:])}</tmp>"),
-                        )
+        Args:
+            sheet (etree.Element): The XML element representing the sheet where
+                                comments will be added.
+
+        """
+        if self.comments:
+            labels = []
+            d = sheet.findall(".//c", namespaces=sheet.nsmap)
+            for pos in d:
+                if "r" in pos.attrib:
+                    labels.append(pos.attrib["r"])
+            labels.sort(key=key_for_addr)
+
+            for key, value in self.comments.items():
+                key2 = key.upper()
+                value2 = value.strip()
+                after = 0
+                if key in labels:
+                    label = key
+                else:
+                    labels2 = labels + [
+                        key,
+                    ]
+                    labels2.sort(key=key_for_addr)
+                    old = None
+                    for l in labels2:
+                        if l == key:
+                            break
+                        old = l
+                    if old:
+                        label = old
+                        after = 1
                     else:
-                        parent.insert(
-                            parent.index(d[0]),
-                            etree.XML(
-                                f"<tmp>{escape(v[1:] if v.startswith('!') else v)}</tmp>"
-                            ),
-                        )
+                        label = labels[0]
+
+                d = filter_attr(
+                    sheet.findall(".//c", namespaces=sheet.nsmap), "r", label
+                )
+                if len(d) > 0:
+                    parent = d[0].getparent()
+                    if "@" in value2:
+                        x = value2.split("@")
+                        values = [x[0], x[1]]
+                        if not x[0].startswith("^") and not x[1].startswith("$"):
+                            values[0] = "^" + values[0]
+                            values[1] = "$" + values[1]
+                    else:
+                        values = [value2]
+                    for v in values:
+                        if v.startswith("^") or v.startswith("!!"):
+                            if v.startswith("!!"):
+                                value3 = v[2:]
+                            else:
+                                value3 = v[1:]
+                            gparent = parent.getparent()
+                            gparent.insert(
+                                gparent.index(parent),
+                                etree.XML("<tmp>%s</tmp>" % escape(value3)),
+                            )
+                        elif v.startswith("$"):
+                            value3 = v[1:]
+                            gparent = parent.getparent()
+                            gparent.insert(
+                                gparent.index(parent) + 1,
+                                etree.XML("<tmp>%s</tmp>" % escape(value3)),
+                            )
+                        elif v.startswith("!"):
+                            parent.insert(
+                                parent.index(d[0]) + after,
+                                etree.XML("<tmp>%s</tmp>" % escape(v[1:])),
+                            )
+                        else:
+                            parent.insert(
+                                parent.index(d[0]) + after,
+                                etree.XML("<tmp>%s</tmp>" % escape(v)),
+                            )
 
     def shared_strings_to_inline(self, sheet):
-        """Convert shared strings to inline strings."""
+        """
+        Convert shared string references in a sheet to inline strings or formulas.
+
+        This function processes all cell elements in the given sheet with the
+        attribute `t='s'`, which indicates a shared string reference. It retrieves
+        the shared string by its ID, modifies the cell element based on specific
+        prefixes in the shared string, and converts it to an inline string or
+        a formula as appropriate.
+
+        :param sheet: The XML sheet element to process.
+        :type sheet: lxml.etree.Element
+        """
+
         d = filter_attr(sheet.findall(".//c", namespaces=sheet.nsmap), "t", "s")
         for pos in d:
             v = pos.find(".//v", namespaces=sheet.nsmap)
             try:
                 id = int(v.text)
-            except ValueError:
+            except:
                 id = -1
-            if id >= 0 and id < len(self.shared_strings):
+            if id >= 0:
                 s = self.shared_strings[id]
                 if s:
                     if s.startswith(":="):
                         pos.remove(v)
                         pos.attrib["t"] = ""
-                        pos.append(etree.XML(f"<f>{escape(s[2:])}</f>"))
+                        pos.append(etree.XML("<f>%s</f>" % escape(s[2:])))
                     elif s.startswith(":?"):
                         pos.remove(v)
                         pos.attrib["t"] = ""
-                        pos.append(etree.XML(f"<vauto>{escape(s[2:])}</vauto>"))
+                        pos.append(etree.XML("<vauto>%s</vauto>" % escape(s[2:])))
                     elif s.startswith(":0"):
                         pos.remove(v)
                         pos.attrib["t"] = "n"
-                        pos.append(etree.XML(f"<v>{escape(s[2:])}</v>"))
+                        pos.append(etree.XML("<v>%s</v>" % escape(s[2:])))
                     elif s.startswith(":*"):
                         pos.attrib["t"] = "inlineStr"
                         pos.remove(v)
-                        pos.append(etree.XML(f"<is><t>{escape(s[2:])}</t></is>"))
-                    elif "{{" in s and "}}" in s or "{%" in s and "%}" in s:
+                        pos.append(etree.XML("<is><t>%s</t></is>" % escape(s[2:])))
+                    elif ("{{" in s and "}}" in s) or ("{%" in s and "%}" in s):
                         pos.attrib["t"] = "inlineStr"
                         pos.remove(v)
-                        pos.append(etree.XML(f"<is><t>{escape(s)}</t></is>"))
+                        pos.append(etree.XML("<is><t>%s</t></is>" % escape(s)))
 
     def repair_xml(self, sheet):
         """Repair XML structure of the sheet."""
