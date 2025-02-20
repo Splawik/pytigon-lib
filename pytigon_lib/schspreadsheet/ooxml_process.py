@@ -242,7 +242,16 @@ class OOXmlDocTransform(OdfDocTransform):
                         pos.append(etree.XML("<is><t>%s</t></is>" % escape(s)))
 
     def repair_xml(self, sheet):
-        """Repair XML structure of the sheet."""
+        """
+        Repairs the XML sheet by reordering and renumbering its elements (rows
+        and columns). This is necessary because the XML structure of the OOXML
+        file is not always valid after processing through the `OdfDocTransform`
+        class. This function should be called after any of the methods of the
+        `OdfDocTransform` class.
+
+        :param sheet: The XML sheet element to process.
+        :type sheet: lxml.etree.Element
+        """
         max_row = 0
         max_col = 0
         d = sheet.findall(".//row", namespaces=sheet.nsmap)
@@ -261,10 +270,14 @@ class OOXmlDocTransform(OdfDocTransform):
                     a = c.attrib["r"]
                     _c, _r, c_id = col_row(a)
                     if _r != i or c_id != j:
-                        c_id = max(j, c_id)
+                        if c_id < j:
+                            c_id = j
+                        else:
+                            j = c_id
                         c.attrib["r"] = make_col_row(c_id, i)
-                    j = c_id + 1
-                    max_col = max(max_col, j)
+                j += 1
+                if j > max_col:
+                    max_col = j
             i += 1
 
         max_row = i - 1
@@ -273,26 +286,52 @@ class OOXmlDocTransform(OdfDocTransform):
 
         if max_row > 0 and max_col > 0:
             d = sheet.find(".//dimension", namespaces=sheet.nsmap)
-            if d is not None and "ref" in d.attrib:
-                d.attrib["ref"] = f"A1:{max_addr}"
+            if d != None:
+                if "ref" in d.attrib:
+                    addr = d.attrib["ref"]
+                    d.attrib["ref"] = "A1:" + max_addr
 
         auto_list = sheet.findall(".//vauto", namespaces=sheet.nsmap)
         for pos in auto_list:
             parent = pos.getparent()
             txt = pos.text
             parent.remove(pos)
-            if txt:
-                try:
-                    d = dateutil.parser.parse(txt)
-                    x = date_to_float(d)
-                    parent.append(etree.XML(f"<v>{x}</v>"))
-                except (ValueError, TypeError):
+            if txt != "" and txt != None:
+                if (
+                    (len(txt) == 10 or len(txt) == 19)
+                    and txt[4] == "-"
+                    and txt[7] == "-"
+                ):
                     try:
-                        x = float(txt)
-                        parent.append(etree.XML(f"<v>{escape(txt)}</v>"))
-                    except ValueError:
-                        parent.attrib["t"] = "inlineStr"
-                        parent.append(etree.XML(f"<is><t>{escape(txt)}</t></is>"))
+                        d = dateutil.parser.parse(txt)
+                        x = date_to_float(d)
+                        parent.append(etree.XML("<v>%f</v>" % x))
+                        continue
+                    except:
+                        pass
+                try:
+                    x = float(txt)
+                    parent.append(etree.XML("<v>%s</v>" % escape(txt)))
+                    continue
+                except:
+                    pass
+
+            parent.attrib["t"] = "inlineStr"
+            try:
+                if txt:
+                    parent.append(etree.XML("<is><t>%s</t></is>" % escape(txt)))
+                else:
+                    parent.append(etree.XML("<is><t></t></is>"))
+            except:
+                print(txt)
+
+        c_list = sheet.findall(".//c", namespaces=sheet.nsmap)
+        for pos in c_list:
+            f = pos.find(".//f", namespaces=sheet.nsmap)
+            if f != None:
+                v = pos.find(".//v", namespaces=sheet.nsmap)
+                if v != None:
+                    pos.remove(v)
 
     def handle_sheet(self, sheet, django_context):
         """Handle sheet transformations."""
