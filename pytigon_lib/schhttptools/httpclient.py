@@ -122,7 +122,17 @@ def asgi_or_wsgi_get_or_post(
             )
         )
     url2 = url.replace("http://127.0.0.2", "")
-    response = CLIENT.post(url2, params) if post else CLIENT.get(url2)
+    if post:
+        params2 = {}
+        for key, value in params.items():
+            if type(value) == bytes:
+                params2[key] = value.decode("utf-8")
+            else:
+                params2[key] = value
+        response = CLIENT.post(url2, params2)
+    else:
+        response = CLIENT.get(url2)
+
     result = {
         "headers": dict(response.headers),
         "type": "http.response.starthttp.response.body",
