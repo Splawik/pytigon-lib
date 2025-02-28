@@ -11,7 +11,7 @@ import io
 from zipfile import ZipFile
 import xml.dom.minidom
 
-from django.template import Template
+from django.template import Template, Context
 from django.http import HttpResponse
 from django.conf import settings
 from django.template.exceptions import TemplateDoesNotExist
@@ -98,6 +98,13 @@ class DefaultTbl:
 
 def _render_doc(doc_type, template_name, context_instance=None, debug=None):
     """Render the document and return the output file name and template name."""
+
+    if context_instance is None:
+        context_instance = {}
+
+    if type(context_instance) is dict:
+        context_instance = Context(context_instance)
+
     context = (
         {"tbl": DefaultTbl()} if "tbl" not in context_instance else context_instance
     )
@@ -131,7 +138,7 @@ def _render_doc(doc_type, template_name, context_instance=None, debug=None):
 def _find_template(template_names):
     """Find the first existing template from the list."""
     for tname in template_names:
-        if tname.startswith("/"):
+        if tname.startswith("/") or ":" in tname:
             if os.path.exists(tname):
                 return tname
         else:

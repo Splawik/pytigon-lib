@@ -3,7 +3,9 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import re
 import shutil
 import base64
+import datetime
 from lxml import etree
+from xml.sax.saxutils import escape
 from pytigon_lib.schfs.vfstools import delete_from_zip
 
 OFFICE_URN = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
@@ -64,19 +66,72 @@ class OdfDocTransform:
         self._process_table_rows(doc)
         self._process_tables(doc)
 
+    def _handle_annotation(self, comment_elem, comment_txt):
+        """
+        Handle annotations by processing comment text and inserting XML elements.
+
+        This function processes the given comment text to determine the level of
+        annotation and any positional offsets. It splits the comment text into
+        individual values if necessary and inserts corresponding XML elements
+        into the parent or grandparent nodes of the provided comment element.
+
+        Args:
+            comment_elem (etree.Element): The XML element representing the comment.
+            comment_txt (str): The text content of the comment to be processed.
+
+        The function supports annotations that begin with '^' or '$' to indicate
+        hierarchical levels, and uses '@' to split the comment text into multiple
+        parts for insertion at different positions.
+        """
+
+        parent = comment_elem.getparent()
+        level = 0
+        while comment_txt.startswith("^") or comment_txt.startswith("$"):
+            level += 1
+            offset = 0 if comment_txt.startswith("^") else 1
+            comment_txt = comment_txt[1:]
+        if "@" in comment_txt:
+            x = comment_txt.split("@")
+            values = [[x[0], level, 0], [x[1], level, 1]]
+        else:
+            values = [[comment_txt, level, 0]]
+
+        for v, level, offset in values:
+            if level < 1:
+                parent.insert(
+                    parent.index(comment_elem) + offset,
+                    etree.XML("<tmp>%s</tmp>" % escape(v)),
+                )
+            else:
+                gparent = parent
+                while level > 0:
+                    p = gparent
+                    gparent = p.getparent()
+                    level -= 1
+                gparent.insert(
+                    gparent.index(p) + offset,
+                    etree.XML("<tmp>%s</tmp>" % escape(v)),
+                )
+
     def _process_annotations(self, doc, debug):
         """Process annotations in the document."""
-        for element in doc.findall(".//{*}p"):
-            if element.getparent().tag.endswith("annotation"):
-                data = "".join(child.text for child in element if child.text)
-                if data and "!" in data:
-                    self._handle_annotation(element, data, debug)
+        for e in doc.findall(".//{*}annotation/{*}p"):
+            element = e.getparent()
+            data = e.text
+            if not data:
+                data = ""
+                for txt in e.itertext():
+                    if txt:
+                        data += txt
+            if data and ("^" in data or "@" in data):
+                self._handle_annotation(element.getparent(), data.strip())
+            parent = element.getparent()
+            parent.remove(element)
 
-    def _handle_annotation(self, element, data, debug):
+    def _handle_annotation_do_wykasowania(self, element, data, debug):
         """Handle annotation data."""
-        data = data[data.find("!") :]
         poziom = 1
-        if len(data) > 1 and data[1] == "!":
+        if len(data) > 1 and data[1] == "^":
             poziom = 2 if len(data) <= 2 or data[2] != "*" else 3
         skladniki = (
             data[poziom:].split("@")
@@ -122,10 +177,12 @@ class OdfDocTransform:
             .decode("utf-8")
             .strip()
         )
-        if any(item in txt for item in (":=", ":*", "{{", "}}", "{%", "%}")):
+        if any(item in txt for item in (":=", ":*", ":?", "{{", "}}", "{%", "%}")):
             txt = transform_str(txt)
             if txt.startswith(":="):
                 self._create_formula_cell(element, txt, debug)
+            elif txt.startswith(":?"):
+                self._create_auto_cell(element, txt, debug)
             else:
                 self._create_value_cell(element, txt, debug)
 
@@ -158,6 +215,18 @@ class OdfDocTransform:
             new_cell.append(new_text)
         if debug:
             self._add_annotation(new_cell, txt[2:] if txt.startswith(":*") else txt)
+        self._set_cell_style(element, new_cell)
+        self._replace_cell(element, new_cell)
+
+    def _create_auto_cell(self, element, txt, debug):
+        """Create a new cell with a value."""
+        new_cell = etree.Element(TABLE_URN + "table-cell")
+        new_cell.set(OFFICE_URN + "value-type", "string")
+        new_text = etree.Element(TEXT_URN + "vauto")
+        new_text.text = txt[2:] if txt.startswith(":?") else txt
+        new_cell.append(new_text)
+        if debug:
+            self._add_annotation(new_cell, txt[2:] if txt.startswith(":?") else txt)
         self._set_cell_style(element, new_cell)
         self._replace_cell(element, new_cell)
 
@@ -236,6 +305,35 @@ class OdfDocTransform:
             "utf-8"
         )
 
+    def repair_xml(self, sheet):
+        auto_list = sheet.findall(".//{*}vauto")
+        for pos in auto_list:
+            parent = pos.getparent()
+            txt = pos.text
+            parent.remove(pos)
+            if txt != "" and txt != None:
+                if len(txt) == 10 and txt[4] == "-" and txt[7] == "-":
+                    try:
+                        new_text = etree.Element(TEXT_URN + "p")
+                        parent.append(new_text)
+                        parent.set(OFFICE_URN + "value-type", "date")
+                        parent.set(OFFICE_URN + "date-value", txt[:10])
+                        continue
+                    except:
+                        pass
+                try:
+                    x = float(txt)
+                    new_text = etree.Element(TEXT_URN + "p")
+                    parent.append(new_text)
+                    parent.set(OFFICE_URN + "value-type", "float")
+                    parent.set(OFFICE_URN + "value", txt)
+                    continue
+                except:
+                    pass
+                new_text = etree.Element(TEXT_URN + "p")
+                new_text.text = escape(txt)
+                parent.append(new_text)
+
     def process(self, context, debug):
         """Transform input file using context and debug mode."""
         try:
@@ -271,6 +369,10 @@ class OdfDocTransform:
                 doc_str = doc_str.replace("{{", "{% expr_escape ").replace("}}", " %}")
 
             x = self.process_template(doc_str, context) or doc_str
+
+            root = etree.XML(x.encode("utf-8"))
+            self.repair_xml(root)
+            x = etree.tostring(root, encoding="utf-8").decode("utf-8")
 
             files = []
             if "[[[" in x and "]]]" in x:

@@ -4,7 +4,7 @@ import os
 import datetime
 from xml.sax.saxutils import escape
 from lxml import etree
-from django.template import Context, Template
+from django.template import Context
 from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
 from pytigon_lib.schfs.vfstools import delete_from_zip
 import dateutil.parser
@@ -133,9 +133,7 @@ class OOXmlDocTransform(OdfDocTransform):
             labels.sort(key=key_for_addr)
 
             for key, value in self.comments.items():
-                key2 = key.upper()
                 value2 = value.strip()
-                after = 0
                 if key in labels:
                     label = key
                 else:
@@ -150,7 +148,6 @@ class OOXmlDocTransform(OdfDocTransform):
                         old = l
                     if old:
                         label = old
-                        after = 1
                     else:
                         label = labels[0]
 
@@ -158,43 +155,7 @@ class OOXmlDocTransform(OdfDocTransform):
                     sheet.findall(".//c", namespaces=sheet.nsmap), "r", label
                 )
                 if len(d) > 0:
-                    parent = d[0].getparent()
-                    if "@" in value2:
-                        x = value2.split("@")
-                        values = [x[0], x[1]]
-                        if not x[0].startswith("^") and not x[1].startswith("$"):
-                            values[0] = "^" + values[0]
-                            values[1] = "$" + values[1]
-                    else:
-                        values = [value2]
-                    for v in values:
-                        if v.startswith("^") or v.startswith("!!"):
-                            if v.startswith("!!"):
-                                value3 = v[2:]
-                            else:
-                                value3 = v[1:]
-                            gparent = parent.getparent()
-                            gparent.insert(
-                                gparent.index(parent),
-                                etree.XML("<tmp>%s</tmp>" % escape(value3)),
-                            )
-                        elif v.startswith("$"):
-                            value3 = v[1:]
-                            gparent = parent.getparent()
-                            gparent.insert(
-                                gparent.index(parent) + 1,
-                                etree.XML("<tmp>%s</tmp>" % escape(value3)),
-                            )
-                        elif v.startswith("!"):
-                            parent.insert(
-                                parent.index(d[0]) + after,
-                                etree.XML("<tmp>%s</tmp>" % escape(v[1:])),
-                            )
-                        else:
-                            parent.insert(
-                                parent.index(d[0]) + after,
-                                etree.XML("<tmp>%s</tmp>" % escape(v)),
-                            )
+                    self._handle_annotation(d[0], value2)
 
     def shared_strings_to_inline(self, sheet):
         """
@@ -222,11 +183,11 @@ class OOXmlDocTransform(OdfDocTransform):
                 if s:
                     if s.startswith(":="):
                         pos.remove(v)
-                        pos.attrib["t"] = ""
+                        pos.attrib.pop("t", None)
                         pos.append(etree.XML("<f>%s</f>" % escape(s[2:])))
                     elif s.startswith(":?"):
                         pos.remove(v)
-                        pos.attrib["t"] = ""
+                        pos.attrib.pop("t", None)
                         pos.append(etree.XML("<vauto>%s</vauto>" % escape(s[2:])))
                     elif s.startswith(":0"):
                         pos.remove(v)
@@ -412,7 +373,6 @@ class OOXmlDocTransform(OdfDocTransform):
                             self.to_update.append((comments_name, root))
                     except KeyError:
                         pass
-
                     sheet2 = self.handle_sheet(sheet, django_context)
                     self.to_update.append((sheet_name, sheet2))
                 except KeyError:
@@ -483,6 +443,6 @@ if __name__ == "__main__":
     )
     django.setup()
 
-    x = OOXmlDocTransform("./in.xlsx", "./test_out.xlsx")
+    x = OOXmlDocTransform("./test/rep_wzr.xlsx", "./test/rep_wzr_out.xlsx")
     context = {"test": 1}
     x.process(context, False)
