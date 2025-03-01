@@ -86,6 +86,10 @@ class OdfDocTransform:
 
         parent = comment_elem.getparent()
         level = 0
+        if comment_txt.startswith("."):
+            comment_elem.text = comment_txt[1:]
+            return
+
         while comment_txt.startswith("^") or comment_txt.startswith("$"):
             level += 1
             offset = 0 if comment_txt.startswith("^") else 1
@@ -123,39 +127,13 @@ class OdfDocTransform:
                 for txt in e.itertext():
                     if txt:
                         data += txt
-            if data and ("^" in data or "@" in data):
-                self._handle_annotation(element.getparent(), data.strip())
+            data = data.strip()
+            if data and (
+                data.startswith("^") or data.startswith("$") or data.startswith(".")
+            ):
+                self._handle_annotation(element.getparent(), data)
             parent = element.getparent()
             parent.remove(element)
-
-    def _handle_annotation_do_wykasowania(self, element, data, debug):
-        """Handle annotation data."""
-        poziom = 1
-        if len(data) > 1 and data[1] == "^":
-            poziom = 2 if len(data) <= 2 or data[2] != "*" else 3
-        skladniki = (
-            data[poziom:].split("@")
-            if "@" in data[poziom:]
-            else data[poziom:].split("$")
-        )
-        self._replace_annotation(element, skladniki, poziom)
-
-    def _replace_annotation(self, element, skladniki, poziom):
-        """Replace annotation with new elements."""
-        x = element.getparent()
-        y = x.getparent()
-        y.remove(x)
-        for _ in range(poziom - 1):
-            y = y.getparent()
-        new_cell = etree.Element("tmp")
-        parent = y.getparent()
-        parent[parent.index(y)] = new_cell
-        new_cell.text = skladniki[0]
-        new_cell.append(y)
-        if len(skladniki) > 1:
-            new_cell.tail = (
-                skladniki[1] if not new_cell.tail else new_cell.tail + skladniki[1]
-            )
 
     def _process_table_cells(self, doc, debug):
         """Process table cells in the document."""

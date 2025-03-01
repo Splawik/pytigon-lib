@@ -155,7 +155,12 @@ class OOXmlDocTransform(OdfDocTransform):
                     sheet.findall(".//c", namespaces=sheet.nsmap), "r", label
                 )
                 if len(d) > 0:
-                    self._handle_annotation(d[0], value2)
+                    if value2 and (
+                        value2.startswith("^")
+                        or value2.startswith("$")
+                        or value2.startswith(".")
+                    ):
+                        self._handle_annotation(d[0], value2)
 
     def shared_strings_to_inline(self, sheet):
         """
