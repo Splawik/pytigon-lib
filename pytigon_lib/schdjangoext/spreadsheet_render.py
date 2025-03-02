@@ -96,7 +96,9 @@ class DefaultTbl:
         return ""
 
 
-def _render_doc(doc_type, template_name, context_instance=None, debug=None):
+def _render_doc(
+    doc_type, template_name, context_instance=None, output_name=None, debug=None
+):
     """Render the document and return the output file name and template name."""
 
     if context_instance is None:
@@ -119,7 +121,10 @@ def _render_doc(doc_type, template_name, context_instance=None, debug=None):
             else:
                 name = _find_template((template_name,))
 
-            name_out = get_temp_filename()
+            if output_name:
+                name_out = output_name
+            else:
+                name_out = get_temp_filename()
             doc_class = (
                 OdfDocTemplateTransform
                 if doc_type.lower().startswith("od")
@@ -130,6 +135,7 @@ def _render_doc(doc_type, template_name, context_instance=None, debug=None):
             if doc.process(context_instance, debug) != 1:
                 os.remove(name_out)
                 return None, name
+
             return name_out, name
     except Exception as e:
         raise RuntimeError(f"Failed to render document: {e}")
@@ -171,14 +177,14 @@ def _render_doc_to_response(
         raise RuntimeError(f"Failed to render document to response: {e}")
 
 
-def render_odf(template_name, context_instance=None, debug=None):
+def render_odf(template_name, context_instance=None, output_name=None, debug=None):
     """Render an ODF document."""
-    return _render_doc("ODF", template_name, context_instance, debug)
+    return _render_doc("ODF", template_name, context_instance, output_name, debug)
 
 
-def render_ooxml(template_name, context_instance=None, debug=None):
+def render_ooxml(template_name, context_instance=None, output_name=None, debug=None):
     """Render an OOXML document."""
-    return _render_doc("OOXML", template_name, context_instance, debug)
+    return _render_doc("OOXML", template_name, context_instance, output_name, debug)
 
 
 def render_to_response_odf(template_name, context_instance=None, debug=None):

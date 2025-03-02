@@ -368,7 +368,13 @@ class OOXmlDocTransform(OdfDocTransform):
                                 for pos2 in pos.findall(
                                     ".//{*}text/{*}r/{*}t", namespaces=root.nsmap
                                 ):
-                                    if "{{" in pos2.text or "{%" in pos2.text:
+                                    if (
+                                        "{{" in pos2.text
+                                        or "{%" in pos2.text
+                                        or pos2.text.startswith("^")
+                                        or pos2.text.startswith("$")
+                                        or pos2.text.startswith(".")
+                                    ):
                                         self.comments[ref] = pos2.text
                                         comment = (
                                             pos2.getparent().getparent().getparent()

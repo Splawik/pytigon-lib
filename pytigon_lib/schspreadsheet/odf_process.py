@@ -1,10 +1,8 @@
-from xml.dom.expatbuilder import TEXT_NODE
-from zipfile import ZipFile, ZIP_DEFLATED
 import re
 import shutil
 import base64
-import datetime
-from lxml import etree
+from zipfile import ZipFile, ZIP_DEFLATED
+from lxml import etree, html
 from xml.sax.saxutils import escape
 from pytigon_lib.schfs.vfstools import delete_from_zip
 
@@ -26,6 +24,12 @@ def transform_str(s):
     return s.replace("***", '"').replace("**", "'")
 
 
+def inner_html(elem):
+    return (elem.text or "") + "".join(
+        [html.tostring(child).decode("utf-8") for child in elem.iterchildren()]
+    )
+
+
 class OdfDocTransform:
     """Transform ODF files."""
 
@@ -36,6 +40,7 @@ class OdfDocTransform:
         self.process_tables = None
         self.doc_type = 1
         self.buf = None
+        self.auto_cells = False
 
     def set_doc_type(self, doc_type):
         """Set document type: 0 - other, 1 - spreadsheet, 2 - writer."""
@@ -45,14 +50,14 @@ class OdfDocTransform:
         """Set tables to process."""
         self.process_tables = tables
 
-    def nr_col(self):
+    def column_number(self):
         """Return template string for column increment."""
         return "{{ tbl.IncCol }}"
 
-    def nr_row(self, il=1):
+    def row_number(self, il=1):
         return """{{ tbl|args:%d|call:'IncRow' }}{{ tbl|args:1|call:'SetCol' }}""" % il
 
-    def zer_row_col(self):
+    def clear_row_col(self):
         return """{{ tbl|args:1|call:'SetRow' }}{{ tbl|args:1|call:'SetCol' }}"""
 
     def doc_process(self, doc, debug):
@@ -87,7 +92,22 @@ class OdfDocTransform:
         parent = comment_elem.getparent()
         level = 0
         if comment_txt.startswith("."):
-            comment_elem.text = comment_txt[1:]
+            if comment_elem is not None:
+                if "table-cell" in comment_elem.tag:
+                    for child in comment_elem.getchildren():
+                        if "annotation" not in child.tag:
+                            comment_elem.remove(child)
+                    new_cell = etree.Element(TEXT_URN + "p")
+                    new_cell.text = comment_txt[1:]
+                    comment_elem.append(new_cell)
+                else:
+                    for child in comment_elem.getchildren():
+                        if child.tag.endswith("v"):
+                            comment_elem.remove(child)
+                    comment_elem.append(
+                        etree.XML("<is><t>%s</t></is>" % escape(comment_txt[1:]))
+                    )
+                    comment_elem.attrib["t"] = "inlineStr"
             return
 
         while comment_txt.startswith("^") or comment_txt.startswith("$"):
@@ -160,6 +180,7 @@ class OdfDocTransform:
             if txt.startswith(":="):
                 self._create_formula_cell(element, txt, debug)
             elif txt.startswith(":?"):
+                self.auto_cells = True
                 self._create_auto_cell(element, txt, debug)
             else:
                 self._create_value_cell(element, txt, debug)
@@ -226,7 +247,7 @@ class OdfDocTransform:
         """Replace old cell with a new one."""
         new_cell2 = etree.Element("tmp")
         new_cell2.append(new_cell)
-        new_cell2.text = self.nr_col()
+        new_cell2.text = self.column_number()
         parent = element.getparent()
         parent[parent.index(element)] = new_cell2
 
@@ -245,7 +266,7 @@ class OdfDocTransform:
         parent = element.getparent()
         parent[parent.index(element)] = new_cell
         new_cell.append(element)
-        new_cell.text = self.nr_row(nr)
+        new_cell.text = self.row_number(nr)
 
     def _process_tables(self, doc):
         """Process tables in the document."""
@@ -260,7 +281,7 @@ class OdfDocTransform:
     def _reset_row_col(self, element):
         """Reset row and column for a table."""
         new_cell = etree.Element("tmp")
-        new_cell.text = self.zer_row_col()
+        new_cell.text = self.clear_row_col()
         parent = element.getparent()
         parent[parent.index(element)] = new_cell
         new_cell.append(element)
@@ -348,9 +369,10 @@ class OdfDocTransform:
 
             x = self.process_template(doc_str, context) or doc_str
 
-            root = etree.XML(x.encode("utf-8"))
-            self.repair_xml(root)
-            x = etree.tostring(root, encoding="utf-8").decode("utf-8")
+            if self.auto_cells:
+                root = etree.XML(x.encode("utf-8"))
+                self.repair_xml(root)
+                x = etree.tostring(root, encoding="utf-8").decode("utf-8")
 
             files = []
             if "[[[" in x and "]]]" in x:
