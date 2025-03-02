@@ -499,8 +499,8 @@ class GenericRows:
         """Get the base path for URL patterns."""
         if self.field:
             if self.prefix:
-                return f"{self.base_path[:-1]}_{self.prefix}/(?P<parent_pk>-?\d+)/{self.field}/"
-            return f"{self.base_path}(?P<parent_pk>-?\d+)/{self.field}/"
+                return fr"{self.base_path[:-1]}_{self.prefix}/(?P<parent_pk>-?\d+)/{self.field}/"
+            return fr"{self.base_path}(?P<parent_pk>-?\d+)/{self.field}/"
         if self.prefix:
             return f"{self.base_path[:-1]}_{self.prefix}/"
         return self.base_path
