@@ -3,11 +3,12 @@ import os.path
 import io
 import gettext
 import codecs
-from pytigon_lib.schindent.py_to_js import compile
-from pytigon_lib.schtools.tools import norm_indent
 
-from .indent_tools import convert_js
 from django.conf import settings
+
+from pytigon_lib.schindent.py_to_js import compile
+from pytigon_lib.schindent.indent_tools import convert_js
+from pytigon_lib.schtools.tools import norm_indent
 from pytigon_lib.schtools.main_paths import get_prj_name
 
 
@@ -488,9 +489,9 @@ class ConwertToHtml:
                             v = buf.getvalue()
                             codejs = py_to_js(v, None)
                             x = self._pre_process_line(
-                                buf0.replace("pscript", "script").replace(
-                                    " language=python", ""
-                                ).replace("py2javascript", "javascript")
+                                buf0.replace("pscript", "script")
+                                .replace(" language=python", "")
+                                .replace("py2javascript", "javascript")
                                 + codejs
                             )
                         elif test == 5:
@@ -593,7 +594,10 @@ class ConwertToHtml:
                     buf0 = line + "...|||"
                     buf = io.StringIO()
                     test = 3
-                elif line.strip().startswith("script") and "language=py2javascript" in line:
+                elif (
+                    line.strip().startswith("script")
+                    and "language=py2javascript" in line
+                ):
                     indent_pos = self._space_count(line)
                     buf0 = line + "...|||"
                     buf = io.StringIO()
@@ -719,7 +723,12 @@ class ConwertToHtml:
                 tab = []
                 l = len(ret)
                 while True:
-                    ret = ret.replace(" <inline:>", "<inline:>").replace("\n<inline:>", "<inline:>").replace("</inline:> ", "</inline:>").replace("</inline:>\n", "</inline:>")
+                    ret = (
+                        ret.replace(" <inline:>", "<inline:>")
+                        .replace("\n<inline:>", "<inline:>")
+                        .replace("</inline:> ", "</inline:>")
+                        .replace("</inline:>\n", "</inline:>")
+                    )
                     if len(ret) == l:
                         break
                     l = len(ret)
@@ -729,11 +738,15 @@ class ConwertToHtml:
                     xx = item.split("</inline:>")
                     lines = xx[0].split("\n")
                     s = " ".join([line.replace("\r", "").strip() for line in lines])
-                    s = s.replace("> ", ">").replace("} ", "}").replace(" <", "<").replace(" {", "{")
+                    s = (
+                        s.replace("> ", ">")
+                        .replace("} ", "}")
+                        .replace(" <", "<")
+                        .replace(" {", "{")
+                    )
                     tab.append(s)
                     tab.append(xx[1])
                 ret = "".join(tab)
-
 
             return ret
 
@@ -823,5 +836,5 @@ def py_to_js(script, module_path):
             result = [None] * (len(x) + len(tab_string))
             result[::2] = x
             result[1::2] = tab_string
-            code = "".join(result)        
+            code = "".join(result)
         return code
