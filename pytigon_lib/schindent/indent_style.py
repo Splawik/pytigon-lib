@@ -714,6 +714,26 @@ class ConwertToHtml:
 
             ret = ret.replace("\r", "").replace("\\\n", "")
 
+            if "<inline:>" in ret:
+                tab = []
+                l = len(ret)
+                while True:
+                    ret = ret.replace(" <inline:>", "<inline:>").replace("\n<inline:>", "<inline:>").replace("</inline:> ", "</inline:>").replace("</inline:>\n", "</inline:>")
+                    if len(ret) == l:
+                        break
+                    l = len(ret)
+                x = ret.split("<inline:>")
+                tab.append(x[0])
+                for item in x[1:]:
+                    xx = item.split("</inline:>")
+                    lines = xx[0].split("\n")
+                    s = " ".join([line.replace("\r", "").strip() for line in lines])
+                    s = s.replace("> ", ">").replace("} ", "}").replace(" <", "<").replace(" {", "{")
+                    tab.append(s)
+                    tab.append(xx[1])
+                ret = "".join(tab)
+
+
             return ret
 
 
@@ -802,5 +822,5 @@ def py_to_js(script, module_path):
             result = [None] * (len(x) + len(tab_string))
             result[::2] = x
             result[1::2] = tab_string
-            code = "".join(result)
+            code = "".join(result)        
         return code
