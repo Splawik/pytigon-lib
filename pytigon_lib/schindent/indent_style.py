@@ -23,7 +23,6 @@ try:
         :return: True if conversion was successful, False otherwise
         """
         if stream_in and stream_out:
-            # print(norm_indent(stream_in.getvalue()))
             buf = markdown.markdown(
                 norm_indent(stream_in.getvalue()),
                 extensions=[
@@ -62,12 +61,14 @@ def translate(s):
 
 def iter_lines(f, f_name, lang):
     in_table = 0
-    base_path = os.path.join(settings.PRJ_PATH, get_prj_name())
-    locale_path = os.path.join(base_path, "locale")
+    base_path = ""
+    locale_path = ""
 
     tab_translate = []
 
     if lang != "en":
+        base_path = os.path.join(settings.PRJ_PATH, get_prj_name())
+        locale_path = os.path.join(base_path, "locale")
         try:
             try:
                 t = gettext.translation(
@@ -489,7 +490,7 @@ class ConwertToHtml:
                             x = self._pre_process_line(
                                 buf0.replace("pscript", "script").replace(
                                     " language=python", ""
-                                )
+                                ).replace("py2javascript", "javascript")
                                 + codejs
                             )
                         elif test == 5:
@@ -592,7 +593,7 @@ class ConwertToHtml:
                     buf0 = line + "...|||"
                     buf = io.StringIO()
                     test = 3
-                elif line.strip().replace(" ", "") == "script":
+                elif line.strip().startswith("script") and "language=py2javascript" in line:
                     indent_pos = self._space_count(line)
                     buf0 = line + "...|||"
                     buf = io.StringIO()
