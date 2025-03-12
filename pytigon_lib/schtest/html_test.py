@@ -39,7 +39,6 @@ def html_content_cmp(file_path1, file_path2):
     Returns:
         bool: True if the content of the two files is the same, False otherwise.
     """
-    print(file_path1, file_path2)
     with (
         open(file_path1, "rt") as f1,
         open(file_path2, "rt") as f2,
