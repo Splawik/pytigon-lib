@@ -1,4 +1,10 @@
-from pytigon_lib.schhtml.parser import Parser, content_tostring, Elem, Script, tostring
+from pytigon_lib.schparser.parser import (
+    Parser,
+    content_tostring,
+    Elem,
+    Script,
+    tostring,
+)
 from pytigon_lib.schhtml.htmltools import Td
 from pyquery import PyQuery as pq
 

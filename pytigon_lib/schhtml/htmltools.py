@@ -1,4 +1,4 @@
-from pytigon_lib.schhtml.parser import Parser
+from pytigon_lib.schparser.parser import Parser
 from urllib.request import urlopen
 from urllib.error import URLError
 

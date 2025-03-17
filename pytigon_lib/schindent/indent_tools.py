@@ -1,5 +1,5 @@
 import io
-from pytigon_lib.schhtml.parser import Parser
+from pytigon_lib.schparser.parser import Parser
 
 
 def _convert_strings(lines):
