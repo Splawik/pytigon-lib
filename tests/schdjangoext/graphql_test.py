@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from pytigon_lib.schdjangoext.graphql import *
 
 # Pytest tests

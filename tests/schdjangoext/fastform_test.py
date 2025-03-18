@@ -5,6 +5,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 
+
 def test_form_from_str():
     form_str = """
     Name::***********************

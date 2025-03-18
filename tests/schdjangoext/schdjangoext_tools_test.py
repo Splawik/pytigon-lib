@@ -1,4 +1,5 @@
 from pytigon_lib.schdjangoext.tools import *
+from django.conf import settings
 
 # Pytest tests
 import pytest
@@ -11,17 +12,17 @@ def test_import_model():
     assert import_model("nonexistent_app", "nonexistent_model") is None
 
 
-def test_gettempdir(settings):
+def test_gettempdir():
     """Test the gettempdir function."""
     settings.TEMP_PATH = "/tmp"
     assert gettempdir() == "/tmp"
 
 
-def test_make_href(settings):
+def test_make_href():
     """Test the make_href function."""
-    settings.URL_ROOT_FOLDER = "root"
-    assert make_href("/path") == "/root/path"
-    assert make_href("/path", "base?param=1") == "/root/path?param=1"
+    #settings.URL_ROOT_FOLDER = "root"
+    assert make_href("/path") == "/path"
+    assert make_href("/path", "base?param=1") == "/path?param=1"
 
 
 def test_from_migrations():

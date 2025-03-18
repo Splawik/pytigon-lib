@@ -1,4 +1,4 @@
-from pytigon_lib.schhtml.parser import *
+from pytigon_lib.schparser.parser import *
 
 # Pytest tests
 import pytest
