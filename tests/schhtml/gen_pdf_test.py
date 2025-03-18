@@ -1,7 +1,6 @@
 import os
 import tempfile
 
-from django.core.files.storage import default_storage
 
 from pytigon.pytigon_run import run
 from pytigon_lib.schtest.html_test import html_content_cmp
@@ -11,6 +10,8 @@ from pytigon_lib.schtools.doc_tools import soffice_convert
 
 import pypdfium2 as pdfium
 import PIL
+
+import pathlib
 
 os.environ["SCRIPT_MODE"] = "1"
 
@@ -23,10 +24,7 @@ if os.path.exists(os.path.join(PRJ_PATH, "schscripts")):
     SCHSCRIPTS_PATH = os.path.join(PRJ_PATH, "schscripts")
 else:
     SCHSCRIPTS_PATH = os.path.join(PRJ_PATH_ALT, "schscripts")
-if os.path.exists(os.path.join(PRJ_PATH, "_schtest")):
-    TEST_PATH = os.path.join(PRJ_PATH, "_schtest")
-else:
-    TEST_PATH = os.path.join(PRJ_PATH_ALT, "_schtest")
+TEST_PATH = pathlib.Path(__file__).parent.resolve()
 
 LAST_PATH = os.getcwd()
 os.chdir(TEST_PATH)
@@ -35,29 +33,29 @@ os.chdir(TEST_PATH)
 def test_gen_pdf():
     tests = (
         (
-            os.path.join(TEST_PATH, "tests", "schhtml", "test1.md"),
+            os.path.join(TEST_PATH, "assets", "test1.md"),
             os.path.join(tempfile.gettempdir(), "test1.pdf"),
             os.path.join(TEST_PATH, "tests", "schhtml", "wzr", "test1.pdf"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schhtml", "test2.ihtml"),
+            os.path.join(TEST_PATH, "assets", "test2.ihtml"),
             os.path.join(tempfile.gettempdir(), "test2.pdf"),
-            os.path.join(TEST_PATH, "tests", "schhtml", "wzr", "test2.pdf"),
+            os.path.join(TEST_PATH, "wzr", "test2.pdf"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schhtml", "test2.ihtml"),
+            os.path.join(TEST_PATH, "assets", "test2.ihtml"),
             os.path.join(tempfile.gettempdir(), "test3.docx"),
-            os.path.join(TEST_PATH, "tests", "schhtml", "wzr", "test3.docx"),
+            os.path.join(TEST_PATH, "wzr", "test3.docx"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schhtml", "test4.ihtml"),
+            os.path.join(TEST_PATH, "assets", "test4.ihtml"),
             os.path.join(tempfile.gettempdir(), "test4.pdf"),
-            os.path.join(TEST_PATH, "tests", "schhtml", "wzr", "test4.pdf"),
+            os.path.join(TEST_PATH, "wzr", "test4.pdf"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schhtml", "test5.md"),
+            os.path.join(TEST_PATH, "assets", "test5.md"),
             os.path.join(tempfile.gettempdir(), "test5.pdf"),
-            os.path.join(TEST_PATH, "tests", "schhtml", "wzr", "test5.pdf"),
+            os.path.join(TEST_PATH, "wzr", "test5.pdf"),
         ),
     )
 

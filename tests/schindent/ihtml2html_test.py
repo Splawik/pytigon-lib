@@ -1,11 +1,12 @@
 import os
 import tempfile
+import pathlib
 
 from pytigon.pytigon_run import run
 from pytigon_lib.schtest.html_test import html_content_cmp
 from pytigon_lib.schtools.main_paths import get_main_paths
 
-os.environ["SCRIPT_MODE"] = "1"
+TEST_PATH = pathlib.Path(__file__).parent.resolve()
 
 PATHS = get_main_paths()
 
@@ -16,10 +17,6 @@ if os.path.exists(os.path.join(PRJ_PATH, "schscripts")):
     SCHSCRIPTS_PATH = os.path.join(PRJ_PATH, "schscripts")
 else:
     SCHSCRIPTS_PATH = os.path.join(PRJ_PATH_ALT, "schscripts")
-if os.path.exists(os.path.join(PRJ_PATH, "_schtest")):
-    TEST_PATH = os.path.join(PRJ_PATH, "_schtest")
-else:
-    TEST_PATH = os.path.join(PRJ_PATH_ALT, "_schtest")
 
 LAST_PATH = os.getcwd()
 os.chdir(TEST_PATH)
@@ -28,24 +25,24 @@ os.chdir(TEST_PATH)
 def test_ihtml2html():
     tests = (
         (
-            os.path.join(TEST_PATH, "tests", "schindent", "test.html"),
+            os.path.join(TEST_PATH, "assets", "test.html"),
             os.path.join(tempfile.gettempdir(), "test.ihtml"),
-            os.path.join(TEST_PATH, "tests", "schindent", "wzr", "test.ihtml"),
+            os.path.join(TEST_PATH, "wzr", "test.ihtml"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schindent", "wzr", "test.ihtml"),
+            os.path.join(TEST_PATH, "wzr", "test.ihtml"),
             os.path.join(tempfile.gettempdir(), "test.html"),
-            os.path.join(TEST_PATH, "tests", "schindent", "wzr", "test.html"),
+            os.path.join(TEST_PATH, "wzr", "test.html"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schindent", "test.py"),
+            os.path.join(TEST_PATH, "assets", "test.py"),
             os.path.join(tempfile.gettempdir(), "test.js"),
-            os.path.join(TEST_PATH, "tests", "schindent", "wzr", "test.js"),
+            os.path.join(TEST_PATH, "wzr", "test.js"),
         ),
         (
-            os.path.join(TEST_PATH, "tests", "schindent", "test.ijs"),
+            os.path.join(TEST_PATH, "assets", "test.ijs"),
             os.path.join(tempfile.gettempdir(), "test2.js"),
-            os.path.join(TEST_PATH, "tests", "schindent", "wzr", "test2.js"),
+            os.path.join(TEST_PATH, "wzr", "test2.js"),
         ),
     )
 
