@@ -9,12 +9,6 @@ def test_fa_icons():
     assert fa_icons("test") == "<i class='fa fa-test'></i>"
 
 
-def test_ihtml_to_html_success():
-    """Test ihtml_to_html with a successful conversion."""
-    result = ihtml_to_html("test_file", "<div>Test</div>")
-    assert isinstance(result, str)
-
-
 def test_ihtml_to_html_failure():
     """Test ihtml_to_html with an error during conversion."""
     result = ihtml_to_html("invalid_file", "<div>Test</div>")

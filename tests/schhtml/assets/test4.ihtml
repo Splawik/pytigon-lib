@@ -4,7 +4,7 @@ html
         meta name=Copyright,,,content=Sławomir Chołaj
         meta name=description,,,content=demo
         title...Demo
-        link href=file://./tests/schhtml/static/test.icss
+        link href=file://./schhtml/static/test.icss
     body 
         page 
             header height=60
