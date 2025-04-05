@@ -425,7 +425,19 @@ class HttpClient:
                     path = finders.find(path[8:])
                     for_vfs = False
                 with open_file(path, "rb", for_vfs=for_vfs) as f:
-                    return HttpResponse(adr, content=f.read(), ret_content_type=mt)
+                    content = f.read()
+                    ret_http = RetHttp(
+                        adr,
+                        {
+                            "body": content,
+                            "headers": {"Content-Type": mt},
+                            "status": 200,
+                        },
+                    )
+
+                    return HttpResponse(
+                        adr, content=content, response=ret_http, ret_content_type=mt
+                    )
             except:
                 print(
                     "Static file load error: ",
