@@ -421,8 +421,8 @@ class HttpClient:
             try:
                 ext = "." + path.split(".")[-1]
                 mt = mimetypes.types_map.get(ext, "text/html")
-                if path.startswith("/static/"):
-                    path = finders.find(path[8:])
+                if path.startswith("/" + settings.STATIC_URL):
+                    path = finders.find(path[len(settings.STATIC_URL) + 1 :])
                     for_vfs = False
                 with open_file(path, "rb", for_vfs=for_vfs) as f:
                     content = f.read()
