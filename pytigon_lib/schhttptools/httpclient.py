@@ -421,9 +421,13 @@ class HttpClient:
             try:
                 ext = "." + path.split(".")[-1]
                 mt = mimetypes.types_map.get(ext, "text/html")
+                print("A1: ", settings.STATIC_URL)
                 if path.startswith("/" + settings.STATIC_URL):
+                    print("A2: ", path[len(settings.STATIC_URL) + 1 :])
                     path = finders.find(path[len(settings.STATIC_URL) + 1 :])
+                    print("A3:", path)
                     for_vfs = False
+                print("A4:")
                 with open_file(path, "rb", for_vfs=for_vfs) as f:
                     content = f.read()
                     ret_http = RetHttp(
