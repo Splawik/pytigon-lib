@@ -399,7 +399,9 @@ class HttpClient:
             else address
         )
         adr = norm_path(adr)
-        if adr.startswith("http://127.0.0.2/"):
+        if adr.startswith("http://127.0.0.2/") or self.base_address.startswith(
+            "http://127.0.0.2/"
+        ):
             cookies = COOKIES_EMBEDED
             direct_access = True
         else:
