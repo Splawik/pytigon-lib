@@ -399,8 +399,8 @@ class HttpClient:
             else address
         )
         adr = norm_path(adr)
-        if adr.startswith("http://127.0.0.2/") or self.base_address.startswith(
-            "http://127.0.0.2/"
+        if adr.startswith("http://127.0.0.2") or self.base_address.startswith(
+            "http://127.0.0.2"
         ):
             cookies = COOKIES_EMBEDED
             direct_access = True
@@ -422,14 +422,10 @@ class HttpClient:
             path = adr.replace("http://127.0.0.2", "")
             try:
                 ext = "." + path.split(".")[-1]
-                mt = mimetypes.types_map.get(ext, "text/html")
-                print("A1: ", settings.STATIC_URL)
-                if path.startswith("/" + settings.STATIC_URL):
-                    print("A2: ", path[len(settings.STATIC_URL) + 1 :])
-                    path = finders.find(path[len(settings.STATIC_URL) + 1 :])
-                    print("A3:", path)
+                mt = mimetypes.types_map.get(ext, "text/javascript")
+                if path.startswith(settings.STATIC_URL):
+                    path = finders.find(path[len(settings.STATIC_URL) :])
                     for_vfs = False
-                print("A4:")
                 with open_file(path, "rb", for_vfs=for_vfs) as f:
                     content = f.read()
                     ret_http = RetHttp(

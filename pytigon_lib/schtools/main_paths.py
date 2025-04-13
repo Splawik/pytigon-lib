@@ -163,7 +163,12 @@ def get_main_paths(prj_name=None):
         ]
     else:
         ret["STATIC_PATH"] = if_not_in_env("STATIC_PATH", static_path)
-        ret["STATICFILES_DIRS"] = []
+        if platform_name() == "Emscripten":
+            ret["STATICFILES_DIRS"] = [
+                os.path.join(pytigon_path, "static"),
+            ]
+        else:
+            ret["STATICFILES_DIRS"] = []
 
     if PRJ_NAME:
         ret["MEDIA_PATH"] = if_not_in_env(
