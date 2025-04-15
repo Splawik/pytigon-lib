@@ -1,7 +1,6 @@
 import io
 from PIL import Image
 from svglib.svglib import svg2rlg
-import numpy as np
 
 
 def spec_resize(image, width=0, height=0):
@@ -77,6 +76,10 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
     Returns:
         bytes: The PNG image as bytes.
     """
+    try:
+        x = svg2rlg
+    except:
+        from svglib.svglib import svg2rlg
     try:
         svg_io = io.BytesIO(svg_str)
         drawing = svg2rlg(svg_io)
@@ -157,6 +160,10 @@ def compare_images(img1, img2):
     err : float
         The mean squared error (MSE) between the two input images.
     """
+    try:
+        x = np
+    except:
+        import numpy as np
     np.array(img1), np.array(img2)
     img2_mod = img2.convert("RGB").resize(
         (img1.size[0], img1.size[1]), Image.Resampling.LANCZOS
