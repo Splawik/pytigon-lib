@@ -1,6 +1,5 @@
 import io
 from PIL import Image
-from svglib.svglib import svg2rlg
 
 
 def spec_resize(image, width=0, height=0):
