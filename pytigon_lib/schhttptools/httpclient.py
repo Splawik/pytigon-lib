@@ -432,7 +432,10 @@ class HttpClient:
                         adr,
                         {
                             "body": content,
-                            "headers": {"Content-Type": mt},
+                            "headers": {
+                                "Content-Type": mt,
+                                "cache-control": "max-age=2592000",
+                            },
                             "status": 200,
                         },
                     )
