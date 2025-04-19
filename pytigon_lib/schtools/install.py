@@ -324,7 +324,7 @@ class Ptig:
             if not os.path.exists(dest_path_db):
                 os.mkdir(dest_path_db)
             if not os.path.exists(dest_db):
-                with open(dest_path_db, "wb") as f:
+                with open(dest_db, "wb") as f:
                     f.write(src_db)
 
             (ret_code, output, err) = py_run(
