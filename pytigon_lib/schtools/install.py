@@ -1,11 +1,12 @@
 import datetime
 import zipfile
 import io
+import os
 
 from pytigon_lib.schdjangoext.django_manage import *
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.process import py_run
-from pytigon_lib.schtools.main_paths import get_prj_name
+from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
 
 
 def install():
@@ -252,12 +253,13 @@ class Ptig:
 
     def extract_ptig(self):
         import pytigon.schserw.settings
-        from django.conf import settings
+
+        paths = get_main_paths(self.prj_name)
 
         if hasattr(pytigon.schserw.settings, "_PRJ_PATH_ALT"):
             base_path = os.path.join(pytigon.schserw.settings._PRJ_PATH_ALT)
         else:
-            base_path = os.path.join(settings.PRJ_PATH_ALT)
+            base_path = paths["PRJ_PATH_ALT"]
 
         ret = []
         ret.append("Install file: " + self.prj_name)
@@ -316,11 +318,10 @@ class Ptig:
         src_db = self.get_db()
         if src_db:
             ret.append("Synchronize database:")
-            dest_path_db = os.path.join(settings.DATA_PATH, self.prj_name)
+            dest_path_db = os.path.join(paths["DATA_PATH"], self.prj_name)
             dest_db = os.path.join(dest_path_db, self.prj_name + ".db")
-
-            if not os.path.exists(settings.DATA_PATH):
-                os.mkdir(settings.DATA_PATH)
+            if not os.path.exists(paths["DATA_PATH"]):
+                os.mkdir(paths["DATA_PATH"])
             if not os.path.exists(dest_path_db):
                 os.mkdir(dest_path_db)
             if not os.path.exists(dest_db):
