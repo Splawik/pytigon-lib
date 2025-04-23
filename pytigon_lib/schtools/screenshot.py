@@ -5,7 +5,7 @@ import platform
 import subprocess
 import sys
 
-Image = None
+IMAGE = None
 
 try:
     from cefpython3 import cefpython as cef
@@ -58,11 +58,11 @@ def get_screenshot(url, size, img_path):
         buffer_string = browser.GetUserData("OnPaint.buffer_string")
         if not buffer_string:
             raise Exception("buffer_string is empty, OnPaint never called?")
-        global Image
-        if not Image:
-            from PIL import Image
+        global IMAGE
+        if not IMAGE:
+            from PIL import Image as IMAGE
 
-        image = Image.frombytes(
+        image = IMAGE.frombytes(
             "RGBA", (size[2], size[3]), buffer_string, "raw", "RGBA", 0, 1
         )
         image.save(path, "PNG")

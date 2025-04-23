@@ -18,7 +18,7 @@ from pytigon_lib.schhtml.render_helpers import (
 from pytigon_lib.schtools.images import svg_to_png, spec_resize
 
 
-Image = None
+IMAGE = None
 
 
 class AtomTag(BaseHtmlAtomParser):
@@ -162,10 +162,10 @@ class ImgTag(AtomTag):
                         self.img = svg_to_png(img, self.width, self.height, itype)
                 else:
                     try:
-                        global Image
-                        if not Image:
-                            from PIL import Image
-                        image = Image.open(io.BytesIO(img))
+                        global IMAGE
+                        if not IMAGE:
+                            from PIL import Image as IMAGE
+                        image = IMAGE.open(io.BytesIO(img))
                         output = io.BytesIO()
                         image.save(output, "PNG")
                         self.img = output.getvalue()

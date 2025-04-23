@@ -6,7 +6,7 @@ import xlsxwriter
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 from pytigon_lib.schfs.vfstools import get_temp_filename
 
-Image = None
+IMAGE = None
 
 
 class XlsxDc(BaseDc):
@@ -292,12 +292,12 @@ class XlsxDcinfo(BaseDcInfo):
         return 1
 
     def get_img_size(self, png_data):
-        global Image
-        if not Image:
-            from PIL import Image
+        global IMAGE
+        if not IMAGE:
+            from PIL import Image as IMAGE
         try:
             png_stream = io.BytesIO(png_data)
-            image = Image.open(png_stream)
+            image = IMAGE.open(png_stream)
             return image.size if image else (0, 0)
         except Exception:
             return (0, 0)
