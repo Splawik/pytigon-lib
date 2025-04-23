@@ -1,5 +1,6 @@
 import io
-from PIL import Image
+
+Image = None
 
 
 def spec_resize(image, width=0, height=0):
@@ -49,6 +50,9 @@ def spec_resize(image, width=0, height=0):
         ytab = (0, h, height - h)
 
         # Create a new image and paste the resized parts
+        global Image
+        if not Image:
+            from PIL import Image
         dst = Image.new("RGB", (width, height))
         i = 0
         for y in ytab:
@@ -112,6 +116,10 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
                 if not width:
                     width = int(drawing.width * height / drawing.height)
 
+                global Image
+                if not Image:
+                    from PIL import Image
+
                 img = Image.open(io.BytesIO(drawing.asString("png")))
                 img2 = spec_resize(img, width, height)
 
@@ -163,6 +171,11 @@ def compare_images(img1, img2):
         x = np
     except:
         import numpy as np
+
+    global Image
+    if not Image:
+        from PIL import Image
+
     np.array(img1), np.array(img2)
     img2_mod = img2.convert("RGB").resize(
         (img1.size[0], img1.size[1]), Image.Resampling.LANCZOS
@@ -171,6 +184,10 @@ def compare_images(img1, img2):
 
 
 if __name__ == "__main__":
+    global Image
+    if not Image:
+        from PIL import Image
+
     img1 = Image.open("image_1.png")
     img2 = Image.open("image_2.jpeg")
     print(compare_images(img1, img2))

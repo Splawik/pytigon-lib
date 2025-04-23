@@ -1,6 +1,3 @@
-from lxml import etree
-
-
 def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name, value):
     """Create a filter function to update pivot table based on cache field value.
 

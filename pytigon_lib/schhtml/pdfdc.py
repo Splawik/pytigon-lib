@@ -1,17 +1,11 @@
 import os
 import io
-import fpdf
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 from pytigon_lib.schfs.vfstools import get_temp_filename
 from pytigon_lib.schtools.main_paths import get_main_paths
 
-try:
-    import PIL
-except ImportError:
-    PIL = None
-
-_cfg = get_main_paths()
-fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg["STATIC_PATH"], "fonts")
+Image = None
+fpdf = None
 
 
 class PDFSurface:
@@ -19,6 +13,15 @@ class PDFSurface:
 
     def __init__(self, output_name, output_stream, width, height):
         """Initialize PDF surface with given dimensions and output settings."""
+        global Image, fpdf
+        if not Image:
+            from PIL import Image
+        if not fpdf:
+            import fpdf
+
+            _cfg = get_main_paths()
+            fpdf.fpdf.FPDF_FONT_DIR = os.path.join(_cfg["STATIC_PATH"], "fonts")
+
         self.output_name = output_name
         self.output_stream = output_stream
         self.width = width
@@ -83,6 +86,10 @@ class PdfDc(BaseDc):
         record=False,
     ):
         """Initialize the PDF drawing context."""
+        global Image
+        if not Image:
+            from PIL import Image
+
         super().__init__(
             calc_only,
             width,
@@ -297,17 +304,17 @@ class PdfDc(BaseDc):
 
     def draw_image(self, x, y, dx, dy, scale, png_data):
         """Draw an image at the specified coordinates."""
-        if not PIL:
+        if not Image:
             raise ImportError("PIL is required to draw images.")
 
         png_stream = io.BytesIO(png_data)
-        image = PIL.Image.open(png_stream)
+        image = Image.open(png_stream)
         w, h = image.size
         x_scale, y_scale = self._scale_image(x, y, dx, dy, scale, w, h)
 
         if scale < 4:
             if scale != 0 and x_scale < 0.25 and y_scale < 0.25:
-                image.thumbnail((4 * w * x_scale, 4 * h * y_scale), PIL.Image.LANCZOS)
+                image.thumbnail((4 * w * x_scale, 4 * h * y_scale), Image.LANCZOS)
             file_name = get_temp_filename("temp.png")
             image.save(file_name, "PNG")
             self.dc.image(file_name, x, y, w * x_scale, h * y_scale)
@@ -368,6 +375,10 @@ class PdfDcInfo(BaseDcInfo):
 
     def __init__(self, dc):
         """Initialize the PDF drawing context information."""
+        global Image
+        if not Image:
+            from PIL import Image
+
         super().__init__(dc)
 
     def get_line_dy(self, height):
@@ -404,7 +415,7 @@ class PdfDcInfo(BaseDcInfo):
         """Get the size of an image."""
         try:
             png_stream = io.BytesIO(png_data)
-            image = PIL.Image.open(png_stream)
+            image = Image.open(png_stream)
         except Exception:
             image = None
         return image.size if image else (0, 0)

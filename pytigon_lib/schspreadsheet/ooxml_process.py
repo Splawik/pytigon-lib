@@ -3,11 +3,12 @@ import shutil
 import os
 import datetime
 from xml.sax.saxutils import escape
-from lxml import etree
 from django.template import Context
 from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
 from pytigon_lib.schfs.vfstools import delete_from_zip
 import dateutil.parser
+
+etree = None
 
 SECTION_WIDTH = ord("Z") - ord("A") + 1
 
@@ -83,6 +84,9 @@ class OOXmlDocTransform(OdfDocTransform):
 
     def __init__(self, file_name_in, file_name_out=None):
         """Initialize the transformer."""
+        global etree
+        if etree is None:
+            from lxml import etree
         super().__init__(file_name_in, file_name_out)
         self.file_name_in = file_name_in
         self.file_name_out = file_name_out or file_name_in.replace("_", "")

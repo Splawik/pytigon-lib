@@ -1,11 +1,12 @@
 import io
 import os
-import PIL
 from decimal import Decimal
 from datetime import date, datetime
 import xlsxwriter
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 from pytigon_lib.schfs.vfstools import get_temp_filename
+
+Image = None
 
 
 class XlsxDc(BaseDc):
@@ -200,7 +201,9 @@ class XlsxDc(BaseDc):
             num = (
                 int(txt)
                 if td_class == "int"
-                else float(txt) if td_class == "float" else Decimal(txt)
+                else float(txt)
+                if td_class == "float"
+                else Decimal(txt)
             )
             parent.parent.parent.worksheet.write_number(row, col, num, style)
         elif td_class in ("date", "datetime"):
@@ -289,9 +292,12 @@ class XlsxDcinfo(BaseDcInfo):
         return 1
 
     def get_img_size(self, png_data):
+        global Image
+        if not Image:
+            from PIL import Image
         try:
             png_stream = io.BytesIO(png_data)
-            image = PIL.Image.open(png_stream)
+            image = Image.open(png_stream)
             return image.size if image else (0, 0)
         except Exception:
             return (0, 0)

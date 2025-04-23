@@ -1,7 +1,8 @@
 from pytigon_lib.schtools.images import svg_to_png, spec_resize
 from django.core.files.storage import default_storage
-import PIL
 import io
+
+Image = None
 
 
 class RenderBase:
@@ -94,7 +95,11 @@ class RenderBackground(RenderBase):
                     img_bytes = svg_to_png(img, int(dc.dx), int(dc.dy), itype)
                 else:
                     with io.BytesIO(img) as img_buffer:
-                        image = PIL.Image.open(img_buffer)
+                        global Image
+                        if not Image:
+                            from PIL import Image
+
+                        image = Image.open(img_buffer)
                         output = io.BytesIO()
                         image.save(output, "PNG")
                         img_bytes = output.getvalue()

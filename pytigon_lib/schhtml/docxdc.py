@@ -4,6 +4,8 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 import docx.enum.text
 
+Image = None
+
 
 class DocxDc(BaseDc):
     def __init__(
@@ -319,11 +321,12 @@ class DocxDcinfo(BaseDcInfo):
         return 1
 
     def get_img_size(self, png_data):
+        global Image
+        if not Image:
+            from PIL import Image
         try:
-            import PIL.Image
-
             png_stream = io.BytesIO(png_data)
-            image = PIL.Image.open(png_stream)
+            image = Image.open(png_stream)
             return image.size
         except Exception:
             return (0, 0)
