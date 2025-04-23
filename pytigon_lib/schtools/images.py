@@ -181,13 +181,3 @@ def compare_images(img1, img2):
         (img1.size[0], img1.size[1]), IMAGE.Resampling.LANCZOS
     )
     return mse(np.array(img1.convert("RGB")), np.array(img2_mod))
-
-
-if __name__ == "__main__":
-    global IMAGE
-    if not IMAGE:
-        from PIL import Image as IMAGE
-
-    img1 = IMAGE.open("image_1.png")
-    img2 = IMAGE.open("image_2.jpeg")
-    print(compare_images(img1, img2))
