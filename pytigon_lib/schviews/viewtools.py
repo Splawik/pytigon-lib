@@ -165,8 +165,10 @@ class LocalizationTemplateResponse(TemplateResponse):
         Returns:
             Template: The resolved template object.
         """
-
-        lang = self._request.LANGUAGE_CODE[:2].lower()
+        if hasattr(self._request, "LANGUAGE_CODE"):
+            lang = self._request.LANGUAGE_CODE[:2].lower()
+        else:
+            lang = "en"
         if lang != "en":
             if isinstance(template, (list, tuple)):
                 templates = []

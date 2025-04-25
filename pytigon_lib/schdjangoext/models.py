@@ -6,7 +6,13 @@ from typing import Any, Dict, List, Optional, Type
 from django.db import models
 from django import forms
 from django.core import serializers
-from django.contrib.contenttypes.models import ContentType
+from django.contrib import admin
+from django.conf import settings
+
+try:
+    from django.contrib.contenttypes.models import ContentType
+except:
+    ContentType = None
 
 from pytigon_lib.schtools.schjson import ComplexEncoder, ComplexDecoder
 from pytigon_lib.schdjangoext.fastform import form_from_str
@@ -167,6 +173,8 @@ class AssociatedModel(models.Model):
     def get_associated_model(self) -> Optional[Type[models.Model]]:
         """Retrieve the associated model class."""
         global ASSOCIATED_MODEL_CACHE
+        if ContentType is None:
+            return None
         key = f"{self.application.lower()}/{self.table.lower()}"
         if key in ASSOCIATED_MODEL_CACHE:
             return ASSOCIATED_MODEL_CACHE[key]
@@ -333,3 +341,8 @@ else:
 
         def set_function(self, func: Any) -> None:
             self.func = func
+
+
+def admin_register(model):
+    if "django.contrib.admin" in settings.INSTALLED_APPS:
+        admin.site.register(model)

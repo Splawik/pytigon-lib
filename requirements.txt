@@ -1,4 +1,5 @@
 httpx
+lxml
 fs
 Django
 django-environ

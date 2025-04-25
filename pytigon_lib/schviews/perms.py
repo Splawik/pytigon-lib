@@ -89,6 +89,8 @@ def make_perms_test_fun(app, model, perm, fun, if_block_view=default_block):
 
     def perms_test(request, *args, **kwargs):
         """Test permissions for the given request."""
+        if not hasattr(request, "user"):
+            return fun(request, *args, **kwargs)
         user = request.user
         if not user.is_authenticated:
             user = get_anonymous()

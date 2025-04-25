@@ -251,15 +251,17 @@ class Ptig:
     def get_db(self):
         return self.archive.read(self.meta_path + "/" + self.prj_name + ".db")
 
-    def extract_ptig(self):
+    def extract_ptig(self, path_alt=True):
         import pytigon.schserw.settings
 
         paths = get_main_paths(self.prj_name)
-
-        if hasattr(pytigon.schserw.settings, "_PRJ_PATH_ALT"):
-            base_path = os.path.join(pytigon.schserw.settings._PRJ_PATH_ALT)
+        if path_alt:
+            if hasattr(pytigon.schserw.settings, "_PRJ_PATH_ALT"):
+                base_path = os.path.join(pytigon.schserw.settings._PRJ_PATH_ALT)
+            else:
+                base_path = paths["PRJ_PATH_ALT"]
         else:
-            base_path = paths["PRJ_PATH_ALT"]
+            base_path = paths["PRJ_PATH"]
 
         ret = []
         ret.append("Install file: " + self.prj_name)
