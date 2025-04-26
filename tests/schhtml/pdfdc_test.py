@@ -1,4 +1,5 @@
 from pytigon_lib.schhtml.pdfdc import *
+import PIL
 
 # Pytest tests
 import pytest

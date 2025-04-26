@@ -1,4 +1,5 @@
 from pytigon_lib.schspreadsheet.ooxml_tools import *
+from lxml import etree
 
 # Pytest tests
 import pytest

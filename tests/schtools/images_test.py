@@ -1,4 +1,5 @@
 from pytigon_lib.schtools.images import *
+from PIL import Image
 
 # Pytest tests
 import pytest
