@@ -1,9 +1,22 @@
+"""CSS parsing module for HTML rendering.
+
+Provides classes for parsing both standard CSS and indentation-based CSS,
+and resolving styles for HTML elements in the render tree.
+"""
+
 from .htmltools import superstrip
 import re
 
 
 def comment_remover(text):
-    """Remove comments from the given text."""
+    """Remove CSS comments (both /* */ and // style) from the given text.
+
+    Args:
+        text: CSS source text.
+
+    Returns:
+        Text with all comments removed.
+    """
 
     def replacer(match):
         s = match.group(0)

@@ -1,26 +1,36 @@
+"""Custom Django AppConfig with extended initialization.
+
+Provides :class:`AppConfigMod` which adds a concatenation operator
+and a smarter model-import mechanism.
+"""
+
 from importlib import import_module
 from django.apps.config import AppConfig, MODELS_MODULE_NAME
 from django.utils.module_loading import module_has_submodule
 
 
 class AppConfigMod(AppConfig):
-    """Custom AppConfig class with extended functionality."""
+    """Extended :class:`AppConfig` with custom model import and string
+    concatenation support."""
 
     def __init__(self, app_name, app_module):
-        """
-        Initialize the AppConfigMod instance.
+        """Initialize the application configuration.
 
         Args:
-            app_name (str): Name of the application.
-            app_module (str): Module name of the application.
+            app_name: Application name string.
+            app_module: Application module.
         """
         super().__init__(app_name, app_module)
 
     def import_models(self, all_models=None):
-        """Import models for the application.
+        """Import models for this application.
+
+        If the application module has a ``models`` submodule it is
+        imported explicitly.
 
         Args:
-            all_models (dict, optional): Dictionary of all models. Defaults to None.
+            all_models: Optional pre-loaded models dictionary. If not
+                given, ``self.apps.all_models`` is used.
         """
         self.models = (
             self.apps.all_models[self.label] if all_models is None else all_models
@@ -34,36 +44,46 @@ class AppConfigMod(AppConfig):
                 self.models_module = None
 
     def __add__(self, other):
-        """Add two AppConfigMod instances by their names.
+        """Concatenate the name of this app config with another.
+
+        This is a convenience operator allowing expressions such as
+        ``app_config + "suffix"`` to produce the app's name followed
+        by a string suffix. When combined with another
+        :class:`AppConfigMod` instance the two names are concatenated.
 
         Args:
-            other (AppConfigMod): Another AppConfigMod instance.
+            other: Another :class:`AppConfigMod` instance or a string.
 
         Returns:
-            str: Concatenated names of the two instances.
+            The concatenated string.
         """
-        return self.name + other
+        if isinstance(other, AppConfigMod):
+            return self.name + other.name
+        return self.name + str(other)
 
 
 def get_app_config(app_name):
-    """Get an AppConfigMod instance for the given app name.
+    """Create an :class:`AppConfigMod` instance for an application name.
+
+    Handles fully-qualified dotted names by extracting the last
+    component.
 
     Args:
-        app_name (str): Name of the application.
+        app_name: Dotted or simple application name.
 
     Returns:
-        AppConfigMod: An instance of AppConfigMod.
+        An :class:`AppConfigMod` instance.
     """
-    return AppConfigMod.create(app_name.split(".")[1] if "." in app_name else app_name)
+    return AppConfigMod.create(app_name.split(".")[-1] if "." in app_name else app_name)
 
 
 def get_app_name(app):
-    """Get the name of the application.
+    """Safely extract the application name.
 
     Args:
-        app (AppConfig or str): The application instance or name.
+        app: An :class:`AppConfig` instance or a plain string name.
 
     Returns:
-        str: The name of the application.
+        The application name string.
     """
-    return app.name if isinstance(app, AppConfig) else app
+    return app.name if isinstance(app, AppConfig) else str(app)

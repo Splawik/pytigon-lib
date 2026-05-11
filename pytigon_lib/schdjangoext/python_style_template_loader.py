@@ -106,7 +106,23 @@ class FSLoader(django.template.loaders.filesystem.Loader):
                     )
 
     def get_contents(self, origin):
-        """Read template contents."""
+        """Read the template content, falling back to the base name.
+
+        If the origin name contains a language suffix
+        (e.g. ``template_pl.html``), the loader first tries to read
+        that file and, if it is missing, falls back to the base
+        ``template.html``.
+
+        Args:
+            origin: An :class:`Origin` instance.
+
+        Returns:
+            The template content as a string.
+
+        Raises:
+            TemplateDoesNotExist: If neither the language-specific file
+                nor the base file can be found.
+        """
         try:
             with open(origin.name, encoding=self.engine.file_charset) as fp:
                 return fp.read()

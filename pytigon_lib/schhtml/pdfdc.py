@@ -56,7 +56,11 @@ class PDFSurface:
             ("monospace", "BI", "DejaVuSansMono-BoldOblique.ttf"),
         ]
         for family, style, filename in fonts:
-            self.pdf.add_font(family, style, filename, uni=True)
+            try:
+                self.pdf.add_font(family, style, filename, uni=True)
+            except (FileNotFoundError, OSError, RuntimeError):
+                # Skip fonts that cannot be loaded; fall back to default
+                pass
 
     def get_dc(self):
         """Return the PDF drawing context."""
@@ -289,26 +293,42 @@ class PdfDc(BaseDc):
 
     def add_spline(self, xytab, close):
         """Add a spline to the drawing stack."""
-        super().add_spline(xytab)
+        super().add_spline(xytab, close)
 
     def draw_text(self, x, y, txt):
         """Draw text at the specified coordinates."""
-        dx, dx_space, dy_up, dy_down = self.dc_info.get_extents(txt)
+        dx, dx_space, dy_up, dy_down = self.dc_info.get_extents(txt, self.last_style)
         self.dc.text(x * self.scale, y * self.scale - dy_down - 2, txt)
         super().draw_text(x, y, txt)
 
     def draw_rotated_text(self, x, y, txt, angle):
         """Draw rotated text at the specified coordinates."""
-        w, h, d, e = self.dc_info.get_extents(txt)
-        super().draw_rotated_text(x, y, txt)
+        w, h, d, e = self.dc_info.get_extents(txt, self.last_style)
+        super().draw_rotated_text(x, y, txt, angle)
 
     def draw_image(self, x, y, dx, dy, scale, png_data):
-        """Draw an image at the specified coordinates."""
+        """Draw an image at the specified coordinates.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            dx: Target width.
+            dy: Target height.
+            scale: Scale mode (0=none, 1=fit, 2=larger, 3=smaller, 4=repeat-x, 5=repeat-y).
+            png_data: Raw image bytes.
+
+        Raises:
+            ImportError: If PIL is not available.
+        """
         if not IMAGE:
             raise ImportError("PIL is required to draw images.")
 
         png_stream = io.BytesIO(png_data)
-        image = IMAGE.open(png_stream)
+        try:
+            image = IMAGE.open(png_stream)
+        except (OSError, ValueError) as e:
+            raise RuntimeError(f"Failed to decode image: {e}") from e
+
         w, h = image.size
         x_scale, y_scale = self._scale_image(x, y, dx, dy, scale, w, h)
 
@@ -316,9 +336,12 @@ class PdfDc(BaseDc):
             if scale != 0 and x_scale < 0.25 and y_scale < 0.25:
                 image.thumbnail((4 * w * x_scale, 4 * h * y_scale), IMAGE.LANCZOS)
             file_name = get_temp_filename("temp.png")
-            image.save(file_name, "PNG")
-            self.dc.image(file_name, x, y, w * x_scale, h * y_scale)
-            os.remove(file_name)
+            try:
+                image.save(file_name, "PNG")
+                self.dc.image(file_name, x, y, w * x_scale, h * y_scale)
+            finally:
+                if os.path.exists(file_name):
+                    os.remove(file_name)
         super().draw_image(x, y, dx, dy, scale, png_data)
 
     def _polygon(self, points):
@@ -412,10 +435,17 @@ class PdfDcInfo(BaseDcInfo):
         return self.dc.dc.font_size_pt
 
     def get_img_size(self, png_data):
-        """Get the size of an image."""
+        """Get the size of an image.
+
+        Args:
+            png_data: Raw PNG image bytes.
+
+        Returns:
+            Tuple of (width, height) in pixels, or (0, 0) on failure.
+        """
         try:
             png_stream = io.BytesIO(png_data)
             image = IMAGE.open(png_stream)
-        except Exception:
-            image = None
-        return image.size if image else (0, 0)
+            return image.size if image else (0, 0)
+        except (OSError, ValueError, AttributeError):
+            return (0, 0)

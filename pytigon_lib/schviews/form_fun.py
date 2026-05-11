@@ -1,34 +1,48 @@
-"""Module contains views for form processing."""
+"""Form processing views for the schviews module.
 
-from django.http import HttpResponse
-from django.template import RequestContext, loader
-from django.conf import settings
-from pytigon_lib.schviews.viewtools import render_to_response
+Provides view functions that handle form rendering, validation, and
+submission within the schviews framework. Includes both standalone
+form views and combined list+form views.
+"""
+
+import logging
+from typing import Any, Callable, Dict, Optional
+
+from django.http import HttpRequest, HttpResponse
+from django.template import RequestContext
+
+from pytigon_lib.schviews.viewtools import render_to_response, render_to_response_ext
+
 from .perms import make_perms_url_test_fun
-from .viewtools import render_to_response_ext
+
+logger = logging.getLogger(__name__)
 
 
 def form(
-    request,
-    app_name,
-    form_class,
-    template_name,
-    object_id=None,
-    form_end=False,
-    param=None,
-    mimetype=None,
-):
+    request: HttpRequest,
+    app_name: str,
+    form_class: Any,
+    template_name: str,
+    object_id: Optional[int] = None,
+    form_end: bool = False,
+    param: Optional[Dict] = None,
+    mimetype: Optional[str] = None,
+) -> HttpResponse:
     """Create and process a form view.
+
+    Handles the full lifecycle of a form: instantiation, validation,
+    processing (valid/invalid/empty), and rendering the result through
+    the appropriate template.
 
     Args:
         request: The HTTP request object.
         app_name: The name of the application.
         form_class: The form class to instantiate.
         template_name: The template to render.
-        object_id: Optional object ID for the form.
-        form_end: Optional flag indicating form end.
-        param: Optional parameters for form processing.
-        mimetype: Optional mimetype for the response.
+        object_id: Optional object ID for form pre-population.
+        form_end: Optional flag indicating form end (for multi-step forms).
+        param: Optional parameters forwarded to form processing methods.
+        mimetype: Optional MIME type for the response.
 
     Returns:
         HttpResponse: The rendered response.
@@ -77,10 +91,12 @@ def form(
             else:
                 if hasattr(form_instance, "process_invalid"):
                     result = (
-                        form_instance.process(request, param)
+                        form_instance.process_invalid(request, param)
                         if param
-                        else form_instance.process(request)
+                        else form_instance.process_invalid(request)
                     )
+                    if not isinstance(result, dict):
+                        return result
                     result.update({"form": form_instance})
                     if object_id:
                         result.update({"object_id": object_id})
@@ -89,7 +105,9 @@ def form(
                     )
                 else:
                     return render_to_response(
-                        template_name, context={"form": form_instance}, request=request
+                        template_name,
+                        context={"form": form_instance},
+                        request=request,
                     )
         else:
             if hasattr(form_instance, "init"):
@@ -103,6 +121,8 @@ def form(
                     if param
                     else form_instance.process_empty(request)
                 )
+                if not isinstance(result, dict):
+                    return result
                 result["form"] = form_instance
             else:
                 result = {"form": form_instance}
@@ -112,46 +132,58 @@ def form(
                     result.update(param)
 
             return render_to_response(template_name, context=result, request=request)
-    except Exception as e:
-        return HttpResponse(f"An error occurred: {str(e)}", status=500)
+    except Exception:
+        logger.exception("Error processing form '%s'", template_name)
+        return HttpResponse("An error occurred while processing the form.", status=500)
 
 
-def form_with_perms(app):
-    """Create a form view with permissions."""
+def form_with_perms(app: str) -> Callable:
+    """Create a form view wrapped with permission checks.
+
+    Args:
+        app: The application name used to build permission checks.
+
+    Returns:
+        A view function that checks permissions before calling ``form()``.
+    """
     return make_perms_url_test_fun(app, form)
 
 
 def list_and_form(
-    request,
-    queryset,
-    form_class,
-    template_name,
-    table_always=True,
-    paginate_by=None,
-    page=None,
-    allow_empty=True,
-    extra_context=None,
-    context_processors=None,
-    template_object_name="obj",
-    mimetype=None,
-    param=None,
-):
-    """List and process a form view.
+    request: HttpRequest,
+    queryset: Any,
+    form_class: Any,
+    template_name: str,
+    table_always: bool = True,
+    paginate_by: Optional[int] = None,
+    page: Optional[int] = None,
+    allow_empty: bool = True,
+    extra_context: Optional[Dict] = None,
+    context_processors: Optional[Any] = None,
+    template_object_name: str = "obj",
+    mimetype: Optional[str] = None,
+    param: Optional[Dict] = None,
+) -> HttpResponse:
+    """Display a list of objects alongside a form for filtering/processing.
+
+    If POST data is present and the form is valid, the form's ``process``
+    method is called to filter or modify the queryset. Otherwise, if
+    ``table_always`` is True, ``process_empty`` is called on GET requests.
 
     Args:
         request: The HTTP request object.
-        queryset: The queryset to display.
-        form_class: The form class to instantiate.
+        queryset: The base queryset to display and filter.
+        form_class: The form class to instantiate (used for filtering).
         template_name: The template to render.
-        table_always: Whether to always display the table.
-        paginate_by: Number of items per page.
-        page: The current page number.
+        table_always: If True, always include the table in the context.
+        paginate_by: Number of items per page (reserved for future use).
+        page: The current page number (reserved for future use).
         allow_empty: Whether to allow empty querysets.
-        extra_context: Additional context data.
+        extra_context: Additional context data to merge.
         context_processors: Context processors to apply.
-        template_object_name: The name of the object in the template.
-        mimetype: Optional mimetype for the response.
-        param: Optional parameters for form processing.
+        template_object_name: The name of the object in the template context.
+        mimetype: Optional MIME type for the response.
+        param: Optional parameters forwarded to form processing methods.
 
     Returns:
         HttpResponse: The rendered response.
@@ -160,20 +192,20 @@ def list_and_form(
         form_instance = form_class(request.POST or None)
         if request.POST and form_instance.is_valid():
             queryset = (
-                form_instance.Process(request, queryset, param)
+                form_instance.process(request, queryset, param)
                 if param
-                else form_instance.Process(request, queryset)
+                else form_instance.process(request, queryset)
             )
             extra_context = extra_context or {}
             extra_context.update({"form": form_instance})
         elif table_always:
             extra_context = extra_context or {}
             extra_context.update({"form": form_instance})
-            if hasattr(form_instance, "ProcessEmpty"):
+            if hasattr(form_instance, "process_empty"):
                 queryset = (
-                    form_instance.ProcessEmpty(request, queryset, param)
+                    form_instance.process_empty(request, queryset, param)
                     if param
-                    else form_instance.ProcessEmpty(request, queryset)
+                    else form_instance.process_empty(request, queryset)
                 )
 
         return render_to_response(
@@ -185,19 +217,32 @@ def list_and_form(
             },
             request=request,
         )
-    except Exception as e:
-        return HttpResponse(f"An error occurred: {str(e)}", status=500)
+    except Exception:
+        logger.exception("Error processing list_and_form '%s'", template_name)
+        return HttpResponse(
+            "An error occurred while processing the combined list and form.",
+            status=500,
+        )
 
 
-def direct_to_template(request, template, extra_context=None, mimetype=None, **kwargs):
-    """Render a template directly with additional context.
+def direct_to_template(
+    request: HttpRequest,
+    template: str,
+    extra_context: Optional[Dict] = None,
+    mimetype: Optional[str] = None,
+    **kwargs: Any,
+) -> HttpResponse:
+    """Render a template directly with optional extra context.
+
+    Useful for simple views that only need to inject URL parameters
+    into a template without any model/form processing.
 
     Args:
         request: The HTTP request object.
-        template: The template to render.
-        extra_context: Additional context data.
-        mimetype: Optional mimetype for the response.
-        **kwargs: Additional URL parameters.
+        template: The template name to render.
+        extra_context: Additional context data (values or callables).
+        mimetype: Optional MIME type for the response.
+        **kwargs: Additional URL parameters added to template context.
 
     Returns:
         HttpResponse: The rendered response.
@@ -209,5 +254,8 @@ def direct_to_template(request, template, extra_context=None, mimetype=None, **k
                 {k: v() if callable(v) else v for k, v in extra_context.items()}
             )
         return render_to_response(template, context=context, request=request)
-    except Exception as e:
-        return HttpResponse(f"An error occurred: {str(e)}", status=500)
+    except Exception:
+        logger.exception("Error rendering template '%s'", template)
+        return HttpResponse(
+            "An error occurred while rendering the template.", status=500
+        )

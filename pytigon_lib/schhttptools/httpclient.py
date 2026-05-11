@@ -77,24 +77,34 @@ def schurljoin(base, address):
 
 
 class RetHttp:
-    """Wrapper for HTTP response."""
+    """Wrapper for HTTP response from the asgi/wsgi bridge.
+
+    Parses a dictionary message from the ASGI/WSGI layer into
+    response attributes compatible with httpx.Response interface.
+    """
 
     def __init__(self, url, ret_message):
         self.url = url
         self.history = None
         self.cookies = {}
+        self.content = b""
+        self.status_code = 200
+        self.headers = {}
+        self.type = ""
         for key, value in ret_message.items():
             if key == "body":
                 self.content = value
             elif key == "headers":
                 self.headers = {}
-                for pos in value.items() if isinstance(value, dict) else value:
-                    if decode(pos[0]).lower() == "set-cookie":
+                items = value.items() if isinstance(value, dict) else value
+                for pos in items:
+                    header_name = decode(pos[0]).lower()
+                    if header_name == "set-cookie":
                         x = decode(pos[1])
                         x2 = x.split("=", 1)
                         self.cookies[x2[0]] = x2[1]
                     else:
-                        self.headers[decode(pos[0]).lower()] = decode(pos[1])
+                        self.headers[header_name] = decode(pos[1])
             elif key == "status":
                 self.status_code = value[0] if isinstance(value, tuple) else value
             elif key == "type":
@@ -111,9 +121,13 @@ CLIENT = None
 
 
 def asgi_or_wsgi_get_or_post(
-    application, url, headers, params={}, post=False, ret=[], user_agent="Pytigon"
+    application, url, headers, params=None, post=False, ret=None, user_agent="Pytigon"
 ):
     """Handle GET or POST request for Emscripten or WSGI."""
+    if params is None:
+        params = {}
+    if ret is None:
+        ret = []
     global CLIENT
     if not CLIENT:
         CLIENT = Client(
@@ -125,7 +139,7 @@ def asgi_or_wsgi_get_or_post(
     if post:
         params2 = {}
         for key, value in params.items():
-            if type(value) == bytes:
+            if isinstance(value, bytes):
                 params2[key] = value.decode("utf-8")
             else:
                 params2[key] = value
@@ -153,8 +167,10 @@ def asgi_or_wsgi_get_or_post(
     ret.append(result)
 
 
-def requests_request(method, url, argv, ret=[]):
+def requests_request(method, url, argv, ret=None):
     """Perform HTTP request using httpx."""
+    if ret is None:
+        ret = []
     ret2 = httpx.request(method, url, **argv)
     ret.append(ret2)
 
@@ -204,7 +220,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                 try:
                     while t.is_alive():
                         app.Yield()
-                except:
+                except Exception:
                     t.join()
             else:
                 t.join()
@@ -221,7 +237,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                 try:
                     while t.is_alive():
                         app.Yield()
-                except:
+                except Exception:
                     t.join()
         else:
             requests_request(method, url, argv, ret)
@@ -385,7 +401,7 @@ class HttpClient:
                 try:
                     if HTTP_IDLE_FUNC:
                         HTTP_IDLE_FUNC()
-                except:
+                except Exception:
                     return HttpResponse(address_str, 500)
         self.content = ""
         address = (
@@ -443,7 +459,7 @@ class HttpClient:
                     return HttpResponse(
                         adr, content=content, response=ret_http, ret_content_type=mt
                     )
-            except:
+            except (OSError, FileNotFoundError):
                 print(
                     "Static file load error: ",
                     get_vfs().getsyspath(path) if for_vfs else path,
@@ -504,7 +520,7 @@ class HttpClient:
     def show(self, parent):
         """Show HTTP error."""
         if HTTP_ERROR_FUNC:
-            HTTP_ERROR_FUNC(parent, self.content)
+            HTTP_ERROR_FUNC(parent, getattr(self, "content", b""))
 
 
 class AppHttp(HttpClient):

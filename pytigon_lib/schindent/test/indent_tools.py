@@ -44,8 +44,8 @@ def norm_tab(f):
     poziom = 0
     tabpoziom = [0]
     tabkod = []
-    for l in _convert_strings(f):
-        line = l.replace("\t", " " * 8).rstrip()
+    for raw_line in _convert_strings(f):
+        line = raw_line.replace("\t", " " * 8).rstrip()
         if not line.lstrip():
             continue
         il = spaces_count(line)

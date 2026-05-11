@@ -83,6 +83,11 @@ class DocxDc(BaseDc):
         )
 
     def close(self):
+        """Close the DOCX document and save to the output stream or file.
+
+        Raises:
+            RuntimeError: If saving the document fails.
+        """
         if self.notify_callback:
             self.notify_callback("end", {"dc": self})
         try:
@@ -90,8 +95,8 @@ class DocxDc(BaseDc):
                 self.document.save(self.output_stream)
             elif self.output_name:
                 self.document.save(self.output_name)
-        except Exception as e:
-            raise RuntimeError(f"Failed to save document: {e}")
+        except (OSError, ValueError) as e:
+            raise RuntimeError(f"Failed to save document: {e}") from e
 
     def annotate(self, what, data):
         if what == "end_tag":

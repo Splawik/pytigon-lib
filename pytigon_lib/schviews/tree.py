@@ -1,107 +1,204 @@
-class MakeTreeFromObject:
-    """Generate a tree widget based on a Django model."""
+"""Tree widget generation for the schviews module.
 
-    def __init__(self, model, callback, field_name=None):
+Provides a class that generates HTML tree widgets from Django model
+hierarchies using a callback-based pattern for node rendering.
+"""
+
+import html
+import logging
+from typing import Any, Callable, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
+
+# Type alias for the callback: f(query_id: int, obj: Any) -> Any
+TreeCallback = Callable[[int, Any], Any]
+
+# -- String constants to reduce repeated allocations -----------------------
+_UL_END = "</ul>"
+_LI_END = "</li>"
+
+
+class MakeTreeFromObject:
+    """Generate an HTML tree widget from a Django model hierarchy.
+
+    The tree is built by traversing parent/child relationships on the
+    model. A user-provided callback controls what information is shown
+    for each node (name, has-children flag, actions).
+
+    Example usage::
+
+        tree = MakeTreeFromObject(MyModel, my_callback, field_name="Root")
+        html_fragment = tree.gen_html()
+    """
+
+    def __init__(
+        self,
+        model: Any,
+        callback: TreeCallback,
+        field_name: Optional[str] = None,
+    ) -> None:
         """Initialize the tree generator.
 
         Args:
-            model: Django model to generate the tree from.
-            callback: Function to retrieve tree node details.
-                The callback function should accept two arguments:
-                    - id: Determines what information to return.
-                        - 0: Return True if the object has children, False otherwise.
-                        - 1: Return the name of the object.
-                        - 2: Return a list of actions for the object.
-                    - obj: The object to query.
-            field_name: Optional name of the tree field.
+            model: Django model class with a ``parent`` ForeignKey field.
+            callback: Function to retrieve tree node details. Called with
+                two arguments:
+
+                - ``query_id`` (int):
+                    - 0: Return ``True`` if the object has children, ``False`` otherwise.
+                    - 1: Return the display name of the object (as a string).
+                    - 2: Return a list of ``(link, name)`` action tuples.
+                - ``obj``: The model instance being queried.
+
+            field_name: Optional label displayed as the root folder name.
         """
         self.model = model
         self.callback = callback
         self.field_name = field_name
 
-    def _tree_from_object_children(self, parent):
-        """Generate HTML for child nodes of a given parent node.
+    # -- Private helpers ---------------------------------------------------
+
+    @staticmethod
+    def _build_node_html(
+        label: str,
+        actions: List[Tuple[str, str]],
+        children_html: str,
+    ) -> str:
+        """Build the HTML fragment for a single tree node.
 
         Args:
-            parent: The parent node object.
+            label: The *already-escaped* display name of the node.
+            actions: List of ``(link, name)`` tuples for node actions.
+            children_html: Pre-rendered HTML for child nodes.
 
         Returns:
-            str: HTML string representing the child nodes.
+            An HTML string representing the node and its subtree.
         """
-        children = self.model.objects.filter(parent=parent)
-        ret = ""
-        for child in children:
-            if self.callback(0, child):
-                ret += "<li>"
-                ret += f"<span class='folder'>{self.callback(1, child)}</span>"
-                ret += "<ul>"
-                actions = self.callback(2, child)
-                for action in actions:
-                    link, name = action
-                    ret += f"<li><span class='file'><a href='{link}'>{name}</a></span></li>"
-                ret += self._tree_from_object_children(child)
-                ret += "</ul>"
-                ret += "</li>"
-        return ret.replace("<ul></ul>", "")
+        parts = ["<li>"]
+        parts.append(f"<span class='folder'>{html.escape(label, quote=True)}</span>")
+        parts.append("<ul>")
+        for link, name in actions:
+            parts.append(
+                "<li><span class='file'>"
+                f"<a href='{html.escape(link, quote=True)}'>"
+                f"{html.escape(name, quote=True)}"
+                "</a></span></li>"
+            )
+        parts.append(children_html)
+        parts.append(_UL_END)
+        parts.append(_LI_END)
+        return "".join(parts)
 
-    def _tree_from_object(self):
+    def _tree_from_object_children(self, parent: Any) -> str:
+        """Recursively generate HTML for child nodes of a parent.
+
+        Args:
+            parent: The parent model instance.
+
+        Returns:
+            HTML string for the subtree rooted at *parent*.
+        """
+        try:
+            children = self.model.objects.filter(parent=parent)
+        except Exception:
+            logger.exception(
+                "Error querying children for parent id=%s",
+                getattr(parent, "pk", "?"),
+            )
+            return ""
+
+        parts = []
+        for child in children:
+            try:
+                if self.callback(0, child):
+                    label = str(self.callback(1, child))
+                    actions = self.callback(2, child) or []
+                    children_html = self._tree_from_object_children(child)
+                    parts.append(self._build_node_html(label, actions, children_html))
+            except Exception:
+                logger.exception(
+                    "Error processing tree node id=%s",
+                    getattr(child, "pk", "?"),
+                )
+        result = "".join(parts)
+        # Remove empty <ul> elements to keep the markup clean.
+        return result.replace("<ul></ul>", "")
+
+    def _tree_from_object(self) -> str:
         """Generate HTML for the root nodes of the tree.
 
         Returns:
-            str: HTML string representing the root nodes.
+            HTML string for all root-level nodes.
         """
-        root_nodes = self.model.objects.filter(parent=None)
-        ret = ""
-        for node in root_nodes:
-            if self.callback(0, node):
-                ret += "<li>"
-                ret += f"<span class='folder'>{self.callback(1, node)}</span>"
-                ret += "<ul>"
-                actions = self.callback(2, node)
-                for action in actions:
-                    link, name = action
-                    ret += f"<li><span class='file'><a href='{link}'>{name}</a></span></li>"
-                ret += self._tree_from_object_children(node)
-                ret += "</ul>"
-                ret += "</li>"
-        return ret
+        try:
+            root_nodes = self.model.objects.filter(parent=None)
+        except Exception:
+            logger.exception("Error querying root nodes for model %s", self.model)
+            return ""
 
-    def _gen(self, head_ctrl, end_head_ctrl):
-        """Generate the final HTML structure.
+        parts = []
+        for node in root_nodes:
+            try:
+                if self.callback(0, node):
+                    label = str(self.callback(1, node))
+                    actions = self.callback(2, node) or []
+                    children_html = self._tree_from_object_children(node)
+                    parts.append(self._build_node_html(label, actions, children_html))
+            except Exception:
+                logger.exception(
+                    "Error processing root tree node id=%s",
+                    getattr(node, "pk", "?"),
+                )
+        return "".join(parts)
+
+    def _gen(self, head_ctrl: str, end_head_ctrl: str) -> str:
+        """Assemble the final HTML structure around the tree.
 
         Args:
-            head_ctrl: HTML to prepend to the tree.
-            end_head_ctrl: HTML to append to the tree.
+            head_ctrl: HTML to prepend before the tree
+                (e.g. ``<ul id='browser' class='filetree'>``).
+            end_head_ctrl: HTML to append after the tree
+                (e.g. ``</ul>``).
 
         Returns:
-            str: The complete HTML structure.
+            The complete HTML structure, or an empty string on error.
         """
         try:
             if self.field_name:
-                ret = f"{head_ctrl}<li><span class='folder'>{self.field_name}</span><ul>{self._tree_from_object()}</ul></li>{end_head_ctrl}"
+                ret = (
+                    f"{head_ctrl}<li>"
+                    f"<span class='folder'>"
+                    f"{html.escape(self.field_name, quote=True)}"
+                    f"</span>"
+                    f"<ul>{self._tree_from_object()}</ul></li>"
+                    f"{end_head_ctrl}"
+                )
             else:
                 ret = f"{head_ctrl}{self._tree_from_object()}{end_head_ctrl}"
-        except Exception as e:
-            import sys
-            import traceback
-
-            print(f"Error: {e}", file=sys.stderr)
-            traceback.print_exc()
+        except Exception:
+            logger.exception("Error generating tree HTML")
             ret = ""
         return ret
 
-    def gen_html(self):
-        """Generate and return HTML for the tree widget.
+    # -- Public API --------------------------------------------------------
+
+    def gen_html(self) -> str:
+        """Generate and return HTML for a full tree widget.
+
+        The output is wrapped in ``<ul id='browser' class='filetree'>``.
 
         Returns:
-            str: HTML string for the tree widget.
+            HTML string for the tree widget.
         """
         return self._gen("<ul id='browser' class='filetree'>", "</ul>")
 
-    def gen_shtml(self):
-        """Generate and return simplified HTML for the tree widget.
+    def gen_shtml(self) -> str:
+        """Generate and return simplified HTML for a tree widget.
+
+        The output has no outer wrapping element — useful for embedding
+        the tree within an existing list.
 
         Returns:
-            str: Simplified HTML string for the tree widget.
+            Simplified HTML string for the tree widget.
         """
         return self._gen("", "")

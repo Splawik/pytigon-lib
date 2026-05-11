@@ -1,47 +1,73 @@
+"""Project initialization and dependency installation utilities."""
+
 import os
 import sys
 import zipfile
 import shutil
 import configparser
-import multiprocessing
+import logging
 from pytigon_lib.schfs import extractall
-from pytigon_lib.schtools.process import py_manage
-from pytigon_lib.schtools.process import py_run
-from pytigon_lib.schtools.nim_integration import install_nim
+from pytigon_lib.schtools.process import py_manage, py_run
+
+logger = logging.getLogger(__name__)
 
 
 def _mkdir(path, ext=None):
-    if ext:
-        p = os.path.join(path, ext)
-    else:
-        p = path
+    """Create a directory if it does not exist.
+
+    Args:
+        path: Base path.
+        ext: Optional subdirectory name to append to path.
+    """
+    p = os.path.join(path, ext) if ext else path
     if not os.path.exists(p):
         try:
-            os.mkdir(p)
-        except:
-            pass
+            os.makedirs(p, exist_ok=True)
+        except OSError:
+            logger.warning("Could not create directory: %s", p)
 
 
 def upgrade_test(zip_path, out_path):
-    if os.path.exists(zip_path):
-        archive = zipfile.ZipFile(zip_path, "r")
-        cfg_txt = archive.read("install.ini").decode("utf-8")
-        cfg = configparser.ConfigParser()
-        cfg.read_string(cfg_txt)
-        t1 = cfg["DEFAULT"]["GEN_TIME"]
-        ini2 = os.path.join(out_path, "install.ini")
-        if os.path.exists(ini2):
-            cfg2 = configparser.ConfigParser()
-            cfg2.read(ini2)
-            t2 = cfg2["DEFAULT"]["GEN_TIME"]
-            if t2 < t1:
-                return True
-        else:
-            return False
+    """Check if an upgrade is needed by comparing generation timestamps.
+
+    Args:
+        zip_path: Path to the upgrade zip archive.
+        out_path: Path to the installed project directory.
+
+    Returns:
+        True if the zip archive contains a newer version, False otherwise.
+    """
+    if not os.path.exists(zip_path):
+        return False
+
+    archive = zipfile.ZipFile(zip_path, "r")
+    cfg_txt = archive.read("install.ini").decode("utf-8")
+    cfg = configparser.ConfigParser()
+    cfg.read_string(cfg_txt)
+    t1 = cfg["DEFAULT"]["GEN_TIME"]
+    ini2 = os.path.join(out_path, "install.ini")
+    if os.path.exists(ini2):
+        cfg2 = configparser.ConfigParser()
+        cfg2.read(ini2)
+        t2 = cfg2["DEFAULT"]["GEN_TIME"]
+        if t2 < t1:
+            return True
     return False
 
 
 def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
+    """Install Python packages to a target directory using pip.
+
+    Args:
+        pip_str: Space-separated list of package names/requirements.
+        prjlib: Target directory for installation.
+        confirm: If True, requires 'Successfully installed' in output to return True.
+        upgrade: If True, passes --upgrade to pip.
+
+    Returns:
+        True if installation succeeded (when confirm=True), always False when
+        confirm=False (caller should check exit code externally).
+    """
     packages = [x.strip() for x in pip_str.split(" ") if x]
     print("pip install: ", pip_str)
     exit_code, output_tab, err_tab = py_run(
@@ -52,13 +78,7 @@ def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
             "install",
             f"--target={prjlib}",
         ]
-        + (
-            [
-                "--upgrade",
-            ]
-            if upgrade
-            else []
-        )
+        + (["--upgrade"] if upgrade else [])
         + packages
     )
     success = False
@@ -73,30 +93,40 @@ def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
             if pos:
                 print("pip error: ", pos)
 
-    if success and confirm:
-        return True
-    else:
-        return False
+    return success if confirm else False
 
 
 def build_all(path):
+    """Execute all ``*_build.py`` scripts found under a directory tree.
+
+    Each script is expected to define a ``build(path=...)`` function.
+    Uses exec() to run user-provided build scripts in a controlled
+    local namespace.
+
+    Args:
+        path: Root directory to walk for build scripts.
+
+    Returns:
+        True if all builds succeeded, False if any failed.
+    """
     ret = True
     for root, dirs, files in os.walk(path):
         for name in files:
             if name.endswith("_build.py"):
                 p = os.path.join(root, name)
                 with open(p, "rt") as f:
-                    l = locals()
+                    local_ns = {}
                     buf = f.read()
-                    exec(buf, globals(), l)
-                    if "build" in l:
-                        x = l["build"](path=p.replace("_build.py", ".nim"))
+                    exec(buf, globals(), local_ns)
+                    if "build" in local_ns:
+                        x = local_ns["build"](path=p.replace("_build.py", ".nim"))
                         if not x:
                             ret = False
     return ret
 
 
 def upgrade_local_libs():
+    """Upgrade locally installed pip packages based on project install.ini."""
     from django.conf import settings
 
     prjlib = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "prjlib")
@@ -110,36 +140,69 @@ def upgrade_local_libs():
                 pip_install(pip_str, prjlib, confirm=True, upgrade=True)
 
 
-SYS_COMMANDS = {
-    "makeallmigrations",
-    "migrate",
-    "createautouser",
-    "import_projects",
-}
+# System management commands that trigger special initialization behavior.
+SYS_COMMANDS = frozenset(
+    {
+        "makeallmigrations",
+        "migrate",
+        "createautouser",
+        "import_projects",
+    }
+)
+
+
+def _acquire_lock():
+    """Attempt to acquire a multiprocessing lock for serializing init.
+
+    Returns:
+        A Lock object or None if multiprocessing is unavailable.
+    """
+    try:
+        import multiprocessing
+
+        lock = multiprocessing.Lock()
+        lock.acquire()
+        return lock
+    except (ImportError, OSError):
+        return None
+
+
+def _release_lock(lock):
+    """Release a multiprocessing lock if one was acquired."""
+    if lock is not None:
+        try:
+            lock.release()
+        except Exception:
+            pass
 
 
 def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
+    """Initialize a project: extract archives, run migrations, install deps.
+
+    This is the main entry point for first-run project setup. It handles
+    zip extraction, database creation, Django migrations, pip installation,
+    and static file copying.
+
+    Args:
+        prj: Project name (e.g. 'schdevtools').
+        root_path: Root installation directory.
+        data_path: Data directory for databases and media.
+        prj_path: Path where project sources live.
+        static_app_path: Path for application static files.
+        paths: Optional list of additional directories to create.
+    """
     if prj == "_schall":
         return
 
-    try:
-        l = multiprocessing.Lock()
-    except:
-        l = None
-    if l:
-        l.acquire()
+    lock = _acquire_lock()
 
     _root_path = os.path.normpath(root_path)
     _data_path = os.path.normpath(data_path)
     _prj_path = os.path.normpath(prj_path)
     _static_app_path = os.path.normpath(static_app_path)
-    # _base_compiler_path = os.path.join(_data_path, "ext_prg")
-    # is_prj_path = True if os.path.exists(_prj_path) else False
-    is_data_path = (
-        True if os.path.exists(os.path.join(_data_path, "install.ini")) else False
-    )
+    is_data_path = os.path.exists(os.path.join(_data_path, "install.ini"))
     is_dev = prj in ("schdevtools", "schmanage", "_schsetup")
-    is_static_path = True if os.path.exists(_static_app_path) else False
+    is_static_path = os.path.exists(_static_app_path)
     upgrade = False
 
     if is_data_path and is_dev:
@@ -206,7 +269,6 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                         print("python: pytigon: projects imported!")
                         if err_tab:
                             print(err_tab)
-        # install_nim(_data_path)
         os.chdir(tmp)
 
     if upgrade:
@@ -265,15 +327,11 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if os.path.exists(prjlib):
         if prjlib not in sys.path:
             sys.path.append(prjlib)
-        # if test1 or test2 or test3:
-        #    ret = make(_data_path, os.path.join(_prj_path, prj), prj)
-        #    if ret:
-        #        for pos in ret:
-        #            print(pos)
+
     syslib = os.path.join(_data_path, prj, "syslib")
     if not os.path.exists(syslib):
         os.makedirs(syslib)
         with open(os.path.join(syslib, "__init__.py"), "wt") as f:
             f.write(" ")
-    if l:
-        l.release()
+
+    _release_lock(lock)

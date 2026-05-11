@@ -1,20 +1,3 @@
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by the
-# Free Software Foundation; either version 3, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY  ; without even the implied warranty of MERCHANTIBILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
-
-# Pytigon - wxpython and django application framework
-
-# author: "Slawomir Cholaj (slawomir.cholaj@gmail.com)"
-# license: "LGPL 3.0"
-
-__version__ = "0.250214"
-
 """
 Initialize system paths based on the project name and environment path.
 
@@ -27,8 +10,14 @@ This function sets up the necessary system paths for the project by:
 
 
 Raises:
-    Exception: If there is an error during the initialization of paths, it prints the error message and raises the exception.
+    Exception: If there is an error during the initialization of paths, it prints the error
+        message and raises the exception.
+
+author: Sławomir Chołaj (slawomir.cholaj@gmail.com)
+license: LGPL 3.0
 """
+
+__version__ = "0.260511"
 
 import sys
 import os
@@ -50,9 +39,7 @@ def init_paths(prj_name=None, env_path=None):
         cfg = get_main_paths(prj_name)
 
         # Remove duplicate and relative paths from sys.path
-        sys.path = list(
-            dict.fromkeys(pos for pos in sys.path if not pos.startswith("."))
-        )
+        sys.path = list(dict.fromkeys(pos for pos in sys.path if not pos.startswith(".")))
 
         from pytigon_lib.schtools.platform_info import platform_name
 
@@ -68,9 +55,7 @@ def init_paths(prj_name=None, env_path=None):
                     sys.path.insert(0, path) if path == p else sys.path.append(path)
         else:
             if pname == "Windows":
-                p = os.path.abspath(
-                    os.path.join(base_path, "..", "python", "lib", "site-packages")
-                )
+                p = os.path.abspath(os.path.join(base_path, "..", "python", "lib", "site-packages"))
             else:
                 p = os.path.abspath(
                     os.path.join(

@@ -1,15 +1,23 @@
+"""Project installation and database export/import utilities."""
+
 import datetime
 import zipfile
 import io
 import os
 
-from pytigon_lib.schdjangoext.django_manage import *
+from pytigon_lib.schdjangoext.django_manage import cmd
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.process import py_run
 from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
 
 
 def install():
+    """Run database migration and initial data setup for a project.
+
+    Detects whether this is a fresh install or an upgrade, runs migrations,
+    and for fresh installs with a separate local database, dumps data
+    from the local DB and loads it into the default DB.
+    """
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
 
@@ -19,21 +27,15 @@ def install():
     app_data_path = os.path.join(data_path, prj_name)
     db_path = os.path.join(app_data_path, prj_name + ".db")
 
-    upgrade = False
-
-    if os.path.exists(db_path):
-        upgrade = True
-    if "local" in settings.DATABASES:
-        db_profile = "local"
-    else:
-        db_profile = "default"
+    upgrade = os.path.exists(db_path)
+    db_profile = "local" if "local" in settings.DATABASES else "default"
 
     db_path_new = os.path.join(app_data_path, prj_name + ".new")
 
     if upgrade:
         try:
             cmd(["migrate", "--database", db_profile])
-        except:
+        except Exception:
             print("Migration for database: " + db_profile + " - fails")
     else:
         os.rename(db_path_new, db_path)
@@ -41,8 +43,8 @@ def install():
     if db_profile != "default":
         try:
             cmd(["migrate", "--database", "default"])
-        except:
-            print("Migration for database: defautl - fails")
+        except Exception:
+            print("Migration for database: default - fails")
 
     if not upgrade:
         if db_profile != "default":
@@ -77,7 +79,7 @@ def install():
                         break
 
             parameters.append("--output")
-            parameters.append("json_path")
+            parameters.append(json_path)
             parameters.append("--traceback")
             print(parameters)
             cmd(parameters)
@@ -89,126 +91,162 @@ def install():
                 "auto", "auto@pytigon.cloud", "anawa"
             )
 
-    # ret = make(data_path, prj_path, prj_name)
-    # if ret:
-    #    for pos in ret:
-    #        print(pos)
-
 
 def export_to_db(withoutapp=None, to_local_db=True):
+    """Export data from one database to another via JSON dump/load.
+
+    Dumps data from the source database to a JSON file, runs migrations
+    on the target database, then loads the JSON data. Also creates an
+    'auto' superuser on the target database when exporting to local.
+
+    Args:
+        withoutapp: Optional list of app names to exclude from the dump.
+                    If 'sys' is in the list, system apps are also excluded.
+        to_local_db: If True, exports from 'default' to 'local'.
+                     If False, exports from 'local' to 'default'.
+    """
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
 
-    if "local" in settings.DATABASES:
-        prj_name = settings.PRJ_NAME
-        data_path = settings.DATA_PATH
-        app_data_path = os.path.join(data_path, prj_name)
-        # db_path = os.path.join(app_data_path, prj_name + ".db")
-        db_path = settings.DATABASES["local"]["NAME"]
+    if "local" not in settings.DATABASES:
+        return
 
-        temp_path = os.path.join(data_path, "temp")
-        if not os.path.exists(temp_path):
-            os.mkdir(temp_path)
-        json_path = os.path.join(temp_path, prj_name + ".json")
+    prj_name = settings.PRJ_NAME
+    data_path = settings.DATA_PATH
+    app_data_path = os.path.join(data_path, prj_name)
+    db_path = settings.DATABASES["local"]["NAME"]
 
-        if to_local_db:
-            parameters = [
-                "dumpdata",
-                "--database",
-                "default",
-                "--format",
-                "json",
-                "--indent",
-                "4",
-            ]
-        else:
-            parameters = [
-                "dumpdata",
-                "--database",
-                "local",
-                "--format",
-                "json",
-                "--indent",
-                "4",
-            ]
+    temp_path = os.path.join(data_path, "temp")
+    if not os.path.exists(temp_path):
+        os.mkdir(temp_path)
+    json_path = os.path.join(temp_path, prj_name + ".json")
 
-        if withoutapp is None or "sys" in withoutapp:
-            do_not_export = [
-                "auth",
-                "contenttypes",
-                "sessions",
-                "sites",
-                "admin",
-                "socialaccount",
-                "account",
-            ]
-        else:
-            do_not_export = []
+    if to_local_db:
+        source_db = "default"
+        target_db = "local"
+    else:
+        source_db = "local"
+        target_db = "default"
 
-        if withoutapp:
-            for item in withoutapp:
-                if item:
-                    do_not_export.append(item)
+    parameters = [
+        "dumpdata",
+        "--database",
+        source_db,
+        "--format",
+        "json",
+        "--indent",
+        "4",
+    ]
 
-        for item in do_not_export:
-            for app in settings.INSTALLED_APPS:
-                if type(app) != str:
-                    app = app.name
-                if item in app:
-                    parameters.append("-e")
-                    parameters.append(item)
-                    break
-        parameters.append("--output")
-        parameters.append(json_path)
-        parameters.append("--traceback")
-        cmd(parameters)
+    if withoutapp is None or "sys" in withoutapp:
+        do_not_export = [
+            "auth",
+            "contenttypes",
+            "sessions",
+            "sites",
+            "admin",
+            "socialaccount",
+            "account",
+        ]
+    else:
+        do_not_export = []
 
-        if to_local_db:
-            if os.path.exists(db_path):
-                os.rename(
-                    db_path,
-                    db_path
-                    + "."
-                    + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                    + ".bak",
-                )
-            cmd(["migrate", "--database", "local"])
-        else:
-            cmd(["migrate"])
+    if withoutapp:
+        for item in withoutapp:
+            if item and item not in do_not_export:
+                do_not_export.append(item)
 
-        if to_local_db:
-            cmd(["loaddata", "--database", "local", json_path, "--traceback"])
-        else:
-            cmd(["loaddata", "--database", "default", json_path, "--traceback"])
+    for item in do_not_export:
+        for app in settings.INSTALLED_APPS:
+            app_name = app.name if hasattr(app, "name") else app
+            if item in app_name:
+                parameters.append("-e")
+                parameters.append(item)
+                break
 
-        if to_local_db:
-            from django.contrib.auth.models import User
+    parameters.append("--output")
+    parameters.append(json_path)
+    parameters.append("--traceback")
+    cmd(parameters)
 
-            User.objects.db_manager("local").create_superuser(
-                "auto", "auto@pytigon.cloud", "anawa"
+    if to_local_db:
+        if os.path.exists(db_path):
+            backup_name = (
+                db_path
+                + "."
+                + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                + ".bak"
             )
+            os.rename(db_path, backup_name)
+        cmd(["migrate", "--database", "local"])
+    else:
+        cmd(["migrate"])
+
+    if to_local_db:
+        cmd(["loaddata", "--database", "local", json_path, "--traceback"])
+    else:
+        cmd(["loaddata", "--database", "default", json_path, "--traceback"])
+
+    if to_local_db:
+        from django.contrib.auth.models import User
+
+        User.objects.db_manager("local").create_superuser(
+            "auto", "auto@pytigon.cloud", "anawa"
+        )
 
 
 def export_to_local_db(withoutapp=None):
+    """Export data from the default database to the local database.
+
+    Args:
+        withoutapp: Optional list of app names to exclude.
+
+    Returns:
+        Result of :func:`export_to_db`.
+    """
     return export_to_db(withoutapp, to_local_db=True)
 
 
 def import_from_local_db(withoutapp=None, to_local_db=True):
+    """Import data from the local database to the default database.
+
+    Args:
+        withoutapp: Optional list of app names to exclude.
+
+    Returns:
+        Result of :func:`export_to_db`.
+    """
     return export_to_db(withoutapp, to_local_db=False)
 
 
 class Ptig:
+    """Reader for .ptig package files (zip-based project packages).
+
+    A .ptig file is a binary file whose first line is a header comment
+    and the remainder is a ZIP archive containing project source files,
+    metadata, and optionally a SQLite database.
+
+    Usage as context manager::
+
+        with Ptig('project.ptig') as ptig:
+            if ptig.is_ok():
+                ptig.extract_ptig()
+    """
+
     def __init__(self, ptig_path_or_file):
-        # if type(ptig_path_or_file) == str:
-        #    self.archive = zipfile.ZipFile(ptig_path_or_file, "r")
-        # else:
-        #    self.archive = zipfile.ZipFile(ptig_path_or_file)
-        if type(ptig_path_or_file) == str:
+        """Open a .ptig file from a path or file-like object.
+
+        Args:
+            ptig_path_or_file: A file path (str) or a file-like object
+                               with a ``read()`` method.
+        """
+        if isinstance(ptig_path_or_file, str):
             with open(ptig_path_or_file, "rb") as f:
                 zip_content = f.read()
         else:
             zip_content = ptig_path_or_file.read()
 
+        # Strip the first line (header comment)
         zip_content = zip_content.split(b"\n", 1)[1]
 
         self.archive = zipfile.ZipFile(io.BytesIO(zip_content))
@@ -222,36 +260,61 @@ class Ptig:
                 self.meta_path = name.split("/")[0]
                 x = self.meta_path.split(".")[0]
                 x2 = x.split("-", 1)
-                if len(x2) > 1:
-                    self.version = x2[1]
-                else:
-                    self.version = "latest"
+                self.version = x2[1] if len(x2) > 1 else "latest"
                 self.prj_name = x2[0]
                 break
         self.extract_to = None
 
     def is_ok(self):
-        if self.prj_name:
-            return True
-        else:
-            return False
+        """Check if the .ptig archive was successfully parsed.
+
+        Returns:
+            True if a project name was found in the archive metadata.
+        """
+        return self.prj_name is not None
 
     def get_license(self):
-        ret = self.archive.read(self.prj_name + "/LICENSE").decode("utf-8")
-        if ret:
-            return ret
-        return ""
+        """Read the LICENSE file from the archive.
+
+        Returns:
+            License text as a string, or empty string if not found.
+        """
+        try:
+            return self.archive.read(self.prj_name + "/LICENSE").decode("utf-8")
+        except KeyError:
+            return ""
 
     def get_readme(self):
-        ret = self.archive.read(self.prj_name + "/README.md").decode("utf-8")
-        if ret:
-            return ret
-        return ""
+        """Read the README.md file from the archive.
+
+        Returns:
+            README text as a string, or empty string if not found.
+        """
+        try:
+            return self.archive.read(self.prj_name + "/README.md").decode("utf-8")
+        except KeyError:
+            return ""
 
     def get_db(self):
+        """Read the SQLite database file from the archive.
+
+        Returns:
+            Database file contents as bytes.
+        """
         return self.archive.read(self.meta_path + "/" + self.prj_name + ".db")
 
     def extract_ptig(self, path_alt=True):
+        """Extract the project files and database from the archive.
+
+        Creates backup ZIPs of existing files before overwriting.
+
+        Args:
+            path_alt: If True, use the alternative project path
+                      (PRJ_PATH_ALT), otherwise use PRJ_PATH.
+
+        Returns:
+            List of status/info strings describing what was done.
+        """
         import pytigon.schserw.settings
 
         paths = get_main_paths(self.prj_name)
@@ -263,8 +326,7 @@ class Ptig:
         else:
             base_path = paths["PRJ_PATH"]
 
-        ret = []
-        ret.append("Install file: " + self.prj_name)
+        ret = ["Install file: " + self.prj_name]
         test_update = True
 
         extract_to = os.path.join(base_path, self.prj_name)
@@ -272,7 +334,6 @@ class Ptig:
 
         if not os.path.exists(base_path):
             os.mkdir(base_path)
-            # os.mkdir(settings.PRJ_PATH)
         if not os.path.exists(extract_to):
             os.mkdir(extract_to)
             test_update = False
@@ -288,9 +349,7 @@ class Ptig:
         zipname2 = os.path.join(extract_to, zipname + ".zip")
         if test_update:
             backup_zip = zipfile.ZipFile(zipname2, "a")
-            exclude = [
-                ".*settings_local.py.*",
-            ]
+            exclude = ["", ".*settings_local.py.*"]
         else:
             backup_zip = None
             exclude = None
@@ -344,6 +403,7 @@ class Ptig:
         return ret
 
     def close(self):
+        """Close the underlying ZIP archive."""
         self.archive.close()
 
     def __enter__(self):

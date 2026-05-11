@@ -1,5 +1,18 @@
+"""Fast form generation from string definitions.
+
+Provides the ability to create Django forms from a compact
+declarative string syntax, enabling rapid form prototyping
+without writing full Python form classes.
+
+Syntax example::
+
+    Name          → CharField(label="Name")
+    Name::*      → CharField(label="Name", required=True, max_length=1)
+    Quantity::0  → IntegerField(label="Quantity", min_value=0)
+    Choose::[a;b;c] → ChoiceField(label="Choose", choices=[('a','a'),...])
+"""
+
 from django import forms
-from pytigon_lib.schdjangoext import fields as ext_fields
 
 FAST_FORM_EXAMPLE = """#Example
 
@@ -20,7 +33,7 @@ Code::****
 
 #Syntax 2 - code:
 from django import forms
-    
+
 def make_form_class(base_form, init_data):
     class form_class(base_form):
         class Meta(base_form.Meta):
@@ -35,7 +48,17 @@ def make_form_class(base_form, init_data):
 
 
 def _scan_lines(input_str):
-    """Scan input string and split into lines, handling multi-line choices."""
+    """Split input into logical lines, joining multi-line choice lists.
+
+    Lines containing ``:[`` without a closing ``]`` are continued
+    on the following line(s).
+
+    Args:
+        input_str: The raw input string.
+
+    Returns:
+        List of logical lines.
+    """
     lines = input_str.replace("\r", "").split("\n")
     result = []
     append_to_last = False
@@ -53,7 +76,23 @@ def _scan_lines(input_str):
 
 
 def _get_name_and_title(s):
-    """Extract name, title, and required flag from a string."""
+    """Parse a field name, title, and required flag from a string.
+
+    Examples::
+
+        "Name"        → ("name", "Name", False)
+        "Name!"       → ("name", "Name", True)
+        "fld//Title"  → ("fld", "Title", False)
+
+    If no explicit name is given (no ``//``), one is auto-generated
+    from the title by ASCII-folding and truncating to 16 characters.
+
+    Args:
+        s: Field definition string.
+
+    Returns:
+        Tuple of (name, title, required).
+    """
     required = s.endswith("!")
     s = s[:-1] if required else s
 
@@ -73,7 +112,26 @@ def _get_name_and_title(s):
 
 
 def _read_form_line(line):
-    """Parse a single line to extract field information."""
+    """Parse a single form-field line and return field metadata.
+
+    The format string after ``::`` determines the field type::
+
+        ``0``…       → IntegerField
+        ``9``…       → FloatField
+        ``#``…       → DateField
+        ``*``…       → CharField (max_length = length of pattern)
+        ``_``         → CharField with Textarea widget
+        ``[a;b;c]``  → ChoiceField
+
+    No ``::`` means CharField (or BooleanField if the line ends
+    with ``?``).
+
+    Args:
+        line: A single logical field line.
+
+    Returns:
+        Tuple of (name, field_type, title, required, kwargs).
+    """
     kwargs = {}
     field_type = None
     title = ""
@@ -122,14 +180,74 @@ def _read_form_line(line):
     return name, field_type, title, required, kwargs
 
 
+def _safe_exec(source, global_ns, local_ns):
+    """Execute code with restricted builtins for basic safety.
+
+    Args:
+        source: Python source code string.
+        global_ns: Global namespace dict.
+        local_ns: Local namespace dict.
+
+    Raises:
+        RuntimeError: If the code execution fails.
+    """
+    safe_builtins = {
+        "True": True,
+        "False": False,
+        "None": None,
+        "print": print,
+        "len": len,
+        "range": range,
+        "int": int,
+        "float": float,
+        "str": str,
+        "bool": bool,
+        "list": list,
+        "dict": dict,
+        "tuple": tuple,
+        "set": set,
+        "isinstance": isinstance,
+        "issubclass": issubclass,
+        "hasattr": hasattr,
+        "getattr": getattr,
+        "setattr": setattr,
+        "super": super,
+    }
+    restricted_globals = {"__builtins__": safe_builtins}
+    restricted_globals.update(global_ns)
+    exec(source, restricted_globals, local_ns)
+
+
 def form_from_str(input_str, init_data=None, base_form_class=forms.Form, prefix=""):
-    """Generate a Django form from a string definition."""
+    """Generate a Django form class from a string definition.
+
+    Supports two syntax modes:
+
+    1. **Line-by-line syntax** — each non-empty line defines one
+       form field using the compact notation described in
+       :func:`_read_form_line`.
+
+    2. **Code syntax** — when ``input_str`` contains
+       ``make_form_class``, it is executed as Python code and the
+       returned ``make_form_class`` callable is invoked.
+
+    Args:
+        input_str: The form definition string.
+        init_data: Optional dict of initial field values keyed by
+            field name.
+        base_form_class: Base class for the generated form
+            (default: :class:`django.forms.Form`).
+        prefix: String prefix prepended to all field names.
+
+    Returns:
+        A Django form **class** (not instance).
+    """
     if init_data is None:
         init_data = {}
 
     if "make_form_class" in input_str:
         locals_dict = {}
-        exec(input_str, globals(), locals_dict)
+        _safe_exec(input_str, globals(), locals_dict)
         return locals_dict["make_form_class"](base_form_class, init_data)
 
     class _Form(base_form_class):
@@ -138,21 +256,25 @@ def form_from_str(input_str, init_data=None, base_form_class=forms.Form, prefix=
             lines = _scan_lines(input_str)
 
             for line in lines:
-                if line:
-                    name, field_type, title, required, form_kwargs = _read_form_line(
-                        line.strip()
+                if not line:
+                    continue
+                name, field_type, title, required, form_kwargs = _read_form_line(
+                    line.strip()
+                )
+                if not field_type:
+                    continue
+
+                field_name = prefix + name
+                if name in init_data:
+                    self.fields[field_name] = field_type(
+                        label=title,
+                        required=required,
+                        initial=init_data[name],
+                        **form_kwargs,
                     )
-                    field_name = prefix + name
-                    if name in init_data:
-                        self.fields[field_name] = field_type(
-                            label=title,
-                            required=required,
-                            initial=init_data[name],
-                            **form_kwargs,
-                        )
-                    else:
-                        self.fields[field_name] = field_type(
-                            label=title, required=required, **form_kwargs
-                        )
+                else:
+                    self.fields[field_name] = field_type(
+                        label=title, required=required, **form_kwargs
+                    )
 
     return _Form

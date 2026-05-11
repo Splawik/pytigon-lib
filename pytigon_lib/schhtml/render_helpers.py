@@ -83,7 +83,7 @@ class RenderBackground(RenderBase):
                 img = response.ptr() if response.ret_code != 404 else None
                 if isinstance(img, str):
                     img = img.encode("utf-8")
-            except Exception:
+            except (OSError, ValueError, AttributeError):
                 img = None
 
             if img:

@@ -334,9 +334,17 @@ class DcDcinfo(BaseDcInfo):
         return th
 
     def get_img_size(self, png_data):
+        """Get the dimensions of a PNG image.
+
+        Args:
+            png_data: Raw PNG image bytes.
+
+        Returns:
+            Tuple of (width, height), or (0, 0) on failure.
+        """
         try:
             png_stream = io.BytesIO(png_data)
             image = wx.Image(png_stream)
             return image.GetWidth(), image.GetHeight()
-        except Exception:
+        except (Exception,):
             return 0, 0

@@ -1,5 +1,14 @@
+"""REST API client with automatic OAuth2 token refresh.
+
+Provides a factory function that returns an authenticated HTTP request
+function with automatic OAuth2 access token management.
+"""
+
+import logging
 import httpx
 from typing import Dict, Any, Callable, Optional
+
+LOGGER = logging.getLogger("rest_client")
 
 
 def get_rest_client(base_url: str, refresh_token: str) -> Callable:
@@ -15,9 +24,7 @@ def get_rest_client(base_url: str, refresh_token: str) -> Callable:
     """
     tokens: Dict[str, str] = {"refresh_token": refresh_token}
 
-    def _oauth2_httpx(
-        httpx_method: Callable, relative_url: str, *args, **kwargs
-    ) -> Optional[httpx.Response]:
+    def _oauth2_httpx(httpx_method: Callable, relative_url: str, *args, **kwargs) -> Optional[httpx.Response]:
         """
         Internal function to handle OAuth2 authentication and make HTTP requests.
 
@@ -44,7 +51,7 @@ def get_rest_client(base_url: str, refresh_token: str) -> Callable:
                 if response.status_code != 401:
                     return response
             except httpx.RequestError as e:
-                print(f"Request failed: {e}")
+                LOGGER.error("Request failed: %s", e)
                 return None
 
         # If access token is not available or request is unauthorized, refresh the token
@@ -70,7 +77,7 @@ def get_rest_client(base_url: str, refresh_token: str) -> Callable:
 
             return httpx_method(base_url + relative_url, *args, **kwargs)
         except httpx.RequestError as e:
-            print(f"Token refresh failed: {e}")
+            LOGGER.error("Token refresh failed: %s", e)
             return None
 
     return _oauth2_httpx
@@ -79,7 +86,7 @@ def get_rest_client(base_url: str, refresh_token: str) -> Callable:
 if __name__ == "__main__":
     # Example usage
     MP = 1
-    refresh_token = "TER3N3NaQnA5blQ2dUtKd01sRHMwODl1TGRlT2JLd0laaTJIM0xGQTpoelphZmVudmhidjVTek1MUWx2eDNiY2pTOUlRdDlOSVk0RjRaallEOUJiSnI3V1VaZkw1dnFFWGlBdElHaks3WTB1MHBoUXVEVE90UllWZjZLMTBkODR1REN4RjZhbEdnRVFZcGsxelBySVB1Mk1TSkw3dWRTc2hQU0Mxd29mNw=="
+    refresh_token = "TER3N3NaQnA5blQ2dUtKd01sRHMwODl1TGRlT2JLd0laaTJIM0xGQTpoelphZmVudmhidjVTek1MUWx2eDNiY2pTOUlRdDlOSVk0RjRaallEOUJiSnI3V1VaZkw1dnFFWGlBdElHaks3WTB1MHBoUXVEVE90UllWZjZLMTBkODR1REN4RjZhbEdnRVFZcGsxelBySVB1Mk1TSkw3dWRTc2hQU0Mxd29mNw=="  # noqa: E501
     client = get_rest_client("http://127.0.0.1:8000", refresh_token)
 
     # Delete a measurement

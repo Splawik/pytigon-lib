@@ -39,19 +39,17 @@ PERMISSIONS = [
 ]
 
 # Set up base path
-BASE_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-)
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 if BASE_PATH not in sys.path:
     sys.path.insert(0, BASE_PATH)
 os.chdir(BASE_PATH)
 
 # Initialize paths and settings
-from pytigon_lib import init_paths
+from pytigon_lib import init_paths  # noqa: E402
 
 init_paths()
-from pytigon.schserw import settings as schserw_settings
-from pytigon_lib.schtools.install_init import init
+from pytigon.schserw import settings as schserw_settings  # noqa: E402
+from pytigon_lib.schtools.install_init import init  # noqa: E402
 
 if schserw_settings.PRJ_PATH not in sys.path:
     sys.path.append(schserw_settings.PRJ_PATH)
@@ -103,7 +101,10 @@ class InterfaceManager(BoxLayout):
         ip_address = ", ".join(ip_tab) if ip_tab else "-"
 
         label = Label(
-            text=f"[size=18sp][color=88f][b]PYTIGON - select the application:[/b][/color][/size]\n[size=15sp][color=448](my ip addresses: {ip_address})[/b][/color][/size]",
+            text=(
+                f"[size=18sp][color=88f][b]PYTIGON - select the application:[/b][/color][/size]\n"
+                f"[size=15sp][color=448](my ip addresses: {ip_address})[/b][/color][/size]"
+            ),
             markup=True,
             halign="center",
         )
@@ -146,9 +147,7 @@ class InterfaceManager(BoxLayout):
 
     def get_ip_address(self, ifname):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return socket.inet_ntoa(
-            fcntl.ioctl(s.fileno(), 0x8915, struct.pack(b"256s", ifname[:15]))[20:24]
-        )
+        return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack(b"256s", ifname[:15]))[20:24])
 
     def get_available_apps(self):
         base_apps_path = os.path.join(os.path.join(STORAGE, "pytigon"), "prj")

@@ -1,4 +1,5 @@
 from itertools import chain
+from django.forms.utils import flatatt
 from django.forms.widgets import (
     CheckboxSelectMultiple,
     CheckboxInput,

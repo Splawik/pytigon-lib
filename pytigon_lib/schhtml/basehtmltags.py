@@ -53,12 +53,20 @@ CSS_TAG = [
     "link",
 ]
 
-import fnmatch
+import fnmatch  # noqa: E402
 
-from pytigon_lib.schhtml.atom import AtomList
+from pytigon_lib.schhtml.atom import AtomList  # noqa: E402
 
 
 def rgb_to_hex(color):
+    """Convert an rgb() CSS color string to a hex color string.
+
+    Args:
+        color: CSS color string, e.g. 'rgb(255,0,0)'.
+
+    Returns:
+        Hex color string, e.g. '#ff0000', or '#000' on failure.
+    """
     try:
 
         def _to_2hex(s):
@@ -71,7 +79,7 @@ def rgb_to_hex(color):
         tab = color.split("(")[1].split(")")[0].split(",")
         ret = "#" + _to_2hex(tab[0]) + _to_2hex(tab[1]) + _to_2hex(tab[2])
         return ret
-    except:
+    except (IndexError, ValueError, AttributeError):
         return "#000"
 
 
@@ -110,9 +118,7 @@ class BaseHtmlElemParser(object):
             else:
                 parent_width = 0
             if parent_width >= 0:
-                self.width = self._norm_sizes_and_minmax(
-                    self.attrs, "width", "max-width", "min-width", parent_width
-                )[0]
+                self.width = self._norm_sizes_and_minmax(self.attrs, "width", "max-width", "min-width", parent_width)[0]
         if "height" in attrs:
             if "%" in attrs["height"]:
                 parent_height = self.get_parent_height()
@@ -163,6 +169,14 @@ class BaseHtmlElemParser(object):
         return False
 
     def get_parent_width(self):
+        """Get the width of the nearest parent with a known width.
+
+        Traverses up the parent chain to find the first element
+        that has a positive client width.
+
+        Returns:
+            Width in points, or -1 if no parent width is available.
+        """
         parent = self.parent
         while parent:
             try:
@@ -170,7 +184,7 @@ class BaseHtmlElemParser(object):
                     parent_width = parent.get_client_width()[0]
                     if parent_width >= 0:
                         return parent_width
-            except:
+            except (AttributeError, IndexError, TypeError):
                 pass
             parent = parent.parent
         return -1
@@ -207,6 +221,14 @@ class BaseHtmlElemParser(object):
         return None
 
     def get_style_id(self):
+        """Get the style ID for the current element.
+
+        Builds a style string from CSS attributes and looks up or creates
+        the corresponding style ID in the device context info.
+
+        Returns:
+            Integer style ID.
+        """
         color = self.get_atrr("color")
         font_family = self.get_atrr("font-family")
         font_size = self.get_atrr("font-size")
@@ -214,7 +236,9 @@ class BaseHtmlElemParser(object):
         font_weight = self.get_atrr("font-weight")
         text_decoration = self.get_atrr("text-decoration")
 
-        if not color[0] == "#":
+        if not color:
+            color = "#000"
+        elif not color.startswith("#"):
             if color.strip().startswith("rgb"):
                 color = rgb_to_hex(color)
             else:
@@ -232,7 +256,7 @@ class BaseHtmlElemParser(object):
         else:
             try:
                 font_size = int(font_size.replace("%", ""))
-            except:
+            except ValueError:
                 font_size = 100
         if "italic" in font_style:
             font_style = 1
@@ -320,11 +344,7 @@ class BaseHtmlElemParser(object):
         #    if self.dc_info.dc.handle_html_child_tag(self, child):
         #        return
         self.rendered_children.append(child)
-        if not (
-            child
-            and "page-break-inside" in child.attrs
-            and child.attrs["page-break-inside"] == "avoid"
-        ):
+        if not (child and "page-break-inside" in child.attrs and child.attrs["page-break-inside"] == "avoid"):
             if self.parent:
                 self.parent.child_ready_to_render(self)
 
@@ -335,9 +355,7 @@ class BaseHtmlElemParser(object):
         else:
             if len(self.rendered_children):
                 for child in self.rendered_children:
-                    ret = self.rendered_child.render(
-                        dc.subdc(0, 0, self.child_dx, self.child_dy)
-                    )
+                    ret = self.rendered_child.render(dc.subdc(0, 0, self.child_dx, self.child_dy))
                     self.dy += self.child_dy
                     self.rendered_child = None
                 return ret
@@ -358,6 +376,35 @@ class BaseHtmlElemParser(object):
     def reg_end(self):
         self.reg_flag = False
 
+    @staticmethod
+    def _safe_eval_expr(expr, context):
+        """Safely evaluate a simple arithmetic expression.
+
+        Only supports: numbers, +, -, *, /, parentheses, and variable names
+        from the provided context dictionary. No builtins or attribute access.
+
+        Args:
+            expr: String expression to evaluate.
+            context: Dictionary of variable name to numeric value.
+
+        Returns:
+            Numeric result of the expression.
+        """
+        # Replace known variables with their values
+        for key, value in context.items():
+            expr = expr.replace(key, str(value))
+        # Remove any remaining non-math characters for safety
+        # Only allow digits, operators, parentheses, whitespace, and dot
+        sanitized = "".join(c for c in expr if c in "0123456789.+-*/() " or c.isdigit())
+        if not sanitized:
+            return 0
+        # Use eval with an empty namespace for safety
+        # since we've sanitized to only math-safe characters
+        try:
+            return int(eval(sanitized, {"__builtins__": {}}, {}))
+        except (SyntaxError, ValueError, ZeroDivisionError):
+            return 0
+
     def _norm_sizes(self, sizes, dxy):
         ret = []
         for pos in sizes:
@@ -377,42 +424,21 @@ class BaseHtmlElemParser(object):
                     else:
                         x = int(pos2)
                     test = False
-                except:
+                except (ValueError, TypeError):
                     pass
 
             if test:
-                # try:
                 if "calc" in pos:
-                    e = (
-                        pos.split("(", 1)[1].rsplit(")", 1)[0].strip()
-                    )  # .replace('[[', '{').replace(']]','}')
+                    e = pos.split("(", 1)[1].rsplit(")", 1)[0].strip()
                 else:
                     e = pos
-                e = (
-                    e.replace("px", "")
-                    .replace("em", "*em")
-                    .replace("rem", "*rem")
-                    .replace("%", "*height/100")
-                )
+                e = e.replace("px", "").replace("em", "*em").replace("rem", "*rem").replace("%", "*height/100")
                 c = {"top": self.dy, "height": dxy, "em": 1, "rem": 1}
                 if hasattr(self, "get_context"):
                     context = self.get_context()
                     c.update(context)
-                x = int(eval(e, c))
-            # except:
-            #    x = 10
+                x = self._safe_eval_expr(e, c)
 
-            if False:
-                t = str(pos).split("%")
-                if len(t) == 2:
-                    if dxy >= 0:
-                        x = int((float(t[0]) * dxy) / 100)
-                    else:
-                        x = -1
-                    if x >= 0 and len(t[1]) > 0:
-                        x += int(t[1])
-                else:
-                    x = int(float(t[0].replace("px", "").replace("em", "")))
             ret.append(x)
         return ret
 
@@ -447,7 +473,7 @@ class BaseHtmlElemParser(object):
 
     def take_into_account_minmax(self, w, h, scale=False):
         w2 = max(min(w, self.max_width), self.min_width)
-        h2 = max(min(w, self.max_height), self.min_height)
+        h2 = max(min(h, self.max_height), self.min_height)
         if scale:
             if w2 != w and w != 0:
                 h2 = h * w2 / w
@@ -464,15 +490,9 @@ class BaseHtmlElemParser(object):
         else:
             if "width" in self.attrs:
                 (parent_width, parent_min, parent_max) = self.parent.get_client_width()
-                width = self._norm_sizes_and_minmax(
-                    self.attrs, "width", "max-width", "min-width", parent_width
-                )[0]
-                min = self._norm_sizes_and_minmax(
-                    self.attrs, "width", "max-width", "min-width", parent_min
-                )[0]
-                max = self._norm_sizes_and_minmax(
-                    self.attrs, "width", "max-width", "min-width", parent_max
-                )[0]
+                width = self._norm_sizes_and_minmax(self.attrs, "width", "max-width", "min-width", parent_width)[0]
+                min = self._norm_sizes_and_minmax(self.attrs, "width", "max-width", "min-width", parent_min)[0]
+                max = self._norm_sizes_and_minmax(self.attrs, "width", "max-width", "min-width", parent_max)[0]
                 return [width, min, max]
             return self.calc_width()
 
@@ -504,9 +524,7 @@ class BaseHtmlElemParser(object):
         else:
             if "height" in self.attrs:
                 parent_height = self.parent.get_height()
-                height = self._norm_sizes_and_minmax(
-                    self.attrs, "height", "max-height", "min-height", parent_height
-                )[0]
+                height = self._norm_sizes_and_minmax(self.attrs, "height", "max-height", "min-height", parent_height)[0]
                 return height
             return self.calc_height()
 
@@ -608,9 +626,7 @@ class TagPreprocesor:
 
     def register(self, tag, fun, not_tag=""):
         if "?" in tag or "*" in tag:
-            self.tag_wildcards_preprocess_map.append(
-                [tag.lower(), fun, not_tag.lower()]
-            )
+            self.tag_wildcards_preprocess_map.append([tag.lower(), fun, not_tag.lower()])
         else:
             self.tag_preprocess_map[tag.lower()] = fun
 

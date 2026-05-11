@@ -1,25 +1,54 @@
+"""
+OOXML (Office Open XML) spreadsheet and document processing module.
+
+Extends OdfDocTransform to handle .xlsx, .docx, and .pptx files.
+Provides utilities for Excel address conversion, shared string processing,
+comment injection, XML repair, and pivot table filtering.
+"""
+
 import zipfile
 import shutil
 import os
 import datetime
+import logging
 from xml.sax.saxutils import escape
 from django.template import Context
 from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
 from pytigon_lib.schfs.vfstools import delete_from_zip
 import dateutil.parser
 
+logger = logging.getLogger(__name__)
+
+# lxml.etree is imported lazily in OOXmlDocTransform.__init__
+# to avoid import overhead when the module is only partially used.
 etree = None
 
 SECTION_WIDTH = ord("Z") - ord("A") + 1
 
 
 def transform_str(s):
-    """Replace special characters in the string."""
+    """Replace special character sequences in template strings.
+
+    '***' -> double quote, '**' -> single quote.
+    """
     return s.replace("***", '"').replace("**", "'")
 
 
 def filter_attr(tab, attr, value):
-    """Filter elements in `tab` based on the attribute `attr` and `value`."""
+    """Filter XML elements by attribute value with wildcard support.
+
+    Args:
+        tab: List of XML elements.
+        attr: Attribute name to check.
+        value: Filter value. Supports:
+            '*suffix'  - match elements where attribute ends with 'suffix'
+            'prefix*'  - match elements where attribute starts with 'prefix'
+            '*substr*' - match elements where attribute contains 'substr'
+            'exact'    - match elements where attribute equals 'exact'
+
+    Returns:
+        List of matching elements.
+    """
     check_type = 0
     ret = []
     if value.startswith("*"):
@@ -40,7 +69,18 @@ def filter_attr(tab, attr, value):
 
 
 def col_row(excel_addr):
-    """Convert Excel address to column, row, and column index."""
+    """Convert Excel address (e.g. 'A1', 'AB12') to column, row, and column index.
+
+    Args:
+        excel_addr: Excel cell address string.
+
+    Returns:
+        Tuple of (column_letter, row_number, column_index) where column_index is
+        1-based (A=1, B=2, ..., Z=26, AA=27, etc.).
+    """
+    if len(excel_addr) < 2:
+        raise ValueError(f"Invalid Excel address: {excel_addr!r}")
+
     if excel_addr[1] >= "0" and excel_addr[1] <= "9":
         col = excel_addr[0].upper()
         row = int(excel_addr[1:])
@@ -57,7 +97,15 @@ def col_row(excel_addr):
 
 
 def make_col_row(col, row):
-    """Convert column index and row to Excel address."""
+    """Convert column index and row number to Excel address string.
+
+    Args:
+        col: 1-based column index (1 = A, 2 = B, ..., 27 = AA).
+        row: 1-based row number.
+
+    Returns:
+        Excel address string like 'A1', 'AB12'.
+    """
     _col, _row, col_as_int = col_row("Z1")
     if col > col_as_int:
         x1 = (col - 1) // col_as_int
@@ -68,22 +116,51 @@ def make_col_row(col, row):
 
 
 def key_for_addr(excel_addr):
-    """Generate a key for sorting Excel addresses."""
+    """Generate a numeric sort key for an Excel address.
+
+    Produces a key that orders cells row-major (top-to-bottom, left-to-right).
+
+    Args:
+        excel_addr: Excel cell address string.
+
+    Returns:
+        Integer sort key: row * 1000 + column_index.
+    """
     col, row, col_as_int = col_row(excel_addr)
     return row * 1000 + col_as_int
 
 
 def date_to_float(d):
-    """Convert datetime to Excel date format."""
+    """Convert a datetime object to an Excel serial date number.
+
+    Args:
+        d: datetime object.
+
+    Returns:
+        Float representing days since 1899-12-30 (Excel epoch).
+    """
     dt = d - datetime.datetime(1899, 12, 30)
     return dt.days + dt.seconds / 86400
 
 
 class OOXmlDocTransform(OdfDocTransform):
-    """Transform OOXML files (e.g., .xlsx)."""
+    """Transform OOXML files (.xlsx, .docx, .pptx).
+
+    Extends OdfDocTransform with Office Open XML specific processing:
+    shared string handling, comment injection, sheet repair/renumbering,
+    and pivot table manipulation via extended transformations.
+    """
 
     def __init__(self, file_name_in, file_name_out=None):
-        """Initialize the transformer."""
+        """Initialize the OOXML transformer.
+
+        Lazily imports lxml.etree on first instantiation.
+
+        Args:
+            file_name_in: Path to the input OOXML file.
+            file_name_out: Path for the output file. Defaults to
+                           file_name_in with underscores removed.
+        """
         global etree
         if etree is None:
             from lxml import etree
@@ -146,10 +223,10 @@ class OOXmlDocTransform(OdfDocTransform):
                     ]
                     labels2.sort(key=key_for_addr)
                     old = None
-                    for l in labels2:
-                        if l == key:
+                    for label_item in labels2:
+                        if label_item == key:
                             break
-                        old = l
+                        old = label_item
                     if old:
                         label = old
                     else:
@@ -170,14 +247,18 @@ class OOXmlDocTransform(OdfDocTransform):
         """
         Convert shared string references in a sheet to inline strings or formulas.
 
-        This function processes all cell elements in the given sheet with the
-        attribute `t='s'`, which indicates a shared string reference. It retrieves
-        the shared string by its ID, modifies the cell element based on specific
-        prefixes in the shared string, and converts it to an inline string or
-        a formula as appropriate.
+        Processes all cell elements with attribute ``t='s'`` (shared string
+        reference), retrieves the shared string by its ID, and converts the
+        cell based on prefix markers:
 
-        :param sheet: The XML sheet element to process.
-        :type sheet: lxml.etree.Element
+        - ``:=``  → formula cell
+        - ``:?``  → auto-type cell (vauto)
+        - ``:0``  → numeric value
+        - ``:*``  → inline string
+        - ``{{`` / ``{%`` → inline string (template tags)
+
+        Args:
+            sheet: The XML sheet element to process.
         """
 
         d = filter_attr(sheet.findall(".//c", namespaces=sheet.nsmap), "t", "s")
@@ -185,7 +266,7 @@ class OOXmlDocTransform(OdfDocTransform):
             v = pos.find(".//v", namespaces=sheet.nsmap)
             try:
                 id = int(v.text)
-            except:
+            except (ValueError, TypeError, AttributeError):
                 id = -1
             if id >= 0:
                 s = self.shared_strings[id]
@@ -256,17 +337,15 @@ class OOXmlDocTransform(OdfDocTransform):
 
         if max_row > 0 and max_col > 0:
             d = sheet.find(".//dimension", namespaces=sheet.nsmap)
-            if d != None:
-                if "ref" in d.attrib:
-                    addr = d.attrib["ref"]
-                    d.attrib["ref"] = "A1:" + max_addr
+            if d is not None and "ref" in d.attrib:
+                d.attrib["ref"] = "A1:" + max_addr
 
         auto_list = sheet.findall(".//vauto", namespaces=sheet.nsmap)
         for pos in auto_list:
             parent = pos.getparent()
             txt = pos.text
             parent.remove(pos)
-            if txt != "" and txt != None:
+            if txt is not None and txt != "":
                 if (
                     (len(txt) == 10 or len(txt) == 19)
                     and txt[4] == "-"
@@ -277,13 +356,13 @@ class OOXmlDocTransform(OdfDocTransform):
                         x = date_to_float(d)
                         parent.append(etree.XML("<v>%f</v>" % x))
                         continue
-                    except:
+                    except (ValueError, dateutil.parser.ParserError):
                         pass
                 try:
                     x = float(txt)
                     parent.append(etree.XML("<v>%s</v>" % escape(txt)))
                     continue
-                except:
+                except (ValueError, TypeError):
                     pass
 
             parent.attrib["t"] = "inlineStr"
@@ -292,19 +371,30 @@ class OOXmlDocTransform(OdfDocTransform):
                     parent.append(etree.XML("<is><t>%s</t></is>" % escape(txt)))
                 else:
                     parent.append(etree.XML("<is><t></t></is>"))
-            except:
-                print(txt)
+            except Exception:
+                logger.warning("Failed to create inline string for text: %r", txt)
 
         c_list = sheet.findall(".//c", namespaces=sheet.nsmap)
         for pos in c_list:
             f = pos.find(".//f", namespaces=sheet.nsmap)
-            if f != None:
+            if f is not None:
                 v = pos.find(".//v", namespaces=sheet.nsmap)
-                if v != None:
+                if v is not None:
                     pos.remove(v)
 
     def handle_sheet(self, sheet, django_context):
-        """Handle sheet transformations."""
+        """Apply template processing to a single sheet.
+
+        Converts shared strings to inline, injects comments, runs the
+        Django template engine over the sheet, and repairs the resulting XML.
+
+        Args:
+            sheet: The XML sheet element.
+            django_context: Django template Context.
+
+        Returns:
+            The processed and repaired XML sheet element.
+        """
         self.shared_strings_to_inline(sheet)
         self.add_comments(sheet)
         sheet_str = etree.tostring(sheet, pretty_print=True).decode("utf-8")
@@ -313,8 +403,11 @@ class OOXmlDocTransform(OdfDocTransform):
         self.repair_xml(root)
         return root
 
-    def process(self, context, debug):
-        """Process the input file with the given context."""
+    def _process_impl(self, context, debug):
+        """Internal implementation of the process method.
+
+        Separated to allow a clean try/except wrapper in process().
+        """
         django_context = Context(context)
         xlsx = context.get("doc_type", "xlsx") == "xlsx"
         shutil.copyfile(self.file_name_in, self.file_name_out)
@@ -443,6 +536,32 @@ class OOXmlDocTransform(OdfDocTransform):
                         z.writestr(item[0], item[1].encode("utf-8"))
 
         return 1
+
+    def process(self, context, debug):
+        """Process the input OOXML file with the given context.
+
+        Handles .xlsx (spreadsheet), .docx (document), and .pptx (presentation)
+        formats. For .xlsx, processes each sheet individually, resolves shared
+        strings, injects comments, and applies extended transformations.
+
+        Args:
+            context: Dictionary with template variables and processing options.
+            debug: If True, preserve annotation markers.
+
+        Returns:
+            1 on success, 0 on failure.
+        """
+        try:
+            return self._process_impl(context, debug)
+        except zipfile.BadZipFile as e:
+            logger.error("Invalid zip file '%s': %s", self.file_name_in, e)
+            return 0
+        except OSError as e:
+            logger.error("File I/O error processing '%s': %s", self.file_name_in, e)
+            return 0
+        except Exception as e:
+            logger.error("Error processing file '%s': %s", self.file_name_in, e)
+            return 0
 
 
 if __name__ == "__main__":

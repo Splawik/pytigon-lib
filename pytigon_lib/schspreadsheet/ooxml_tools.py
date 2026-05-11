@@ -1,14 +1,32 @@
+"""
+OOXML pivot table manipulation utilities.
+
+Provides factory functions that create callbacks for filtering and
+grouping pivot table data within OOXML spreadsheet transformations.
+These are used as extended transformation scripts by OOXmlDocTransform.
+"""
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name, value):
-    """Create a filter function to update pivot table based on cache field value.
+    """Create a filter function that updates a pivot table based on a cache field value.
+
+    Returns a callable suitable for use as an extended transformation script.
+    When invoked, it searches the pivot cache for a matching field value,
+    then hides all pivot items except the matched one.
 
     Args:
-        cache_field_name (str): Name of the cache field.
-        pivot_table_name (str): Name of the pivot table.
-        pivot_field_name (str): Name of the pivot field.
-        value (str): Value to filter on.
+        cache_field_name: Name of the cache field to search.
+        pivot_table_name: XML path to the pivot table definition.
+        pivot_field_name: Name of the pivot field to update.
+        value: Value to select in the filter.
 
     Returns:
-        function: A function that updates the pivot table based on the cache field value.
+        A callable with signature ``(doc_transform, root) -> bool``
+        that returns False (no upstream changes needed).
     """
 
     def _update_filter(doc_transform, root):
@@ -28,11 +46,11 @@ def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name,
 
             # Find the index of the value in the cache field
             try:
-                id = tab.index(value)
+                idx = tab.index(value)
             except ValueError:
-                id = -1
+                idx = -1
 
-            if id >= 0:
+            if idx >= 0:
                 # Get the pivot table content
                 ret = doc_transform.get_xml_content(pivot_table_name)
                 root2 = ret["data"]
@@ -46,7 +64,7 @@ def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name,
                         items = field2.findall(".//items/item", namespaces=root2.nsmap)
                         for item in items:
                             if "x" in item.attrib:
-                                if int(item.attrib["x"]) == id:
+                                if int(item.attrib["x"]) == idx:
                                     item.attrib.pop("h", None)
                                 else:
                                     item.attrib["h"] = "1"
@@ -57,7 +75,8 @@ def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name,
                     doc_transform.to_update.append((pivot_table_name, root2))
 
         except Exception as e:
-            raise RuntimeError(f"Error updating filter: {e}")
+            logger.error("Error updating pivot filter: %s", e)
+            raise RuntimeError(f"Error updating filter: {e}") from e
 
         return False
 
@@ -65,14 +84,19 @@ def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name,
 
 
 def make_group_fun(pivot_field_no, values_on):
-    """Create a grouping function for pivot fields.
+    """Create a grouping function that shows/hides pivot field items.
+
+    Returns a callable suitable for use as an extended transformation script.
+    When invoked, it expands (shows) items whose names appear in the semicolon-
+    separated list and collapses (hides) all others.
 
     Args:
-        pivot_field_no (int): Index of the pivot field.
-        values_on (str): Semicolon-separated values to group on.
+        pivot_field_no: Zero-based index of the pivot field.
+        values_on: Semicolon-separated names of items to show.
 
     Returns:
-        function: A function that updates the pivot field grouping.
+        A callable with signature ``(doc_transform, root) -> bool``
+        that returns True (upstream content may need updating).
     """
 
     def _update_group(doc_transform, root):
@@ -89,8 +113,12 @@ def make_group_fun(pivot_field_no, values_on):
                 else:
                     item.attrib["sd"] = "0"
 
+        except (IndexError, AttributeError, KeyError) as e:
+            logger.error("Error updating pivot group: %s", e)
+            raise RuntimeError(f"Error updating group: {e}") from e
         except Exception as e:
-            raise RuntimeError(f"Error updating group: {e}")
+            logger.error("Unexpected error updating pivot group: %s", e)
+            raise RuntimeError(f"Error updating group: {e}") from e
 
         return True
 

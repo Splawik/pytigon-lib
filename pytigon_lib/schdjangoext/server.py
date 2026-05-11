@@ -1,31 +1,64 @@
-"""Django channels based server"""
+"""Django-channels-based server management.
+
+Provides utilities for starting and stopping a Django-channels
+server (via Daphne) or a WSGI server (via Waitress) in a subprocess.
+"""
 
 import sys
 import socket
 import datetime
+import time
 import multiprocessing
 import django
 
-# from pytigon.schserw.schsys.initdjango import init_django
-
 
 def log_action(protocol, action, details):
-    """Log actions such as HTTP requests or WebSocket connections."""
+    """Log HTTP and WebSocket actions to stderr.
+
+    Args:
+        protocol: ``"http"`` or ``"websocket"``.
+        action: ``"complete"``, ``"connected"``, or ``"disconnected"``.
+        details: Dictionary with keys expected for the action type
+            (e.g. ``method``, ``path``, ``status``, ``time_taken``,
+            ``client``).
+    """
     timestamp = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     msg = f"[{timestamp}] "
 
-    if protocol == "http" and action == "complete":
-        msg += f"HTTP {details['method']} {details['path']} {details['status']} [{details['time_taken']:.2f}, {details['client']}]\n"
-    elif protocol == "websocket" and action == "connected":
-        msg += f"WebSocket CONNECT {details['path']} [{details['client']}]\n"
-    elif protocol == "websocket" and action == "disconnected":
-        msg += f"WebSocket DISCONNECT {details['path']} [{details['client']}]\n"
+    try:
+        if protocol == "http" and action == "complete":
+            msg += (
+                f"HTTP {details.get('method', '?')} "
+                f"{details.get('path', '?')} "
+                f"{details.get('status', '?')} "
+                f"[{details.get('time_taken', 0):.2f}, {details.get('client', '?')}]\n"
+            )
+        elif protocol == "websocket" and action == "connected":
+            msg += (
+                f"WebSocket CONNECT {details.get('path', '?')} "
+                f"[{details.get('client', '?')}]\n"
+            )
+        elif protocol == "websocket" and action == "disconnected":
+            msg += (
+                f"WebSocket DISCONNECT {details.get('path', '?')} "
+                f"[{details.get('client', '?')}]\n"
+            )
+    except Exception:
+        msg += f"Unrecognized: protocol={protocol} action={action} details={details}\n"
 
     sys.stderr.write(msg)
 
 
 def _run(addr, port, prod, params=None):
-    """Internal function to run the server."""
+    """Internal function to run the server in a subprocess.
+
+    Args:
+        addr: Bind address.
+        port: TCP port.
+        prod: If True, use production server profile.
+        params: Optional dict; may contain ``"wsgi"`` to use Waitress
+            instead of Daphne.
+    """
     try:
         if params and "wsgi" in params:
             from waitress.runner import run
@@ -55,27 +88,37 @@ def _run(addr, port, prod, params=None):
 
 
 class ServProc:
-    """Wrapper class for managing server processes."""
+    """Wrapper around a :class:`multiprocessing.Process` for managing
+    the server lifecycle."""
 
     def __init__(self, proc):
+        """Initialize with a running process.
+
+        Args:
+            proc: A :class:`multiprocessing.Process` instance.
+        """
         self.proc = proc
 
     def stop(self):
-        """Stop the server process."""
+        """Terminate the server process."""
         self.proc.terminate()
 
 
 def run_server(address, port, prod=True, params=None):
-    """Run Django channels server.
+    """Start a Django-channels (or WSGI) server in a subprocess.
+
+    Spawns a new process that runs the server and blocks until the
+    socket is accepting connections.
 
     Args:
-        address (str): Address to bind the HTTP server.
-        port (int): TCP/IP port on which the server will run.
-        prod (bool): If True, start server in production mode. If False, run in development mode.
-        params (dict): Additional parameters for server configuration.
+        address: Address to bind the HTTP server.
+        port: TCP/IP port on which the server will listen.
+        prod: If True, start in production mode; otherwise
+            development mode.
+        params: Additional parameters forwarded to :func:`_run`.
 
     Returns:
-        ServProc: An instance of ServProc to manage the server process.
+        ServProc: Handle for managing the server process.
     """
     print(f"Starting server: {address}:{port}")
 
@@ -89,7 +132,7 @@ def run_server(address, port, prod=True, params=None):
                 s.connect((address, port))
             break
         except (ConnectionRefusedError, socket.error):
-            pass
+            time.sleep(0.1)
 
     print("Server started")
     return ServProc(proc)

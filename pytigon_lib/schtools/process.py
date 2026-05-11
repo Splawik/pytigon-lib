@@ -1,3 +1,5 @@
+"""Subprocess and Django management command execution utilities."""
+
 import sys
 import os
 import asyncio
@@ -10,15 +12,28 @@ from pytigon_lib.schtools.platform_info import platform_name
 
 
 class FrozenModules:
-    """Class to manage freezing and restoring Python modules."""
+    """Context manager-like helper to temporarily remove and restore modules.
+
+    Removes Django/pytigon-related modules from sys.modules so that a
+    sub-interpreter or management command can import them fresh. Call
+    ``restore()`` to put them back.
+
+    Usage::
+
+        frozen = FrozenModules()
+        try:
+            # run code that re-imports modules
+        finally:
+            frozen.restore()
+    """
 
     def __init__(self):
-        """Initialize FrozenModules by storing and deleting specific modules."""
+        """Store and remove tracked modules from sys.modules."""
         self.to_restore = {}
-        self.all = list(sys.modules.keys())
+        self.original_keys = set(sys.modules.keys())
         to_delete = []
 
-        for module_name in self.all:
+        for module_name in self.original_keys:
             if any(
                 module_name.startswith(prefix)
                 for prefix in ("django", "pytigon_lib", "schserw", "settings")
@@ -30,33 +45,32 @@ class FrozenModules:
             del sys.modules[module_name]
 
     def restore(self):
-        """Restore the previously frozen modules."""
-        to_delete = [
-            module_name for module_name in sys.modules if module_name not in self.all
-        ]
+        """Restore previously removed modules and clean up any new ones."""
+        # Remove modules that were added after freezing
+        to_delete = [name for name in sys.modules if name not in self.original_keys]
 
-        for module_name in to_delete:
-            del sys.modules[module_name]
+        for name in to_delete:
+            del sys.modules[name]
 
-        for module_name, module in self.to_restore.items():
-            sys.modules[module_name] = module
+        # Restore original modules
+        for name, module in self.to_restore.items():
+            sys.modules[name] = module
 
 
 def run(
     cmd: List[str], shell: bool = False, env: Optional[dict] = None
 ) -> Tuple[int, Optional[List[str]], Optional[List[str]]]:
-    """Run an external command and capture its output.
+    """Run an external command and capture stdout and stderr.
 
     Args:
-        cmd: List of command arguments.
-        shell: Whether to use the shell to execute the command.
-        env: Environment variables to use.
+        cmd: Command and arguments as a list of strings.
+        shell: If True, run the command through the system shell.
+        env: Optional environment variable dictionary.
 
     Returns:
-        A tuple containing:
-            - The exit code of the command.
-            - The stdout output as a list of strings.
-            - The stderr output as a list of strings.
+        Tuple of (exit_code, stdout_lines, stderr_lines). Lines are
+        lists of strings without trailing carriage returns. None means
+        no output was captured.
     """
     try:
         process = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=shell, env=env)
@@ -81,26 +95,28 @@ def run(
 
 
 def py_run(cmd: List[str]) -> Tuple[int, Optional[List[str]], Optional[List[str]]]:
-    """Run a Python script using the current Python interpreter.
+    """Run a Python command using the current interpreter.
+
+    Prepends the path to the current Python executable to the command list.
 
     Args:
-        cmd: List of command arguments.
+        cmd: Arguments to pass to the Python interpreter.
 
     Returns:
-        A tuple containing:
-            - The exit code of the command.
-            - The stdout output as a list of strings.
-            - The stderr output as a list of strings.
+        Same as :func:`run`.
     """
     return run([get_executable()] + cmd)
 
 
 def _manage(path: str, cmd: List[str]):
-    """Internal function to manage Django commands.
+    """Execute a Django management command in a clean module environment.
+
+    Freezes existing Django modules so the management command can import
+    them fresh, and runs the command in a new asyncio event loop.
 
     Args:
-        path: The directory path to run the command in.
-        cmd: List of command arguments.
+        path: Working directory for the command.
+        cmd: Management command arguments.
     """
     frozen_modules = FrozenModules()
 
@@ -122,21 +138,22 @@ def py_manage(
 ) -> Tuple[int, Optional[List[str]], Optional[List[str]]]:
     """Run a Django management command.
 
+    On Emscripten, returns (0, [], []) as a no-op since management
+    commands cannot be forked.
+
     Args:
-        cmd: List of command arguments.
-        thread_version: Whether to run the command in a separate thread.
+        cmd: Management command arguments.
+        thread_version: If True, run in a separate thread (used when
+            the current process is already a Django management context).
 
     Returns:
-        A tuple containing:
-            - The exit code of the command.
-            - The stdout output as a list of strings.
-            - The stderr output as a list of strings.
+        Same as :func:`run`.
     """
     if platform_name() == "Emscripten":
-        return (None, None, None)
+        return 0, [], []
 
     if not cmd:
-        return (0, [], [])
+        return 0, [], []
 
     if thread_version:
         thread = Thread(target=_manage, args=(os.getcwd(), cmd))

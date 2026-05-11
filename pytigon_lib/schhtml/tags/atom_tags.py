@@ -148,7 +148,7 @@ class ImgTag(AtomTag):
                 img = response.ptr() if response.ret_code != 404 else None
                 if isinstance(img, str):
                     img = img.encode("utf-8")
-            except Exception as e:
+            except (OSError, ValueError, AttributeError) as e:
                 img = None
                 print(f"Image {self.src} not loaded! Error: {e}")
 
@@ -200,11 +200,29 @@ class ImgTag(AtomTag):
 
 
 class ParCalc(AtomTag):
-    """Class for handling <calc> tags."""
+    """Class for handling <calc> tags.
+
+    Evaluates simple arithmetic expressions using a restricted namespace
+    that only allows basic math operations and a few predefined variables.
+    """
+
+    # Allowed builtins for safe evaluation
+    _SAFE_BUILTINS = {
+        "abs": abs,
+        "int": int,
+        "float": float,
+        "round": round,
+        "min": min,
+        "max": max,
+        "sum": sum,
+        "len": len,
+        "str": str,
+    }
 
     def handle_data(self, data):
-        """Handle data by evaluating it as a Python expression."""
+        """Handle data by evaluating it as a restricted Python expression."""
         parent = self.parent
+        table = body = html = None
         while parent:
             if parent.tag == "table":
                 table = parent
@@ -213,7 +231,12 @@ class ParCalc(AtomTag):
             if parent.tag == "html":
                 html = parent
             parent = parent.parent
-        data2 = str(eval(data))
+        safe_globals = {"__builtins__": self._SAFE_BUILTINS}
+        safe_locals = {"table": table, "body": body, "html": html}
+        try:
+            data2 = str(eval(data, safe_globals, safe_locals))
+        except Exception:
+            data2 = ""
         return super().handle_data(data2)
 
 

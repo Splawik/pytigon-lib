@@ -1,66 +1,105 @@
 """
-This module provides classes and functions to parse and handle HTML content.
+HTML parsing module for Pytigon.
+
+Provides a base parser class and utility functions for parsing HTML content,
+with support for both lxml and Python's standard ElementTree as fallback.
 
 Classes:
-    Parser: A class to parse HTML content and handle tags and data.
-    Elem: A class to represent an HTML element.
-    Script: A class to represent a script element.
+    Parser: Base class for HTML parsing with tree crawling.
+    Elem: Wrapper for HTML elements with string conversion utilities.
+    Script: Specialized Elem for script elements.
 
 Functions:
-    tostring(elem: etree.Element) -> str: Convert an element to a string representation.
-    content_tostring(elem: etree.Element) -> str: Convert the content of an element to a string.
+    tostring(elem) -> str: Serialize an element to HTML string.
+    content_tostring(elem) -> str: Serialize inner content of an element.
 """
 
 import io
 import re
-from typing import Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 try:
     from lxml import etree
 
-    LXML = True
+    _LXML_AVAILABLE = True
 except ImportError:
     import xml.etree.ElementTree as etree
     from naivehtmlparser import NaiveHTMLParser
 
-    LXML = False
+    _LXML_AVAILABLE = False
 
 
 class Parser:
-    """A class to parse HTML content and handle tags and data."""
+    """Base HTML parser with tree crawling and tag/data handling.
 
-    def __init__(self):
+    Subclasses override :meth:`handle_starttag`, :meth:`handle_data`,
+    and :meth:`handle_endtag` to process HTML content.
+
+    Attributes:
+        _tree: The root element tree being parsed.
+        _cur_elem: The current element during tree traversal.
+    """
+
+    def __init__(self) -> None:
         self._tree: Optional[etree.Element] = None
         self._cur_elem: Optional[etree.Element] = None
 
     def get_starttag_text(self) -> str:
-        """Generate the start tag text for the current element."""
-        if self._cur_elem:
-            attributes = " ".join(
-                f'{key}="{value}"' if value else key
-                for key, value in self._cur_elem.items()
-            )
-            return (
-                f"<{self._cur_elem.tag} {attributes}>"
-                if attributes
-                else f"<{self._cur_elem.tag}>"
-            )
-        return ""
+        """Generate the opening tag string for the current element.
 
-    def handle_starttag(self, tag: str, attrib: dict) -> None:
-        """Handle the start tag of an element."""
+        Returns:
+            String like ``<tagname attr="value">`` or ``<tagname>``.
+        """
+        if self._cur_elem is None:
+            return ""
+        attributes = " ".join(
+            f'{key}="{value}"' if value else key
+            for key, value in self._cur_elem.items()
+        )
+        if attributes:
+            return f"<{self._cur_elem.tag} {attributes}>"
+        return f"<{self._cur_elem.tag}>"
+
+    def handle_starttag(self, tag: str, attrib: Dict[str, str]) -> None:
+        """Handle a start tag during tree crawling.
+
+        Override in subclasses to process opening tags.
+
+        Args:
+            tag: The tag name (lowercased).
+            attrib: Dictionary of tag attributes.
+        """
         pass
 
     def handle_data(self, txt: str) -> None:
-        """Handle the text data within an element."""
+        """Handle text data encountered during tree crawling.
+
+        Override in subclasses to process text content.
+
+        Args:
+            txt: The text content (may include whitespace).
+        """
         pass
 
     def handle_endtag(self, tag: str) -> None:
-        """Handle the end tag of an element."""
+        """Handle a closing tag during tree crawling.
+
+        Override in subclasses to process closing tags.
+
+        Args:
+            tag: The tag name.
+        """
         pass
 
     def _crawl_tree(self, tree: etree.Element) -> None:
-        """Recursively crawl through the HTML tree."""
+        """Recursively traverse an HTML element tree.
+
+        Calls handle_starttag, handle_data, and handle_endtag
+        for each node in depth-first order.
+
+        Args:
+            tree: The root element to traverse.
+        """
         self._cur_elem = tree
         if isinstance(tree.tag, str):
             self.handle_starttag(tree.tag.lower(), tree.attrib)
@@ -73,13 +112,31 @@ class Parser:
             self.handle_data(tree.tail)
 
     def crawl_tree(self, tree: etree.Element) -> None:
-        """Start crawling the HTML tree."""
+        """Begin crawling an HTML element tree.
+
+        Args:
+            tree: The root element tree to crawl.
+        """
         self._tree = tree
         self._crawl_tree(self._tree)
 
-    def from_html(self, html_txt: str) -> etree.Element:
-        """Parse HTML text and return the root element."""
-        if LXML:
+    @staticmethod
+    def from_html(html_txt: str) -> etree.Element:
+        """Parse raw HTML text into an element tree.
+
+        Uses lxml when available, falling back to the bundled
+        NaiveHTMLParser.
+
+        Args:
+            html_txt: Raw HTML string to parse.
+
+        Returns:
+            The root element of the parsed tree.
+
+        Raises:
+            ValueError: If the HTML cannot be parsed.
+        """
+        if _LXML_AVAILABLE:
             parser = etree.HTMLParser(
                 remove_blank_text=True, remove_comments=True, remove_pis=True
             )
@@ -91,60 +148,107 @@ class Parser:
             return root
 
     def init(self, html_txt: Union[str, "Elem"]) -> None:
-        """Initialize the parser with HTML text or an Elem object."""
+        """Initialize the parser with HTML text or an Elem wrapper.
+
+        Args:
+            html_txt: Either a raw HTML string or an :class:`Elem` instance.
+
+        Note:
+            When an Elem is passed, it is wrapped inside a minimal
+            ``<html>`` document for consistent tree handling.
+        """
         if isinstance(html_txt, Elem):
             self._tree = self.from_html("<html></html>")
             self._tree.append(html_txt.elem)
         else:
             try:
                 self._tree = self.from_html(html_txt)
-            except Exception as e:
-                print(f"Error parsing HTML: {e}")
+            except Exception:
                 self._tree = None
 
     def feed(self, html_txt: Union[str, "Elem"]) -> None:
-        """Feed HTML text to the parser and start crawling."""
+        """Parse and crawl HTML content in one step.
+
+        Equivalent to calling :meth:`init` followed by
+        :meth:`_crawl_tree` on the result.
+
+        Args:
+            html_txt: Raw HTML string or :class:`Elem` instance.
+        """
         self.init(html_txt)
         if self._tree is not None and len(self._tree) > 0:
             self._crawl_tree(self._tree)
 
     def close(self) -> None:
-        """Close the parser and reset the tree."""
+        """Reset the parser, clearing the internal tree."""
         self._tree = None
 
 
 def tostring(elem: etree.Element) -> str:
-    """Convert an element to a string representation."""
-    if LXML:
+    """Serialize an element to its HTML string representation.
+
+    Args:
+        elem: An ElementTree element.
+
+    Returns:
+        HTML string. Pretty-printed when lxml is available.
+    """
+    if _LXML_AVAILABLE:
         return etree.tostring(
             elem, encoding="unicode", method="html", pretty_print=True
         )
-    else:
-        return etree.tostring(elem, encoding="unicode", method="html")
+    return etree.tostring(elem, encoding="unicode", method="html")
 
 
 def content_tostring(elem: etree.Element) -> str:
-    """Convert the content of an element to a string."""
-    tab = []
+    """Extract the inner text and HTML content of an element as a string.
+
+    Concatenates the element's own text, the serialized representation
+    of each child element, and the element's tail text.
+
+    Args:
+        elem: An ElementTree element.
+
+    Returns:
+        Concatenated string of all content within the element.
+    """
+    parts: List[str] = []
     if elem.text:
-        tab.append(elem.text)
-    for pos in elem:
-        tab.append(tostring(pos))
+        parts.append(elem.text)
+    for child in elem:
+        parts.append(tostring(child))
     if elem.tail:
-        tab.append(elem.tail)
-    return "".join(tab)
+        parts.append(elem.tail)
+    return "".join(parts)
 
 
 class Elem:
-    """A class to represent an HTML element."""
+    """Wrapper around an ElementTree element with string conversion.
 
-    def __init__(self, elem: etree.Element, tostring_fun=tostring):
-        self.elem = elem
+    Provides lazy string conversion, boolean testing (non-None element),
+    and a debug-oriented tree stream representation.
+
+    Attributes:
+        elem: The underlying ElementTree element (may be None).
+    """
+
+    def __init__(
+        self,
+        elem: Optional[etree.Element],
+        tostring_fun: Callable[[Optional[etree.Element]], str] = tostring,
+    ) -> None:
+        """Initialize with an element and optional serialization function.
+
+        Args:
+            elem: An ElementTree element or None.
+            tostring_fun: Function to convert the element to a string.
+        """
+        self.elem: Optional[etree.Element] = elem
         self._elem_txt: Optional[str] = None
         self._tostring_fun = tostring_fun
 
     def __str__(self) -> str:
-        """Return the string representation of the element."""
+        """Return the string representation of the element (lazy computed)."""
         if self._elem_txt is None:
             self._elem_txt = (
                 self._tostring_fun(self.elem) if self.elem is not None else ""
@@ -152,19 +256,35 @@ class Elem:
         return self._elem_txt
 
     def __len__(self) -> int:
-        """Return the length of the element's string representation."""
+        """Return the character length of the element's string representation."""
         if self._elem_txt is None:
-            self._elem_txt = self._tostring_fun(self.elem)
+            self._elem_txt = (
+                self._tostring_fun(self.elem) if self.elem is not None else ""
+            )
         return len(self._elem_txt)
 
     def __bool__(self) -> bool:
-        """Return True if the element exists, False otherwise."""
+        """Return True if the wrapped element is not None."""
         return self.elem is not None
 
     @staticmethod
     def super_strip(s: str) -> str:
-        """Strip and clean the string by removing extra spaces and newlines."""
-        s = re.sub(r"(( )*(\\n)*)*", "", s)
+        """Clean a string by collapsing whitespace and removing literal ``\\n``.
+
+        Converts sequences of spaces and literal backslash-n into a single
+        space, then strips leading/trailing whitespace.
+
+        Args:
+            s: The input string to clean.
+
+        Returns:
+            Stripped string with collapsed whitespace.
+        """
+        if not s:
+            return ""
+        # Collapse runs of spaces, tabs, and literal '\n' sequences
+        s = re.sub(r"[\t ]+", " ", s)
+        s = re.sub(r"(\\n\s*)+", " ", s)
         return s.strip()
 
     def tostream(
@@ -173,14 +293,30 @@ class Elem:
         elem: Optional[etree.Element] = None,
         tab: int = 0,
     ) -> io.StringIO:
-        """Convert the element to a stream representation."""
+        """Write a human-readable tree representation to a stream.
+
+        Useful for debugging HTML structure.
+
+        Args:
+            output: An existing StringIO buffer, or None to create one.
+            elem: Element to serialize; defaults to :attr:`self.elem`.
+            tab: Indentation level (in spaces).
+
+        Returns:
+            The StringIO buffer containing the tree representation.
+        """
         if elem is None:
             elem = self.elem
+        if elem is None:
+            return output or io.StringIO()
         if output is None:
             output = io.StringIO()
+
         if isinstance(elem.tag, str):
-            output.write(" " * tab)
+            indent = " " * tab
+            output.write(indent)
             output.write(elem.tag.lower())
+
             first = True
             for key, value in elem.attrib.items():
                 if first:
@@ -194,26 +330,39 @@ class Elem:
                 else:
                     output.write(str(value).replace("\n", "\\n"))
                 first = False
+
             if elem.text:
-                x = self.super_strip(elem.text.replace("\n", "\\n"))
-                if x:
+                cleaned = self.super_strip(elem.text.replace("\n", "\\n"))
+                if cleaned:
                     output.write("...")
-                    output.write(x)
+                    output.write(cleaned)
+
             output.write("\n")
             for node in elem:
                 self.tostream(output, node, tab + 4)
+
         if elem.tail:
-            x = self.super_strip(elem.tail.replace("\n", "\\n"))
-            if x:
+            cleaned = self.super_strip(elem.tail.replace("\n", "\\n"))
+            if cleaned:
                 output.write(" " * tab)
                 output.write(".")
-                output.write(x)
+                output.write(cleaned)
                 output.write("\n")
+
         return output
 
 
 class Script(Elem):
-    """A class to represent a script element."""
+    """Specialized Elem for ``<script>`` elements.
 
-    def __init__(self, elem: etree.Element, tostring_fun=content_tostring):
+    Uses :func:`content_tostring` for serialization instead of
+    :func:`tostring`, so the ``<script>`` tags are omitted and only
+    the inner content is returned.
+    """
+
+    def __init__(
+        self,
+        elem: Optional[etree.Element],
+        tostring_fun: Callable[[Optional[etree.Element]], str] = content_tostring,
+    ) -> None:
         super().__init__(elem, tostring_fun)

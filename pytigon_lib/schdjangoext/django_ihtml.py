@@ -1,4 +1,15 @@
+"""ihtml to HTML conversion utilities for Django templates.
+
+Provides the bridge between the ihtml (indentation-based HTML shorthand)
+format and standard HTML. Used by the template loaders to compile
+.ihtml source files into .html templates.
+"""
+
+import logging
+
 from pytigon_lib.schindent.indent_style import ConwertToHtml
+
+LOGGER = logging.getLogger("pytigon.schdjangoext")
 
 # Elements that should be self-closing in HTML
 SIMPLE_CLOSE_ELEM = ["br", "meta", "input"]
@@ -23,27 +34,32 @@ NO_AUTO_CLOSE_DJANGO_ELEM = [
 
 
 def fa_icons(value):
-    """Generate Font Awesome icon HTML.
+    """Generate a Font Awesome ``<i>`` element for the given icon name.
 
     Args:
-        value (str): The name of the Font Awesome icon.
+        value: Font Awesome icon name (e.g. ``"user"``).
 
     Returns:
-        str: HTML string for the icon.
+        An HTML string: ``<i class='fa fa-{value}'></i>``.
     """
     return f"<i class='fa fa-{value}'></i>"
 
 
 def ihtml_to_html(file_name, input_str=None, lang="en"):
-    """Convert ihtml syntax to HTML.
+    """Convert ihtml syntax to HTML for a given language.
+
+    When ``input_str`` is None the source is read from ``file_name``;
+    otherwise ``file_name`` is used as a logical identifier and
+    ``input_str`` supplies the content.
 
     Args:
-        file_name (str): The name of the template file.
-        input_str (str, optional): The input string with ihtml content. Defaults to None.
-        lang (str, optional): The language. Defaults to "en".
+        file_name: Source file path or logical identifier.
+        input_str: Optional inline ihtml content.
+        lang: Language code (e.g. ``"en"``, ``"pl"``).
 
     Returns:
-        str: The converted HTML string or an empty string on error.
+        The rendered HTML string, or an empty string on conversion
+        failure.
     """
     try:
         conwert = ConwertToHtml(
@@ -59,12 +75,6 @@ def ihtml_to_html(file_name, input_str=None, lang="en"):
         )
         conwert.process()
         return conwert.to_str()
-    except Exception as e:
-        print(f"Error during ihtml conversion: {e}")
-        import traceback
-        import sys
-
-        print(sys.exc_info()[0])
-        print(traceback.print_exc())
-
+    except Exception:
+        LOGGER.exception("Error during ihtml conversion of '%s'", file_name)
         return ""

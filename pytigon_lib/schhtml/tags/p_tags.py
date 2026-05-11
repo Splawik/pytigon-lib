@@ -371,7 +371,7 @@ class ParArray(AtomContainer):
 class Li(InlineElements):
     def __init__(self, parent, parser, tag, attrs):
         InlineElements.__init__(self, parent, parser, tag, attrs)
-        if type(parent) == Ul:
+        if isinstance(parent, Ul):
             self.level = parent.level
         else:
             self.level = 0
@@ -398,7 +398,7 @@ class Ul(ParArray):
         self.level = 1
         p = parent
         while p:
-            if type(p) == Ul:
+            if isinstance(p, Ul):
                 self.level += 1
             p = p.parent
         self.subdiv = True
@@ -407,7 +407,7 @@ class Ul(ParArray):
         if self.dc_info.dc.handle_html_directly:
             return super().child_ready_to_render(child)
 
-        if not child in self.children:
+        if child not in self.children:
             if child.lp < 0:
                 child.lp = self.lp
                 self.lp += 1
@@ -423,7 +423,7 @@ class Ul(ParArray):
             del child.atom_list.atom_list[-1]
             child.atom_list.atom_list.insert(0, atom)
 
-            if self.parent.tag == "li" and type(self.parent.parent) == Ul:
+            if self.parent.tag == "li" and isinstance(self.parent.parent, Ul):
                 self.parent.parent.child_ready_to_render(self.parent)
                 for child in self.rendered_children:
                     self.parent.parent.rendered_children.append(child)

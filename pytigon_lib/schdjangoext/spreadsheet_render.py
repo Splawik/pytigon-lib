@@ -20,7 +20,17 @@ from pytigon_lib.schfs.vfstools import get_temp_filename
 from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
 from pytigon_lib.schspreadsheet.ooxml_process import OOXmlDocTransform
 
-template_dirs = getattr(settings, "TEMPLATES")[0]["DIRS"]
+
+def _get_template_dirs():
+    """Return the configured template directories, or an empty list.
+
+    Uses lazy access to ``settings.TEMPLATES`` to avoid evaluation
+    before the settings are fully populated.
+    """
+    try:
+        return settings.TEMPLATES[0]["DIRS"]
+    except (AttributeError, IndexError, KeyError):
+        return []
 
 
 class OdfDocTemplateTransform(OdfDocTransform):
@@ -44,28 +54,40 @@ class OOXmlDocTemplateTransform(OOXmlDocTransform):
 
 
 def oo_dict(template_name):
-    """Extract table names from the ODF template."""
-    file_name = None
-    for template_dir in template_dirs:
-        if os.path.exists(os.path.join(template_dir, template_name)):
-            file_name = os.path.join(template_dir, template_name)
+    """Extract table names from an ODF template.
 
-    if file_name:
-        try:
-            with ZipFile(file_name, "r") as z:
-                doc_content = z.read("content.xml")
-                if isinstance(doc_content, bytes):
-                    doc_content = doc_content.decode("utf-8")
-                doc = xml.dom.minidom.parseString(doc_content.replace("&apos;", "'"))
-                elements = doc.getElementsByTagName("table:table")
-                return [
-                    (elem.getAttribute("table:name"), elem.getAttribute("table:name"))
-                    for elem in elements
-                ]
-        except Exception as e:
-            raise RuntimeError(f"Failed to process template: {e}")
-    else:
+    Args:
+        template_name: Name of the ODF template file.
+
+    Returns:
+        List of (table_name, table_name) tuples found in the document.
+
+    Raises:
+        RuntimeError: If the template cannot be found or processed.
+    """
+    file_name = None
+    for template_dir in _get_template_dirs():
+        candidate = os.path.join(template_dir, template_name)
+        if os.path.exists(candidate):
+            file_name = candidate
+            break
+
+    if not file_name:
         raise RuntimeError(f"Failed to find template: {template_name}")
+
+    try:
+        with ZipFile(file_name, "r") as z:
+            doc_content = z.read("content.xml")
+            if isinstance(doc_content, bytes):
+                doc_content = doc_content.decode("utf-8")
+            doc = xml.dom.minidom.parseString(doc_content.replace("&apos;", "'"))
+            elements = doc.getElementsByTagName("table:table")
+            return [
+                (elem.getAttribute("table:name"), elem.getAttribute("table:name"))
+                for elem in elements
+            ]
+    except Exception as e:
+        raise RuntimeError(f"Failed to process template: {e}") from e
 
 
 class DefaultTbl:
@@ -104,7 +126,7 @@ def _render_doc(
     if context_instance is None:
         context_instance = {}
 
-    if type(context_instance) is dict:
+    if isinstance(context_instance, dict):
         context_instance = Context(context_instance)
 
     context = (
@@ -142,13 +164,28 @@ def _render_doc(
 
 
 def _find_template(template_names):
-    """Find the first existing template from the list."""
+    """Find the first existing template from a list of candidate names.
+
+    Searches through configured template directories. Absolute paths
+    and paths containing ``:`` (e.g. Windows drive letters) are checked
+    as-is.
+
+    Args:
+        template_names: Iterable of template name strings.
+
+    Returns:
+        The full path to the first found template.
+
+    Raises:
+        TemplateDoesNotExist: If none of the template names resolve
+            to an existing file.
+    """
     for tname in template_names:
         if tname.startswith("/") or ":" in tname:
             if os.path.exists(tname):
                 return tname
         else:
-            for template_dir in template_dirs:
+            for template_dir in _get_template_dirs():
                 name = os.path.join(template_dir, tname)
                 if os.path.exists(name):
                     return name

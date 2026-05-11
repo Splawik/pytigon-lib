@@ -192,10 +192,10 @@ class TableTag(BaseHtmlAtomParser):
                             if s[k] > s2[k]:
                                 delta[k] = (s[k] - s2[k]) / pos.colspan
                         if delta[0] != 0 or delta[1] != 0 or delta[2] != 0:
-                            l = 1
-                            if delta[l] != 0:
+                            idx = 1
+                            if delta[idx] != 0:
                                 for k in range(0, pos.colspan):
-                                    self.sizes[j + k][l] += delta[l]
+                                    self.sizes[j + k][idx] += delta[idx]
             (opt, min, max) = (0, 0, 0)
             for pos in self.sizes:
                 opt += pos[0]
@@ -296,9 +296,9 @@ class TableTag(BaseHtmlAtomParser):
         rowspan = 1
         for pos in child.td_list:
             try:
-                while row[i] != None:
+                while row[i] is not None:
                     i += 1
-            except:
+            except IndexError:
                 continue
             row[i] = pos
             if pos.colspan > 1:
@@ -633,12 +633,12 @@ class TrTag(BaseHtmlElemParser):
 
 class TdTag(Par):
     def __init__(self, parent, parser, tag, attrs):
-        if not "border" in attrs:
+        if "border" not in attrs:
             if "border" in parent.parent.attrs:
                 attrs["border"] = parent.parent.attrs["border"]
-        if not "margin" in attrs and "cellspacing" in parent.parent.attrs:
+        if "margin" not in attrs and "cellspacing" in parent.parent.attrs:
             attrs["margin"] = parent.parent.attrs["cellspacing"]
-        if not "padding" in attrs and "cellpadding" in parent.parent.attrs:
+        if "padding" not in attrs and "cellpadding" in parent.parent.attrs:
             attrs["padding"] = parent.parent.attrs["cellpadding"]
 
         Par.__init__(self, parent, parser, tag, attrs)

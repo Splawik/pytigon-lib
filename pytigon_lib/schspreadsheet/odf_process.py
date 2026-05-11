@@ -1,10 +1,21 @@
+"""
+ODF (Open Document Format) spreadsheet processing module.
+
+Provides classes and utilities for transforming ODF spreadsheet files,
+processing templates, handling annotations, and managing table cell
+transformations for formula, value, and auto-cell types.
+"""
+
 import re
 import shutil
 import base64
+import logging
 from zipfile import ZipFile, ZIP_DEFLATED
 from lxml import etree, html
 from xml.sax.saxutils import escape
 from pytigon_lib.schfs.vfstools import delete_from_zip
+
+logger = logging.getLogger(__name__)
 
 OFFICE_URN = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
 TABLE_URN = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
@@ -55,13 +66,15 @@ class OdfDocTransform:
         return "{{ tbl.IncCol }}"
 
     def row_number(self, il=1):
+        """Return template string for row increment followed by column reset."""
         return """{{ tbl|args:%d|call:'IncRow' }}{{ tbl|args:1|call:'SetCol' }}""" % il
 
     def clear_row_col(self):
+        """Return template string to reset both row and column to 1."""
         return """{{ tbl|args:1|call:'SetRow' }}{{ tbl|args:1|call:'SetCol' }}"""
 
     def doc_process(self, doc, debug):
-        """Process document type 2 (writer)."""
+        """Process document type 2 (writer). Override in subclasses."""
         pass
 
     def spreadsheet_process(self, doc, debug):
@@ -84,58 +97,73 @@ class OdfDocTransform:
             comment_elem (etree.Element): The XML element representing the comment.
             comment_txt (str): The text content of the comment to be processed.
 
-        The function supports annotations that begin with '^' or '$' to indicate
-        hierarchical levels, and uses '@' to split the comment text into multiple
-        parts for insertion at different positions.
+        Annotation syntax:
+            '.' prefix  - Replace cell content entirely with the text that follows.
+            '^' prefix  - Increase hierarchy level (insert at ancestor).
+            '$' prefix  - Increase hierarchy level (insert at ancestor, offset +1).
+            '@'         - Split into two values inserted at offset 0 and 1 respectively.
         """
-
-        parent = comment_elem.getparent()
-        level = 0
-        if comment_txt.startswith("."):
-            if comment_elem is not None:
-                if "table-cell" in comment_elem.tag:
-                    for child in comment_elem.getchildren():
-                        if "annotation" not in child.tag:
-                            comment_elem.remove(child)
-                    new_cell = etree.Element(TEXT_URN + "p")
-                    new_cell.text = comment_txt[1:]
-                    comment_elem.append(new_cell)
-                else:
-                    for child in comment_elem.getchildren():
-                        if child.tag.endswith("v"):
-                            comment_elem.remove(child)
-                    comment_elem.append(
-                        etree.XML("<is><t>%s</t></is>" % escape(comment_txt[1:]))
-                    )
-                    comment_elem.attrib["t"] = "inlineStr"
+        if comment_elem is None:
             return
 
+        parent = comment_elem.getparent()
+        if parent is None:
+            return
+
+        level = 0
+        if comment_txt.startswith("."):
+            if "table-cell" in comment_elem.tag:
+                for child in comment_elem.getchildren():
+                    if "annotation" not in child.tag:
+                        comment_elem.remove(child)
+                new_cell = etree.Element(TEXT_URN + "p")
+                new_cell.text = comment_txt[1:]
+                comment_elem.append(new_cell)
+            else:
+                for child in comment_elem.getchildren():
+                    if child.tag.endswith("v"):
+                        comment_elem.remove(child)
+                comment_elem.append(
+                    etree.XML("<is><t>%s</t></is>" % escape(comment_txt[1:]))
+                )
+                comment_elem.attrib["t"] = "inlineStr"
+            return
+
+        # Parse hierarchy markers ('^' and '$') from the start of the text.
         while comment_txt.startswith("^") or comment_txt.startswith("$"):
             level += 1
-            offset = 0 if comment_txt.startswith("^") else 1
             comment_txt = comment_txt[1:]
+
         if "@" in comment_txt:
             x = comment_txt.split("@")
             values = [[x[0], level, 0], [x[1], level, 1]]
         else:
             values = [[comment_txt, level, 0]]
 
-        for v, level, offset in values:
-            if level < 1:
+        for v, _level, offset in values:
+            if _level < 1:
                 parent.insert(
                     parent.index(comment_elem) + offset,
                     etree.XML("<tmp>%s</tmp>" % escape(v)),
                 )
             else:
                 gparent = parent
-                while level > 0:
+                remaining = _level
+                while remaining > 0:
                     p = gparent
                     gparent = p.getparent()
-                    level -= 1
-                gparent.insert(
-                    gparent.index(p) + offset,
-                    etree.XML("<tmp>%s</tmp>" % escape(v)),
-                )
+                    if gparent is None:
+                        logger.warning(
+                            "Annotation level exceeds document depth for text: %s",
+                            comment_txt,
+                        )
+                        break
+                    remaining -= 1
+                if gparent is not None:
+                    gparent.insert(
+                        gparent.index(p) + offset,
+                        etree.XML("<tmp>%s</tmp>" % escape(v)),
+                    )
 
     def _process_annotations(self, doc, debug):
         """Process annotations in the document."""
@@ -218,7 +246,7 @@ class OdfDocTransform:
         self._replace_cell(element, new_cell)
 
     def _create_auto_cell(self, element, txt, debug):
-        """Create a new cell with a value."""
+        """Create a new auto-type cell (auto-detected value on output)."""
         new_cell = etree.Element(TABLE_URN + "table-cell")
         new_cell.set(OFFICE_URN + "value-type", "string")
         new_text = etree.Element(TEXT_URN + "vauto")
@@ -310,7 +338,7 @@ class OdfDocTransform:
             parent = pos.getparent()
             txt = pos.text
             parent.remove(pos)
-            if txt != "" and txt != None:
+            if txt is not None and txt != "":
                 if len(txt) == 10 and txt[4] == "-" and txt[7] == "-":
                     try:
                         new_text = etree.Element(TEXT_URN + "p")
@@ -318,7 +346,7 @@ class OdfDocTransform:
                         parent.set(OFFICE_URN + "value-type", "date")
                         parent.set(OFFICE_URN + "date-value", txt[:10])
                         continue
-                    except:
+                    except (ValueError, TypeError):
                         pass
                 try:
                     x = float(txt)
@@ -327,7 +355,7 @@ class OdfDocTransform:
                     parent.set(OFFICE_URN + "value-type", "float")
                     parent.set(OFFICE_URN + "value", txt)
                     continue
-                except:
+                except (ValueError, TypeError):
                     pass
                 new_text = etree.Element(TEXT_URN + "p")
                 new_text.text = escape(txt)
@@ -402,8 +430,11 @@ class OdfDocTransform:
                     z.writestr(pos[0], base64.b64decode(pos[1].encode("utf-8")))
 
             return 1
+        except OSError as e:
+            logger.error("File I/O error processing '%s': %s", self.file_name_in, e)
+            return 0
         except Exception as e:
-            print(f"Error processing file: {e}")
+            logger.error("Error processing file '%s': %s", self.file_name_in, e)
             return 0
 
 

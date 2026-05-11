@@ -1,0 +1,9 @@
+# Ruff configuration for pytigon-lib
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = ["E", "W", "F"]
+
+[format]
+line-ending = "lf"

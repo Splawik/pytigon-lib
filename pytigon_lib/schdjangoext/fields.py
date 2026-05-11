@@ -1,5 +1,4 @@
-"""Module contains many additional fields for django models.
-"""
+"""Module contains many additional fields for django models."""
 
 # from itertools import chain
 
@@ -17,45 +16,54 @@ from pytigon_lib.schdjangoext.formfields import (
 
 
 class ModelSelect2WidgetExt(ModelSelect2Widget):
+    """Extended Select2 widget with dynamic form-open and add-form buttons.
+
+    Supports ``href1`` for opening a related form and ``href2`` for
+    adding a new object directly from the select widget.
+    """
+
     input_type = "select2"
 
     def __init__(
         self, href1=None, href2=None, label="", minimum_input_length=0, **argv
     ):
+        """Initialize the widget with optional href attributes for related actions.
+
+        Args:
+            href1: URL for opening a related form (adds 'show-form-btn' CSS class).
+            href2: URL for adding a new related object.
+            label: Widget label.
+            minimum_input_length: Minimum input length before search triggers.
+            **argv: Additional keyword arguments forwarded to ModelSelect2Widget.
+        """
+        # Ensure attrs dict exists and set base attributes
+        attrs = argv.setdefault("attrs", {})
         if href1:
-            if "attrs" in argv:
-                argv["attrs"]["href1"] = href1
-            else:
-                argv["attrs"] = {"href1": href1}
+            attrs["href1"] = href1
         if href2:
-            if "attrs" in argv:
-                argv["attrs"]["href2"] = href2
-            else:
-                argv["attrs"] = {"href2": href2}
-        if "attrs" in argv:
-            argv["attrs"]["data-minimum-input-length"] = minimum_input_length
-            argv["attrs"]["class"] = "form-control" + (
-                " show-form-btn" if href1 else ""
-            )
-        else:
-            argv["attrs"] = {"data-minimum-input-length": minimum_input_length}
-            argv["attrs"]["class"] = "form-control" + (
-                " show-form-btn" if href1 else ""
-            )
+            attrs["href2"] = href2
+        attrs["data-minimum-input-length"] = minimum_input_length
+        attrs["class"] = "form-control" + (" show-form-btn" if href1 else "")
         ModelSelect2Widget.__init__(self, label=label, **argv)
 
 
 class ModelSelect2MultipleWidgetExt(ModelSelect2MultipleWidget):
-    def __init__(self, label="", minimum_input_length=0, **argv):
-        if "attrs" in argv:
-            argv["attrs"]["data-minimum-input-length"] = minimum_input_length
-            argv["attrs"]["class"] = "form-control"
-        else:
-            argv["attrs"] = {"data-minimum-input-length": minimum_input_length}
-            argv["attrs"]["class"] = "form-control"
-        ModelSelect2MultipleWidget.__init__(self, label=label, **argv)
+    """Extended Select2 multiple-select widget with streamlined initialization."""
 
     input_type = "select2"
+
+    def __init__(self, label="", minimum_input_length=0, **argv):
+        """Initialize the multi-select widget.
+
+        Args:
+            label: Widget label.
+            minimum_input_length: Minimum input length before search.
+            **argv: Additional keyword arguments forwarded to parent.
+        """
+        attrs = argv.setdefault("attrs", {})
+        attrs["data-minimum-input-length"] = minimum_input_length
+        attrs["class"] = "form-control"
+        ModelSelect2MultipleWidget.__init__(self, label=label, **argv)
 
 
 class ForeignKey(models.ForeignKey):
@@ -112,7 +120,13 @@ class ForeignKey(models.ForeignKey):
             self.to = args[0]
 
     def formfield(self, **kwargs):
-        if type(self.to) == str:
+        """Return a form field for this ForeignKey with Select2 widget support.
+
+        Builds href1 (form popup) and href2 (add popup) URLs and
+        optionally wraps the field in a custom ModelChoiceField that
+        uses Select2 for search_fields or query-based filtering.
+        """
+        if isinstance(self.to, str):
             to = self.model
         else:
             to = self.to
@@ -135,7 +149,7 @@ class ForeignKey(models.ForeignKey):
                 % (to._meta.app_label, to._meta.object_name, self.filter)
             )
         else:
-            href2 = False
+            href2 = None
 
         field = self
 
@@ -219,7 +233,12 @@ class ManyToManyField(models.ManyToManyField):
             self.to = args[0]
 
     def formfield(self, **kwargs):
-        if type(self.to) == str:
+        """Return a form field for this ManyToManyField with Select2 widget support.
+
+        When search_fields or query are provided, wraps the field in a
+        custom ModelMultipleChoiceField that uses Select2 for filtering.
+        """
+        if isinstance(self.to, str):
             to = self.model
         else:
             to = self.to

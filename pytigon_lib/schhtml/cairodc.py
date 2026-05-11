@@ -221,10 +221,21 @@ class CairoDc(BaseDc):
         super().draw_rotated_text(x, y, txt, angle)
 
     def draw_image(self, x, y, dx, dy, scale, png_data):
+        """Draw an image on the Cairo surface.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            dx: Target width.
+            dy: Target height.
+            scale: Scale mode.
+            png_data: Raw PNG image bytes.
+        """
         try:
             png_stream = io.BytesIO(png_data)
             surface = cairo.ImageSurface.create_from_png(png_stream)
-        except Exception:
+        except (cairo.Error, OSError, ValueError):
+            # Fall back to a placeholder image on decode failure
             surface = cairo.ImageSurface.create_from_png("sleeptimer.png")
         w = surface.get_width()
         h = surface.get_height()
@@ -285,14 +296,20 @@ class CairoDcInfo(BaseDcInfo):
         return th
 
     def get_img_size(self, png_data):
+        """Get the dimensions of a PNG image.
+
+        Args:
+            png_data: Raw PNG image bytes.
+
+        Returns:
+            Tuple of (width, height) in pixels, or (0, 0) on failure.
+        """
         try:
             png_stream = io.BytesIO(png_data)
             surface = cairo.ImageSurface.create_from_png(png_stream)
-        except Exception:
-            surface = None
-        if surface:
             return surface.get_width(), surface.get_height()
-        return 0, 0
+        except (cairo.Error, OSError, ValueError):
+            return (0, 0)
 
 
 def get_PdfCairoDc(result, width, height):

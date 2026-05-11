@@ -1,4 +1,11 @@
+"""WebSocket client implementation for Pytigon.
+
+Provides both local (in-process via asyncio.Queue) and remote
+(via autobahn/Twisted) WebSocket client protocols.
+"""
+
 import asyncio
+import logging
 from autobahn.twisted.websocket import (
     WebSocketClientFactory,
     WebSocketClientProtocol,
@@ -6,20 +13,30 @@ from autobahn.twisted.websocket import (
 )
 from pytigon_lib.schtools.schjson import json_dumps, json_loads
 
+LOGGER = logging.getLogger("pytigon.websocket")
+
 
 class PytigonClientProtocolBase:
-    """Base class for Pytigon WebSocket client protocol."""
+    """Base class for Pytigon WebSocket client protocol.
+
+    Delegates WebSocket events to the application instance via
+    on_websocket_connect, on_websocket_open, on_websocket_message callbacks.
+    """
 
     def onConnect(self, response):
-        """Handle WebSocket connection."""
+        """Handle WebSocket connection established."""
         return self.app.on_websocket_connect(self, self.websocket_id, response)
 
     def onOpen(self):
-        """Handle WebSocket open event."""
+        """Handle WebSocket opened."""
         return self.app.on_websocket_open(self, self.websocket_id)
 
     def onClose(self, wasClean, code, reason):
-        """Handle WebSocket close event."""
+        """Handle WebSocket closed.
+
+        Note: The base implementation does nothing; override in subclasses
+        or handle via application callbacks.
+        """
         pass
 
     def onMessage(self, msg, binary):
@@ -28,21 +45,22 @@ class PytigonClientProtocolBase:
 
 
 def create_websocket_client(app, websocket_id, local=False, callback=False):
-    """Create a WebSocket client.
+    """Create a WebSocket client and register it with the application.
 
     Args:
-        app: The application instance.
-        websocket_id: The unique identifier for the WebSocket connection.
-        local: If True, create a local WebSocket client.
-        callback: Optional callback function to be added to the WebSocket.
+        app: The application instance (must have a 'websockets' dict and
+            'base_address' attribute for remote connections).
+        websocket_id: Unique identifier for the WebSocket connection.
+        local: If True, create an in-process client using asyncio.Queue.
+            If False, create a remote client using autobahn/Twisted.
+        callback: Optional callback function to register on the WebSocket.
     """
     if local:
 
         class PytigonClientProtocol(PytigonClientProtocolBase):
-            """Local WebSocket client protocol."""
+            """Local (in-process) WebSocket client using asyncio.Queue."""
 
             def __init__(self, app):
-                """Initialize the local WebSocket client."""
                 self.app = app
                 self.websocket_id = websocket_id
                 self.input_queue = asyncio.Queue()
@@ -50,7 +68,7 @@ def create_websocket_client(app, websocket_id, local=False, callback=False):
                 self.status = 1
 
             async def send_message(self, msg):
-                """Send a message through the WebSocket."""
+                """Enqueue a JSON-encoded message for the WebSocket bridge."""
                 await self.input_queue.put(json_dumps(msg))
 
         app.websockets[websocket_id] = PytigonClientProtocol(app)
@@ -58,10 +76,9 @@ def create_websocket_client(app, websocket_id, local=False, callback=False):
     else:
 
         class PytigonClientProtocol(PytigonClientProtocolBase, WebSocketClientProtocol):
-            """Remote WebSocket client protocol."""
+            """Remote WebSocket client using autobahn/Twisted transport."""
 
             def __init__(self):
-                """Initialize the remote WebSocket client."""
                 nonlocal app, websocket_id
                 PytigonClientProtocolBase.__init__(self)
                 WebSocketClientProtocol.__init__(self)
@@ -71,11 +88,11 @@ def create_websocket_client(app, websocket_id, local=False, callback=False):
                 self.status = 0
 
             def send_message(self, msg):
-                """Send a message through the WebSocket."""
+                """Send a JSON-encoded message over the WebSocket."""
                 try:
                     super().sendMessage(json_dumps(msg).encode("utf-8"))
                 except Exception as e:
-                    print(f"Failed to send message: {e}")
+                    LOGGER.error("Failed to send WebSocket message: %s", e)
 
         ws_address = app.base_address.replace("http", "ws").replace("https", "wss")
         ws_address += websocket_id

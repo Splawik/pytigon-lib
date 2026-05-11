@@ -1,6 +1,12 @@
+"""Atom-based text layout engine for HTML rendering.
+
+This module provides classes for representing text atoms, lines of atoms,
+and lists of atoms that can be laid out and rendered on a device context.
+"""
+
 from pytigon_lib.schhtml.htmltools import superstrip
 
-# Define symbols to decode
+# HTML entity decoding table (order matters: &amp; must come after &gt; and &lt;)
 DECODE_SYM = (
     ("&gt;", ">"),
     ("&lt;", "<"),
@@ -10,7 +16,14 @@ DECODE_SYM = (
 
 
 def unescape(text):
-    """Unescape HTML entities in the given text."""
+    """Unescape HTML entities in the given text.
+
+    Args:
+        text: String potentially containing HTML entities.
+
+    Returns:
+        String with HTML entities replaced by their character equivalents.
+    """
     for symbol, replacement in DECODE_SYM:
         text = text.replace(symbol, replacement)
     return text
@@ -91,12 +104,15 @@ class AtomLine:
             return
         dx = self.maxwidth - self.dx
         d = 1 if from_second else 0
-        l = len(self.objs)
-        if l > 1 + d:
+        n = len(self.objs)
+        if n > 1 + d:
             for e in self.objs:
                 if isinstance(e, BrAtom):
                     return
-            ddx = dx / (l - 1 - d)
+            divisor = n - 1 - d
+            if divisor <= 0:
+                return
+            ddx = dx / divisor
             objs = []
             for i, obj in enumerate(self.objs):
                 objs.append(obj)
@@ -236,24 +252,28 @@ class AtomList:
         self.atom_list.append(atom)
 
     def get_width_tab(self):
-        """Calculate the optimal, minimum, and maximum width of the atom list."""
+        """Calculate the optimal, minimum, and maximum width of the atom list.
+
+        Returns:
+            Tuple of (optimal_width, min_width, max_width).
+        """
         minwidth = 0
-        maxwidth = 0
-        maxmaxwidth = 0
+        cur_width = 0
+        max_segment_width = 0
         for atom in self.atom_list:
             minwidth = max(minwidth, atom.get_width())
-            maxwidth += atom.get_width() + atom.dx_space
+            cur_width += atom.get_width() + atom.dx_space
             if isinstance(atom, BrAtom):
-                maxmaxwidth = max(maxmaxwidth, maxwidth)
-                maxwidth = 0
+                max_segment_width = max(max_segment_width, cur_width)
+                cur_width = 0
 
-        maxwidth = max(maxwidth, maxmaxwidth)
+        total_max = max(cur_width, max_segment_width)
         optwidth = (
-            (maxwidth * 8) // len(self.atom_list)
+            (total_max * 8) // len(self.atom_list)
             if len(self.atom_list) > 8
-            else maxwidth
+            else total_max
         )
-        return (optwidth, minwidth, maxwidth)
+        return (optwidth, minwidth, total_max)
 
     def gen_list_for_draw(self, width):
         """Generate a list of lines for drawing."""

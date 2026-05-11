@@ -1,13 +1,18 @@
+"""Command-line entry point for HTML to PDF conversion.
+
+Usage: python -m pytigon_lib.schhtml.main [html_file]
+"""
+
 import sys
 from pathlib import Path
 
-# Import necessary modules
 from pytigon_lib.schhtml.pdfdc import PdfDc
 from pytigon_lib.schhtml.cairodc import CairoDc
 from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
 
 
 def main():
+    """Parse an HTML file and render it to PDF."""
     try:
         # Configuration
         run_cairo = False
@@ -26,7 +31,7 @@ def main():
         if not html_file_path.exists():
             raise FileNotFoundError(f"HTML file not found: {html_file_path}")
 
-        # Set dimensions for the output
+        # A4 dimensions in points
         width, height = 595, 842
 
         # Initialize the appropriate drawing context
@@ -50,7 +55,7 @@ def main():
         dc.set_paging(False)
         dc.set_paging(True)
 
-        # Initialize HTML parser
+        # Initialize HTML parser with indentation-based CSS
         p = HtmlViewerParser(
             dc=dc, calc_only=False, init_css_str=init_css_str, css_type=1
         )
@@ -64,6 +69,9 @@ def main():
         p.close()
         dc.end_page()
 
+    except (FileNotFoundError, OSError, ValueError) as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        print(f"An error occurred: {e}", file=sys.stderr)
+        print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)

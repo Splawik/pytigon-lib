@@ -1,43 +1,54 @@
+"""Custom Django form widgets.
+
+Provides :class:`ImgFileInput`, a :class:`ClearableFileInput` variant
+tailored for image uploads.
+"""
+
 import django.forms.widgets
 
 
 class ImgFileInput(django.forms.widgets.ClearableFileInput):
-    """
-    A custom file input widget for handling image file inputs.
-    This widget extends ClearableFileInput to handle image files specifically.
+    """A file input widget optimized for image uploads.
+
+    Extends :class:`~django.forms.ClearableFileInput` to handle image
+    files specifically. The ``format_value`` override simply passes
+    through the value unchanged.
     """
 
     def format_value(self, value):
-        """
-        Format the value to be displayed in the widget.
+        """Return the value unchanged.
+
+        Overrides the parent behaviour to preserve the raw value
+        without any transformation.
 
         Args:
-            value: The value to be formatted.
+            value: The field value (can be any type, including ``None``).
 
         Returns:
-            The formatted value.
+            The same value, with no transformation applied.
         """
         return value
 
     def value_from_datadict(self, data, files, name):
-        """
-        Extract the value from the data dictionary.
+        """Extract the field value from form data or uploaded files.
+
+        Looks up ``name`` in ``data`` first, then in ``files``.
+        ``data`` takes priority when the key exists in both dictionaries.
+        Returns ``None`` if neither contains the key.
 
         Args:
-            data: The data dictionary containing form data.
-            files: The files dictionary containing uploaded files.
-            name: The name of the field.
+            data: Form data dictionary (mapping-like).
+            files: Uploaded files dictionary (mapping-like).
+            name: Field name to look up.
 
         Returns:
-            The value extracted from the data or files dictionary, or None if not found.
+            The extracted value, or ``None``.
+
+        Raises:
+            TypeError: If ``data`` is ``None`` (not a valid mapping).
         """
-        try:
-            if name in data:
-                return data[name]
-            elif name in files:
-                return files[name]
-            else:
-                return None
-        except Exception as e:
-            # Log the error or handle it as needed
-            raise ValueError(f"Error extracting value from datadict: {e}")
+        if name in data:
+            return data[name]
+        if name in files:
+            return files[name]
+        return None

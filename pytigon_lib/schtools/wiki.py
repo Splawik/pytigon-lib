@@ -1,16 +1,28 @@
-"""Module contains helper functions to handle wiki links and formatting."""
+"""Helper functions for wiki link formatting and rendering.
+
+Supports ``[[Page Name]]`` wiki syntax with optional modifiers
+(``^`` for new window, ``#`` for button style).
+"""
 
 from django.conf import settings
 
 
 def wiki_from_str(wiki_value):
-    """Convert a string into a wiki-friendly format.
+    """Convert a human-readable string into a compact wiki page name.
+
+    Rules:
+    - Empty input returns ``"index"``.
+    - Strings starting with ``?`` return everything after the second character.
+    - Non-ASCII characters are replaced with XML character references,
+      then stripped (``&``, ``#``, ``;`` are removed).
+    - Words before the first ``-`` are capitalized and truncated to fit
+      within 32 characters total.
 
     Args:
-        wiki_value (str): The string to be converted.
+        wiki_value: The human-readable page title.
 
     Returns:
-        str: A wiki-friendly string.
+        A compact wiki identifier (max 32 characters).
     """
     if not wiki_value:
         return "index"
@@ -18,8 +30,8 @@ def wiki_from_str(wiki_value):
     if wiki_value.startswith("?"):
         return wiki_value[2:]
 
-    # Clean the string by removing unwanted characters
-    cleaned_value = (
+    # Transliterate non-ASCII characters to XML references, then strip them
+    cleaned = (
         wiki_value.encode("ascii", "xmlcharrefreplace")
         .decode("utf-8")
         .replace("&", "")
@@ -27,33 +39,37 @@ def wiki_from_str(wiki_value):
         .replace(";", "")
     )
 
-    # Split the cleaned string into words
-    words = cleaned_value.split("-")[0].strip().split(" ")
-    word_size = max(1, 32 // len(words))  # Ensure word_size is at least 1
+    # Only use the part before the first hyphen as base words
+    base = cleaned.split("-")[0].strip()
+    words = base.split(" ")
+    if not words or words == [""]:
+        return "index"
 
-    # Capitalize and truncate each word
-    formatted_words = [
-        word[0].upper() + word[1:word_size] if len(word) > 1 else word.upper()
-        for word in words
-    ]
+    word_size = max(1, 32 // len(words))
 
-    # Join the words and truncate to 32 characters
-    wiki = "".join(formatted_words)[:32]
+    formatted = []
+    for word in words:
+        if len(word) > 1:
+            formatted.append(word[0].upper() + word[1:word_size])
+        else:
+            formatted.append(word.upper())
+
+    wiki = "".join(formatted)[:32]
     return wiki if wiki else "index"
 
 
 def make_href(wiki_value, new_win=True, section=None, btn=False, path=None):
-    """Generate an HTML link for a wiki entry.
+    """Generate an HTML anchor tag for a wiki link.
 
     Args:
-        wiki_value (str): The wiki entry to link to.
-        new_win (bool): Whether to open the link in a new window.
-        section (str): The section of the wiki to link to.
-        btn (bool): Whether to style the link as a button.
-        path (str): Additional path to prepend to the wiki link.
+        wiki_value: The wiki page title.
+        new_win: If True, link opens in ``_top2`` target.
+        section: Optional wiki section name for generating the URL.
+        btn: If True, style the link as a Bootstrap button.
+        path: Optional path prefix (joined with ``+``).
 
     Returns:
-        str: An HTML anchor tag.
+        An HTML ``<a>`` tag string.
     """
     wiki = wiki_from_str(wiki_value)
     if path:
@@ -73,15 +89,20 @@ def make_href(wiki_value, new_win=True, section=None, btn=False, path=None):
 
 
 def wikify(value, path=None, section=None):
-    """Convert a string containing wiki links into HTML.
+    """Replace ``[[...]]`` wiki markup in a string with HTML links.
+
+    Supports modifiers:
+    - ``[[^Page]]`` — opens in new window.
+    - ``[[#Page]]`` — styled as a button.
+    - ``[[Page;section]]`` — overrides the section for this link.
 
     Args:
-        value (str): The string to be wikified.
-        path (str): Additional path to prepend to wiki links.
-        section (str): The section of the wiki to link to.
+        value: The string containing wiki markup.
+        path: Optional path prefix for all links.
+        section: Default wiki section for all links.
 
     Returns:
-        str: The wikified string with HTML links.
+        The string with ``[[...]]`` replaced by HTML ``<a>`` tags.
     """
     if not value:
         return value
@@ -97,7 +118,8 @@ def wikify(value, path=None, section=None):
             txt = subparts[0]
             new_win = txt.startswith("^")
             btn = txt.startswith("#")
-            txt = txt[1:] if new_win or btn else txt
+            if new_win or btn:
+                txt = txt[1:]
 
             if ";" in txt:
                 txt, _section = txt.split(";", 1)
@@ -109,6 +131,6 @@ def wikify(value, path=None, section=None):
                 + subparts[1]
             )
         else:
-            result.append(f"[[{part}")
+            result.append("[[%s" % part)
 
     return "".join(result)

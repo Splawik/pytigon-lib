@@ -219,7 +219,7 @@ class HtmlViewerParser(HtmlModParser):
                 if tag.lower() == "html":
                     self.tag_parser = HtmlTag(None, self, tag.lower(), attrs)
                     self.tag_parser.set_dc(self.dc)
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
 
     def handle_startendtag(self, tag, attrs):
@@ -239,7 +239,7 @@ class HtmlViewerParser(HtmlModParser):
                 self.tag_parser = obj
                 tag_parser.finish()
                 self.dc.annotate("end_tag", {"element": tag_parser})
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
         if tag.lower() in ("table", "tdata"):
             self.table_lp += 1
@@ -316,7 +316,7 @@ def stream_from_html(
         result_buf.close()
 
         def notify_callback(event_name, data):
-            if event_name == 'end"':
+            if event_name == "end":
                 dc = data["dc"]
                 dc.surf.set_subject(html2)
 
@@ -345,7 +345,7 @@ def stream_from_html(
 
                     dc.save(spdf_name)
                     with open(spdf_name, "rb") as f:
-                        dc.ouput_stream.write(f.read())
+                        dc.output_stream.write(f.read())
 
         dc = PdfDc(
             calc_only=True,

@@ -11,7 +11,7 @@ from django.conf import settings
 
 try:
     from django.contrib.contenttypes.models import ContentType
-except:
+except ImportError:
     ContentType = None
 
 from pytigon_lib.schtools.schjson import ComplexEncoder, ComplexDecoder
@@ -254,38 +254,69 @@ def standard_table_action(
     data: Dict[str, Any],
     operations: Dict[str, Any],
 ) -> Optional[Dict[str, Any]]:
-    """Handle standard table actions like copy, paste, and delete."""
-    if "action" in data and data["action"] in operations:
-        if data["action"] == "copy":
-            if "pk" in request.GET:
-                x = request.GET["pks"].split(",")
-                x2 = [int(pos) for pos in x]
+    """Handle standard table actions: copy, paste, and delete.
+
+    Supports three action types:
+    - ``"copy"``: Serialize selected objects (or full queryset) to JSON.
+    - ``"paste"``: Create new model instances from serialized data.
+    - ``"delete"``: Remove selected objects by primary keys.
+
+    Args:
+        cls: The model class on which to operate.
+        list_view: The list view providing ``get_queryset()`` and ``kwargs``.
+        request: The HTTP request (used for GET parameters).
+        data: Dictionary of action data (may contain ``"action"`` and
+            ``"data"`` keys).
+        operations: Set of allowed operation names.
+
+    Returns:
+        Serialized JSON string for copy, dict for paste, list for delete,
+        or None if no matching action was found.
+    """
+    action = data.get("action", "")
+    if not action or action not in operations:
+        return None
+
+    if action == "copy":
+        pks_str = request.GET.get("pks", "")
+        if pks_str:
+            try:
+                pk_list = [int(pos) for pos in pks_str.split(",") if pos]
+            except (ValueError, TypeError):
+                pk_list = []
+            if pk_list:
                 return serializers.serialize(
-                    "json", list_view.get_queryset().filter(pk__in=x2)
+                    "json", list_view.get_queryset().filter(pk__in=pk_list)
                 )
-            return serializers.serialize("json", list_view.get_queryset())
-        if data["action"] == "paste":
-            if "data" in data:
-                data2 = data["data"]
-                for obj in data2:
-                    obj2 = cls()
-                    for key, value in obj["fields"].items():
-                        if key not in ("id", "pk"):
-                            if key == "parent" and "parent_pk" in list_view.kwargs:
-                                setattr(
-                                    obj2, "parent_id", list_view.kwargs["parent_pk"]
-                                )
-                            else:
-                                setattr(obj2, key, value)
-                    obj2.save()
-            return {"success": 1}
-        if data["action"] == "delete":
-            if "pks" in request.GET:
-                x = request.GET["pks"].split(",")
-                x2 = [int(pos) for pos in x]
-                if x2:
-                    list_view.get_queryset().filter(pk__in=x2).delete()
-                return []
+        return serializers.serialize("json", list_view.get_queryset())
+
+    if action == "paste":
+        data2 = data.get("data", [])
+        for obj in data2:
+            obj2 = cls()
+            parent_pk = list_view.kwargs.get("parent_pk")
+            for key, value in obj.get("fields", {}).items():
+                if key in ("id", "pk"):
+                    continue
+                if key == "parent" and parent_pk is not None:
+                    setattr(obj2, "parent_id", parent_pk)
+                else:
+                    setattr(obj2, key, value)
+            obj2.save()
+        return {"success": 1}
+
+    if action == "delete":
+        pks_str = request.GET.get("pks", "")
+        if pks_str:
+            try:
+                pk_list = [int(pos) for pos in pks_str.split(",") if pos]
+            except (ValueError, TypeError):
+                pk_list = []
+            if pk_list:
+                list_view.get_queryset().filter(pk__in=pk_list).delete()
+            return []
+        return []
+
     return None
 
 

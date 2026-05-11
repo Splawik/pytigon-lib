@@ -1,26 +1,30 @@
-from django.http import HttpResponse, JsonResponse
+import json
+
+from django.http import JsonResponse
 from oauth2_provider.views import ProtectedResourceView
 from oauth2_provider.views.mixins import ProtectedResourceMixin
 from graphene_django.views import GraphQLView
-import json
 
 
 class OAuth2ProtectedResourceMixin(ProtectedResourceView):
-    """
-    Mixin to protect resources using OAuth2 authentication.
-    Handles OPTIONS preflight requests and verifies user authentication.
+    """Mixin that protects resources using OAuth2 authentication.
+
+    Handles OPTIONS preflight requests by allowing them through
+    and verifies the user or OAuth2 token for all other methods.
     """
 
     def dispatch(self, request, *args, **kwargs):
-        """
-        Dispatch method to handle incoming requests.
+        """Dispatch incoming requests with OAuth2 authentication.
+
+        Returns:
+            HttpResponse: The response from the downstream view, or a
+            JsonResponse with an error message and appropriate status code
+            (401 for authentication failure, 500 for unexpected errors).
         """
         try:
             # Allow preflight OPTIONS requests to pass through
             if request.method.upper() == "OPTIONS":
-                return super(ProtectedResourceMixin, self).dispatch(
-                    request, *args, **kwargs
-                )
+                return super().dispatch(request, *args, **kwargs)
 
             # Verify if the request is valid and the user is authenticated
             if request.user.is_authenticated:
@@ -32,13 +36,11 @@ class OAuth2ProtectedResourceMixin(ProtectedResourceView):
 
             if valid:
                 request.resource_owner = user
-                return super(ProtectedResourceMixin, self).dispatch(
-                    request, *args, **kwargs
-                )
-            else:
-                # Return authentication failure response
-                message = {"evr-api": {"errors": ["Authentication failure"]}}
-                return JsonResponse(message, status=401)
+                return super().dispatch(request, *args, **kwargs)
+
+            # Return authentication failure response
+            message = {"evr-api": {"errors": ["Authentication failure"]}}
+            return JsonResponse(message, status=401)
 
         except Exception as e:
             # Handle unexpected errors
@@ -47,14 +49,13 @@ class OAuth2ProtectedResourceMixin(ProtectedResourceView):
 
 
 class OAuth2ProtectedGraph(OAuth2ProtectedResourceMixin, GraphQLView):
-    """
-    View to protect GraphQL endpoints using OAuth2 authentication.
+    """View that combines OAuth2 protection with GraphQL endpoint handling.
+
+    Uses OAuth2ProtectedResourceMixin for authentication and
+    GraphQLView for request processing.
     """
 
     @classmethod
     def as_view(cls, *args, **kwargs):
-        """
-        Class method to create a view instance.
-        """
-        view = super(OAuth2ProtectedGraph, cls).as_view(*args, **kwargs)
-        return view
+        """Create a view instance combining OAuth2 and GraphQL functionality."""
+        return super().as_view(*args, **kwargs)

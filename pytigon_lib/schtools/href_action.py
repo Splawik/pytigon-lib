@@ -27,23 +27,12 @@ STANDARD_ACTIONS = {
         "target": "popup_edit",
         "title": _("Update"),
         "class": "btn {{btn_size}} btn-primary shadow-none edit",
-        "attrs": "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
+        "attrs": "data-role='button' data-inline='true' data-mini='true' "
+        "data-inline-position='^tr, .tr:after'",
         "url": "{tp}{id}/{action}/",
         "icon": "edit fa-pencil fa-lg",
-        #'icon': 'edit bi bi-pencil',
-        #'icon': 'edit icon-whatsapp',
-        #'icon': 'edit svg-categories--applications-office',
         "attrs_in_menu": "data-inline-position='^tr, .tr:after'",
     },
-    #'edit2': {
-    #    'target':  "popup_edit",
-    #    'title': _('Update'),
-    #    'class': "btn {{btn_size}} btn-outline-secondary edit",
-    #    'attrs': "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
-    #    'url': "{tp}{id}/{action}/",
-    #    'icon': 'edit fa-pencil fa-lg',
-    #    'attrs_in_menu': "data-inline-position='^tr, .tr:after'",
-    # },
     "delete": {
         "target": "popup_delete",
         "title": _("Delete"),
@@ -52,18 +41,11 @@ STANDARD_ACTIONS = {
         "url": "{tp}{id}/{action}/",
         "icon": "delete fa-trash-o fa-lg",
     },
-    #'delete2': {
-    #    'target': "popup_delete",
-    #    'title': _('Delete'),
-    #    'class': "popup_delete btn {{btn_size}} btn-outline-danger",
-    #    'attrs': "data-role='button' data-inline='true' data-mini='true'",
-    #    'url': "{tp}{id}/{action}/",
-    #    'icon': 'delete fa-trash-o fa-lg'
-    # },
     "field_list": {
         "target": "inline_info",
         "class": "popup_inline btn {{btn_size}} btn-info shadow-none",
-        "attrs": "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after' ",
+        "attrs": "data-role='button' data-inline='true' data-mini='true' "
+        "data-inline-position='^tr, .tr:after' ",
         "attrs_in_menu": "data-inline-position='^tr, .tr:after'",
         "url": "{ap}table/{object_name}/{id}/{x1}/-/form/sublist/",
         "icon": "grid fa-caret-down fa-lg",
@@ -75,11 +57,11 @@ STANDARD_ACTIONS = {
         "url": "{ap}{object_name}/{id}/{x1}/-/form/get/",
         "icon": "grid fa-caret-down fa-lg",
     },
-    # field_action do usunięcia
     "field_action": {
         "target": "inline_edit",
         "class": "popup_inline btn {{btn_size}} btn-primary shadow-none",
-        "attrs": "data-role='button' data-inline='true' data-mini='true' data-inline-position='^tr, .tr:after'",
+        "attrs": "data-role='button' data-inline='true' data-mini='true' "
+        "data-inline-position='^tr, .tr:after'",
         "attrs_in_menu": "data-inline-position='^tr, .tr:after'",
         "url": "{ap}{object_name}/{id}/{x1}/-/form/sublist/",
         "icon": "grid fa-angle-double-down fa-lg",
@@ -142,67 +124,132 @@ STANDARD_ACTIONS = {
 
 
 def unpack_value(standard_web_browser, value):
-    if value:
-        if value == "None":
-            return ""
-        ret = value.strip()
-        if ret.startswith("[") and ret.endswith("]"):
-            x = ret[1:-1].split("|")
-            if standard_web_browser:
-                return x[0]
-            else:
-                if len(x) > 1:
-                    return x[1]
-                else:
-                    return x[0]
-        return ret
-    return ""
+    """Unpack a value string, handling special formats.
+
+    Supports pipe-delimited alternatives in brackets: ``[web_value|mobile_value]``.
+    When ``standard_web_browser`` is True, the first alternative is returned;
+    otherwise the second alternative (or first if only one exists).
+
+    Args:
+        standard_web_browser: Whether the client is a standard web browser.
+        value: The string value to unpack.
+
+    Returns:
+        The unpacked string, or empty string if value is None or 'None'.
+    """
+    if not value:
+        return ""
+    if value == "None":
+        return ""
+    ret = value.strip()
+    if ret.startswith("[") and ret.endswith("]"):
+        x = ret[1:-1].split("|")
+        if standard_web_browser:
+            return x[0]
+        else:
+            return x[1] if len(x) > 1 else x[0]
+    return ret
 
 
 def get_action_parm(standard_web_browser, action, key, default_value=""):
-    global STANDARD_ACTIONS
+    """Resolve an action parameter by searching through the action hierarchy.
+
+    The action string may contain hyphen-separated components (e.g.
+    'edit-new_row'). The lookup searches from right to left through
+    these components in STANDARD_ACTIONS, falling back to the 'default'
+    entry.
+
+    Args:
+        standard_web_browser: Whether the client is a standard web browser.
+        action: The action identifier (may contain hyphens).
+        key: The parameter key to look up (e.g. 'target', 'class').
+        default_value: Value returned when no match is found.
+
+    Returns:
+        The unpacked parameter value, or default_value if not found.
+    """
     ret = None
-    p = action.split("-")
-    for item in reversed(p):
+    for item in reversed(action.split("-")):
         if item in STANDARD_ACTIONS:
             if key in STANDARD_ACTIONS[item]:
                 ret = STANDARD_ACTIONS[item][key]
                 break
-    if ret == None:
-        if key in STANDARD_ACTIONS["default"]:
-            ret = STANDARD_ACTIONS["default"][key]
+    if ret is None:
+        ret = STANDARD_ACTIONS["default"].get(key, default_value)
     return unpack_value(standard_web_browser, ret)
 
 
 def set_attrs(obj, params, attr_tab, standard_web_browser):
+    """Set object attributes from a list of positional and named parameters.
+
+    Parameters can be either positional (assigned in order to attr_tab
+    entries) or named (``attr=value``). Named parameters are matched
+    to attr_tab entries by name.
+
+    Args:
+        obj: The object whose attributes are being set.
+        params: List of parameter strings.
+        attr_tab: Ordered list of attribute names for positional matching.
+        standard_web_browser: Whether the client is a standard web browser.
+    """
     i = 0
     for pos in params:
-        equal_sign = False
+        matched = False
         for attr in attr_tab:
             if pos.replace(" ", "").startswith(attr + "="):
                 setattr(
-                    obj, attr, unpack_value(standard_web_browser, pos.split("=", 1)[1])
+                    obj,
+                    attr,
+                    unpack_value(standard_web_browser, pos.split("=", 1)[1]),
                 )
-                equal_sign = True
+                matched = True
                 break
-        if not equal_sign:
-            if len(attr_tab) > i:
+        if not matched:
+            if i < len(attr_tab):
                 setattr(obj, attr_tab[i], unpack_value(standard_web_browser, pos))
         i += 1
 
 
 def get_perm(app, table, action):
+    """Build a Django permission string for the given action.
+
+    Args:
+        app: The Django app label.
+        table: The model/table name (lowercase).
+        action: The action identifier.
+
+    Returns:
+        A permission string like 'app.change_table' or 'app.delete_table',
+        or an empty string if no specific permission applies.
+    """
     if "edit" in action:
-        return "%s.change_%s" % (app, table)
+        return f"{app}.change_{table}"
     elif "delete" in action:
-        return "%s.delete_%s" % (app, table)
+        return f"{app}.delete_{table}"
     else:
         return ""
 
 
 class Action:
+    """Represents a single UI action parsed from an action definition string.
+
+    The action string format is::
+
+        action,title,icon_name,target,attrs,tag_class,url
+
+    with optional ``key=value`` pairs at the end. Action components separated
+    by ``/`` provide x1/x2/x3 sub-parameters (e.g. ``edit/123/456``).
+    """
+
     def __init__(self, actions_str, context, d):
-        # actions_str: action,title,icon_name,target,attrs,tag_class,url
+        """Parse an action definition string and populate attributes.
+
+        Args:
+            actions_str: The comma-separated action definition string.
+            context: The Django template context.
+            d: A shared parameter dictionary that gets updated with
+               action, x1, x2, x3 values.
+        """
         self.d = d
         self.context = context
         self.action = ""
@@ -230,23 +277,21 @@ class Action:
             "url",
         )
 
-        if "standard_web_browser" in d:
-            standard_web_browser = d["standard_web_browser"]
-        else:
-            standard_web_browser = 1
+        standard_web_browser = d.get("standard_web_browser", True)
 
         pos = actions_str.split(",")
         action = ""
         if "=" not in pos[0]:
             action = pos[0].strip()
 
+        # Process trailing key=value pairs
         while True:
             if "=" in pos[-1]:
                 if pos[-1].split("=")[0].strip() not in standard_attr:
                     break
                 s = pos.pop().split("=", 1)
                 if s[0] == "action":
-                    action = s.strip()
+                    action = s[1].strip()
                 else:
                     setattr(self, s[0], unpack_value(standard_web_browser, s[1]))
             else:
@@ -272,18 +317,6 @@ class Action:
         self.d["x3"] = self.x3
 
         set_attrs(self, pos[1:], standard_attr[1:], standard_web_browser)
-        # if len(pos)>1:
-        #    self.title = unpack_value(standard_web_browser, pos[1])
-        #    if len(pos)>2:
-        #        self.icon = unpack_value(standard_web_browser, pos[2])
-        #        if len(pos)>3:
-        #            self.target = unpack_value(standard_web_browser, pos[3])
-        #            if len(pos)>4:
-        #                self.attrs = unpack_value(standard_web_browser, pos[4])
-        #                if len(pos)>5:
-        #                    self.tag_class = unpack_value(standard_web_browser, pos[5])
-        #                    if len(pos)>6:
-        #                        self.url = unpack_value(standard_web_browser, pos[6])
 
         if "/" in action:
             tmp = action.split("/")
@@ -306,10 +339,7 @@ class Action:
                 standard_web_browser, action2, "target", "_blank"
             )
 
-        if "btn_size" in context:
-            btn_size = context["btn_size"]
-        else:
-            btn_size = settings.BOOTSTRAP_BUTTON_SIZE_CLASS
+        btn_size = context.get("btn_size", settings.BOOTSTRAP_BUTTON_SIZE_CLASS)
 
         if not self.tag_class:
             self.tag_class = get_action_parm(
@@ -357,7 +387,7 @@ class Action:
 
         if self.icon_name:
             if not standard_web_browser:
-                if not "://" in self.icon_name and not "wx." in self.icon_name:
+                if "://" not in self.icon_name and "wx." not in self.icon_name:
                     if "fa-" in self.icon_name:
                         x = self.icon_name.split(" ")
                         for pos in x:
@@ -375,6 +405,14 @@ class Action:
                     self.icon2 = x[1]
 
     def format(self, s):
+        """Format a URL template string, appending x1/x2/x3 query parameters.
+
+        Args:
+            s: The URL template string with ``{...}`` placeholders.
+
+        Returns:
+            The formatted URL string.
+        """
         ret = s.format(**self.d).strip()
         if self.d["x1"]:
             buf = "x1=%s" % self.d["x1"]
@@ -390,6 +428,19 @@ class Action:
 
 
 def standard_dict(context, parm=None):
+    """Build a standard parameter dictionary from a template context.
+
+    Extracts commonly used values like path, base_path, app_path, table_path,
+    and table_path_and_filter from the context. Additional parameters can
+    be merged via the ``parm`` argument.
+
+    Args:
+        context: A Django template context (or dict-like with .flatten()).
+        parm: Optional dict of extra parameters to merge.
+
+    Returns:
+        A dict with standard keys: path, bp, ap, tp, tpf, and any extras.
+    """
     d = {}
     d.update(context.flatten())
     if parm:
@@ -409,6 +460,21 @@ def standard_dict(context, parm=None):
 
 
 def actions_dict(context, actions_str):
+    """Parse an actions string into a dictionary of Action objects.
+
+    The actions string is a semicolon-separated list of action definitions.
+    Items prefixed with ``|`` are placed in the secondary actions list.
+    Permission checks (``?:edit``, ``app?:delete``) filter actions based
+    on the current user's permissions.
+
+    Args:
+        context: The Django template context.
+        actions_str: The semicolon-separated action definitions.
+
+    Returns:
+        A dictionary with keys: actions, actions2, action (first action),
+        and all standard_dict keys.
+    """
     d = standard_dict(context)
 
     if "object" in context:
@@ -420,13 +486,9 @@ def actions_dict(context, actions_str):
             d["table_name"] = "user_table"
             if context["object"] and "id" in context["object"]:
                 d["id"] = context["object"]["id"]
-
             d["object_name"] = "object_name"
 
-    if "rel_field" in context and context["rel_field"]:
-        d["child_tab"] = True
-    else:
-        d["child_tab"] = False
+    d["child_tab"] = bool(context.get("rel_field"))
 
     actions = []
     actions2 = []
@@ -444,7 +506,6 @@ def actions_dict(context, actions_str):
                 perm = get_perm(app, table, x[1])
 
             if perm and not context["request"].user.has_perm(perm):
-                print("perm: ", context["request"].user, perm)
                 continue
             pos = x[1]
         if not pos:
@@ -456,7 +517,11 @@ def actions_dict(context, actions_str):
             action = Action(pos, context, d)
             act.append(action)
 
-    if not test_actions2 and len(actions) > 2 and context["standard_web_browser"]:
+    if (
+        not test_actions2
+        and len(actions) > 2
+        and context.get("standard_web_browser", True)
+    ):
         actions2 = actions[1:]
         actions = actions[:1]
 
@@ -472,10 +537,27 @@ def actions_dict(context, actions_str):
     return d
 
 
-# actions_str: action,title,icon_name,target,attrs,tag_class,url
 def action_fun(
     context, action, title="", icon_name="", target="", attrs="", tag_class="", url=""
 ):
+    """Convenience function to build a single action from explicit parameters.
+
+    Constructs an action string, renders any Django template variables
+    through the context, and returns the full actions dictionary.
+
+    Args:
+        context: The Django template context.
+        action: The action identifier.
+        title: Optional action title.
+        icon_name: Optional icon name.
+        target: Optional link target.
+        attrs: Optional HTML attributes.
+        tag_class: Optional CSS class.
+        url: Optional URL pattern.
+
+    Returns:
+        An actions dictionary as returned by :func:`actions_dict`.
+    """
     action_str = "%s,%s,%s,%s,%s,%s,%s" % (
         action,
         title,
@@ -487,6 +569,4 @@ def action_fun(
     )
     t = Template(action_str)
     output2 = t.render(context)
-    d = actions_dict(context, output2)
-    # return standard_dict(context, d)
-    return d
+    return actions_dict(context, output2)

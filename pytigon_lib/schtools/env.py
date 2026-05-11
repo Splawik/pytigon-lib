@@ -2,23 +2,33 @@ import os
 import environ
 from typing import Optional
 
-# Global environment variable instance
-ENV = None
+# Global environment variable instance (singleton)
+_ENV = None
 
 
 def get_environ(path: Optional[str] = None) -> environ.Env:
-    """Initialize and return the environment configuration.
+    """Initialize and return the environment configuration singleton.
+
+    On first call, creates an environ.Env instance with default settings.
+    Subsequent calls return the same instance. If a path is provided and an
+    environment file (.env or 'env') is found there, it is read once per path.
 
     Args:
-        path (Optional[str]): Path to the directory containing .env or env file.
+        path: Directory path where .env or env file is located.
+              If None, only environment variables already set in the OS
+              are considered.
 
     Returns:
         environ.Env: The environment configuration instance.
-    """
-    global ENV
 
-    if ENV is None:
-        ENV = environ.Env(
+    Raises:
+        environ.ImproperlyConfigured: If a required variable is missing
+            and no default was provided.
+    """
+    global _ENV
+
+    if _ENV is None:
+        _ENV = environ.Env(
             DEBUG=(bool, False),
             PYTIGON_DEBUG=(bool, False),
             EMBEDED_DJANGO_SERVER=(bool, False),
@@ -48,8 +58,8 @@ def get_environ(path: Optional[str] = None) -> environ.Env:
         for env_path in env_paths:
             if os.path.exists(env_path):
                 try:
-                    ENV.read_env(env_path)
+                    _ENV.read_env(env_path)
                 except Exception as e:
                     print(f"Error reading environment file {env_path}: {e}")
 
-    return ENV
+    return _ENV

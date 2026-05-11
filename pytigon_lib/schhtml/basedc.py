@@ -1,23 +1,32 @@
-"""
-This module provides classes and functions for managing device contexts (DC) and sub-device contexts (SubDc) for drawing operations. It includes the following classes:
+"""Device context management for drawing operations.
 
-- BaseDc: Represents a base device context with methods for drawing shapes, text, and images, as well as managing document state and pages.
-- BaseDcInfo: Provides information and utility methods for the BaseDc class, such as text measurements and style management.
-- SubDc: Represents a sub-device context that inherits properties and methods from a parent device context.
-- NullDc: A null device context that performs no actual drawing but tracks the maximum dimensions of the content.
+This module provides classes and functions for managing device contexts (DC) and
+sub-device contexts (SubDc) for drawing operations. It includes the following classes:
+
+- BaseDc: A base device context with methods for drawing shapes, text, and images,
+    as well as managing document state and pages.
+- BaseDcInfo: Provides information and utility methods for the BaseDc class,
+    such as text measurements and style management.
+- SubDc: A sub-device context that inherits properties and methods from
+    a parent device context.
+- NullDc: A null device context that performs no actual drawing but tracks
+    the maximum dimensions of the content.
 - NullDcinfo: Provides information and utility methods for the NullDc class.
 
-The module also includes a decorator function `convert_fun_arg` that modifies the positional and keyword arguments of a function to adjust coordinates and dimensions based on the object's attributes.
+The module also includes a decorator function ``convert_fun_arg`` that modifies
+the positional and keyword arguments of a function to adjust coordinates and
+dimensions based on the object's attributes.
 
 Classes:
-    BaseDc: Represents a base device context with methods for drawing shapes, text, and images, as well as managing document state and pages.
-    BaseDcInfo: Provides information and utility methods for the BaseDc class, such as text measurements and style management.
-    SubDc: Represents a sub-device context that inherits properties and methods from a parent device context.
-    NullDc: A null device context that performs no actual drawing but tracks the maximum dimensions of the content.
-    NullDcinfo: Provides information and utility methods for the NullDc class.
+    BaseDc: Base device context for drawing and document state management.
+    BaseDcInfo: Information and utility methods for BaseDc.
+    SubDc: Sub-device context inheriting from a parent device context.
+    NullDc: Null device context that tracks maximum content dimensions.
+    NullDcinfo: Information and utility methods for NullDc.
 
 Functions:
-    convert_fun_arg(fn): A decorator that modifies the positional and keyword arguments of a function to adjust coordinates and dimensions based on the object's attributes.
+    convert_fun_arg(fn): A decorator that adjusts coordinates and dimensions
+        based on the object's attributes.
 """
 
 import zipfile
@@ -59,11 +68,11 @@ class BaseDc(object):
 
         self.default_width = int(210 * 72 / 25.4)
         self.default_height = int(297 * 72 / 25.4)
-        if width == None:
+        if width is None:
             self.width = self.default_width
         else:
             self.width = width
-        if height == None:
+        if height is None:
             self.height = self.default_height
         else:
             self.height = height
@@ -377,10 +386,8 @@ class BaseDc(object):
         """
         try:
             zf = zipfile.ZipFile(zip_name, mode="w", compression=zipfile.ZIP_BZIP2)
-        except:
-            zf = zipfile.ZipFile(
-                zip_name, mode="w", compression=zipfile.ZIP_BZIP2ZIP_DEFLATED
-            )
+        except (RuntimeError, ValueError):
+            zf = zipfile.ZipFile(zip_name, mode="w", compression=zipfile.ZIP_DEFLATED)
 
         zf.writestr("set.dat", json_dumps(self.state()))
         i = 1
@@ -747,11 +754,9 @@ class BaseDc(object):
             else:
                 style = self.set_style(0)
             if style[5] == "1":
-                self.add_line(
-                    (x + dx) - 1, y + line.dy_up + 2, obj.dx - obj.dx_space + 1, 0
-                )
+                self.add_line((x + dx) - 1, y + line.dy_up + 2, obj.dx - obj.dx_space + 1, 0)
                 self.draw()
-            if type(obj.data) == str:
+            if isinstance(obj.data, str):
                 ret = False
                 if obj.parent and hasattr(obj.parent, "draw_atom"):
                     ret = obj.parent.draw_atom(
@@ -981,8 +986,8 @@ def convert_fun_arg(fn):
                 if kwargs["dx"] == -1:
                     kwargs["dx"] = self.dx - dx
             if "dy" in kwargs:
-                if kwargs["dx"] == -1:
-                    kwargs["dx"] = self.dy - dy
+                if kwargs["dy"] == -1:
+                    kwargs["dy"] = self.dy - dy
         if test == 0:
             return fn(self, *args, **kwargs)
         if test == 1:
@@ -1081,7 +1086,7 @@ class SubDc(object):
         """
         try:
             ret = object.__getattribute__(self, attr)
-        except:
+        except AttributeError:
             ret = getattr(self._parent, attr)
         return ret
 
@@ -1106,7 +1111,7 @@ class SubDc(object):
                 if len(pos) > 2:
                     pos2 = []
                     pos2.append(pos[0])
-                    pos2.append("".s.join(pos[1:]))
+                    pos2.append("".join(pos[1:]))
                     pos = pos2
                 if len(pos) == 2:
                     name = pos[0]
@@ -1340,7 +1345,7 @@ class NullDc(object):
         else:
             try:
                 ret = object.__getattribute__(self, attr)
-            except:
+            except AttributeError:
                 ret = getattr(self._ref_dc, attr)
         return ret
 
@@ -1431,7 +1436,8 @@ class NullDc(object):
         """
         Adds a rounded rectangle to the device context.
 
-        The rounded rectangle is defined by its top-left corner (x,y), its width and height (dx,dy), and its corner radius.
+        The rounded rectangle is defined by its top-left corner (x,y),
+        its width and height (dx,dy), and its corner radius.
 
         :param x: The x-coordinate of the top-left corner of the rectangle.
         :param y: The y-coordinate of the top-left corner of the rectangle.
@@ -1566,7 +1572,8 @@ class NullDcinfo(object):
         :param dc: The device context associated with this NullDcinfo instance.
         :type dc: NullDc
         """
-        pass
+        self.dc = dc
+        self.styles = []
 
     def get_text_width(self, txt, style):
         """

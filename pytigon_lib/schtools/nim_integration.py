@@ -1,3 +1,10 @@
+"""Nim compiler download, installation, and zigcc wrapper setup.
+
+Automates fetching the Nim toolchain, extracting it, configuring
+nim.cfg to use a zig-based C compiler wrapper, and compiling the
+zigcc helper binary.
+"""
+
 import lzma
 import httpx
 import tarfile
@@ -9,6 +16,7 @@ from typing import Optional
 
 from pytigon_lib.schtools.process import run
 
+# C source for the zigcc wrapper: forwards all arguments to 'ptig zig cc'
 ZIG_CC_C = """
 #include <string.h>
 #include <stdlib.h>
@@ -34,22 +42,31 @@ NIM_DOWNLOAD_PATH = (
 
 
 def install_nim(data_path: str) -> None:
-    """Install Nim compiler in the specified data path."""
+    """Download and install the Nim compiler into *data_path*/prg/.
+
+    On Linux, the downloaded .tar.xz is decompressed via lzma then tar.
+    On Windows, a .zip is extracted directly. After extraction, the
+    nim.cfg is patched to use the zigcc wrapper and the wrapper binary
+    is compiled.
+
+    Args:
+        data_path: Root data directory (e.g. ``settings.DATA_PATH``).
+    """
     temp_dir = tempfile.gettempdir()
     try:
-        r = httpx.get(NIM_DOWNLOAD_PATH)
+        r = httpx.get(NIM_DOWNLOAD_PATH, follow_redirects=True)
         r.raise_for_status()
     except httpx.HTTPError as e:
         print(f"Failed to download Nim: {e}")
         return
 
+    prg_path = os.path.join(data_path, "prg")
+    os.makedirs(prg_path, exist_ok=True)
+
     if os.name == "nt":
         nim_zip = os.path.join(temp_dir, "nim.zip")
         with open(nim_zip, "wb") as f:
             f.write(r.content)
-
-        prg_path = os.path.join(data_path, "prg")
-        os.makedirs(prg_path, exist_ok=True)
 
         with zipfile.ZipFile(nim_zip) as f:
             f.extractall(prg_path)
@@ -64,55 +81,65 @@ def install_nim(data_path: str) -> None:
         with open(nim_tar, "wb") as f:
             f.write(buf)
 
-        prg_path = os.path.join(data_path, "prg")
-        os.makedirs(prg_path, exist_ok=True)
-
         with tarfile.open(nim_tar, "r") as tar:
             tar.extractall(prg_path)
 
     nim_path = get_nim_path(data_path)
-    if nim_path:
-        nim_cfg_path = os.path.join(nim_path, "config", "nim.cfg")
+    if not nim_path:
+        print("Nim installation path not found after extraction.")
+        return
+
+    # Patch nim.cfg to use zigcc as the C compiler
+    nim_cfg_path = os.path.join(nim_path, "config", "nim.cfg")
+    try:
+        with open(nim_cfg_path, "rt") as f:
+            buf = f.read()
+            buf = buf.replace(
+                "cc = gcc",
+                "cc = clang\nclang.exe = zigcc\nclang.linkerexe = zigcc\n",
+            )
+        with open(nim_cfg_path, "wt") as f:
+            f.write(buf)
+    except IOError as e:
+        print(f"Failed to update nim.cfg: {e}")
+        return
+
+    # Compile the zigcc wrapper
+    zigcc_bin = os.path.join(
+        nim_path, "bin", "zigcc.exe" if os.name == "nt" else "zigcc"
+    )
+    zigcc_c = os.path.join(temp_dir, "zigcc.c")
+    try:
+        with open(zigcc_c, "wt") as f:
+            f.write(ZIG_CC_C)
+    except IOError as e:
+        print(f"Failed to write zigcc.c: {e}")
+        return
+
+    exit_code, output_tab, err_tab = run(
+        ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c], env=os.environ
+    )
+    if err_tab:
+        print(err_tab)
+
+    # Ensure the wrapper is executable on Unix
+    if os.name != "nt":
         try:
-            with open(nim_cfg_path, "rt") as f:
-                buf = f.read()
-                buf = buf.replace(
-                    "cc = gcc",
-                    "cc = clang\nclang.exe = zigcc\nclang.linkerexe = zigcc\n",
-                )
-            with open(nim_cfg_path, "wt") as f:
-                f.write(buf)
-        except IOError as e:
-            print(f"Failed to update nim.cfg: {e}")
-            return
-
-        zigcc_bin = os.path.join(
-            nim_path, "bin", "zigcc.exe" if os.name == "nt" else "zigcc"
-        )
-        zigcc_c = os.path.join(temp_dir, "zigcc.c")
-        try:
-            with open(zigcc_c, "wt") as f:
-                f.write(ZIG_CC_C)
-        except IOError as e:
-            print(f"Failed to write zigcc.c: {e}")
-            return
-
-        exit_code, output_tab, err_tab = run(
-            ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c], env=os.environ
-        )
-        if err_tab:
-            print(err_tab)
-
-        if os.name != "nt":
-            try:
-                st = os.stat(zigcc_bin)
-                os.chmod(zigcc_bin, st.st_mode | stat.S_IEXEC)
-            except OSError as e:
-                print(f"Failed to set executable permissions: {e}")
+            st = os.stat(zigcc_bin)
+            os.chmod(zigcc_bin, st.st_mode | stat.S_IEXEC)
+        except OSError as e:
+            print(f"Failed to set executable permissions on zigcc: {e}")
 
 
 def get_nim_path(data_path: str) -> Optional[str]:
-    """Get the path to the Nim installation."""
+    """Find the Nim installation directory under *data_path*/prg/.
+
+    Args:
+        data_path: Root data directory.
+
+    Returns:
+        The path to the ``nim-*`` directory, or None if not found.
+    """
     prg_path = os.path.join(data_path, "prg")
     if not os.path.exists(prg_path):
         return None
@@ -123,7 +150,14 @@ def get_nim_path(data_path: str) -> Optional[str]:
 
 
 def install_if_not_exists(data_path: str) -> Optional[str]:
-    """Install Nim if it doesn't already exist in the specified data path."""
+    """Ensure Nim is installed, downloading it if necessary.
+
+    Args:
+        data_path: Root data directory.
+
+    Returns:
+        The Nim installation path, or None if installation failed.
+    """
     nim_path = get_nim_path(data_path)
     if nim_path:
         return nim_path
