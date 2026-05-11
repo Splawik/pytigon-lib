@@ -442,3 +442,4 @@ if __name__ == "__main__":
     x = OdfDocTransform("./test.ods", "./test_out.ods")
     context = {"test": 1, "object_list": ["x1", "x2", "x3"]}
     x.process(context, False)
+    
