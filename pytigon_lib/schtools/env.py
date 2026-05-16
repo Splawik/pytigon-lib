@@ -36,6 +36,7 @@ def get_environ(path: Optional[str] = None) -> environ.Env:
             PYTIGON_TASK=(bool, False),
             LOGS_TO_DOCKER=(bool, False),
             PWA=(bool, False),
+            PUBLIC=(bool, False),
             GRAPHQL=(bool, False),
             DJANGO_Q=(bool, False),
             ALLAUTH=(bool, False),
