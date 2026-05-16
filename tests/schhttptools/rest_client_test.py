@@ -1,8 +1,9 @@
-from pytigon_lib.schhttptools.rest_client import *
+from unittest.mock import patch
 
 # Pytest tests
 import pytest
-from unittest.mock import Mock, patch
+
+from pytigon_lib.schhttptools.rest_client import *
 
 
 @pytest.fixture

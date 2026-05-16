@@ -1,7 +1,7 @@
-from pytigon.django_min_init import init
-from pytigon_lib.schhttptools.httpclient import HttpClient
-from pytigon_lib.schhttptools.rest_client import get_rest_client
 import httpx
+from pytigon.django_min_init import init
+
+from pytigon_lib.schhttptools.rest_client import get_rest_client
 
 
 def update_settings(settings):

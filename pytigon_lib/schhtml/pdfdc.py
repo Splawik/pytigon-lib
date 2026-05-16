@@ -1,7 +1,8 @@
-import os
 import io
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+import os
+
 from pytigon_lib.schfs.vfstools import get_temp_filename
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 from pytigon_lib.schtools.main_paths import get_main_paths
 
 IMAGE = None

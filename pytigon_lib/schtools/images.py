@@ -1,7 +1,6 @@
 """Image processing utilities: 9-slice resizing, SVG-to-PNG conversion, image comparison."""
 
 import io
-import importlib
 
 # Lazy-loaded module references (imported on first use to avoid
 # heavy dependencies when image functionality is not needed).

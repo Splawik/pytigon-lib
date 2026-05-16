@@ -6,13 +6,15 @@ processing templates, handling annotations, and managing table cell
 transformations for formula, value, and auto-cell types.
 """
 
-import re
-import shutil
 import base64
 import logging
-from zipfile import ZipFile, ZIP_DEFLATED
-from lxml import etree, html
+import re
+import shutil
 from xml.sax.saxutils import escape
+from zipfile import ZIP_DEFLATED, ZipFile
+
+from lxml import etree, html
+
 from pytigon_lib.schfs.vfstools import delete_from_zip
 
 logger = logging.getLogger(__name__)
@@ -349,7 +351,7 @@ class OdfDocTransform:
                     except (ValueError, TypeError):
                         pass
                 try:
-                    x = float(txt)
+                    float(txt)
                     new_text = etree.Element(TEXT_URN + "p")
                     parent.append(new_text)
                     parent.set(OFFICE_URN + "value-type", "float")
@@ -442,4 +444,4 @@ if __name__ == "__main__":
     x = OdfDocTransform("./test.ods", "./test_out.ods")
     context = {"test": 1, "object_list": ["x1", "x2", "x3"]}
     x.process(context, False)
-    
+

@@ -1,44 +1,35 @@
 __pycache__/
 *.py[cod]
-
-pip-log.txt
-pip-delete-this-directory.txt
-launch.json
-extensions.json
-*global_db_settings.py
-settings_app_local.py
-
-build
-dist
-site
-
-.cache
-.idea/
-*/.gradle/
-migrations/
-
+*.pyo
 *.mo
 *.pkl
 *.pid
 *.log
 *.whl
 *.tar.gz
-*.egg*
 *.so
 
-pytigon/prj/*
-!*pytigon/prj/_schall/*
-!*pytigon/prj/_schdata/*
-!*pytigon/prj/_schremote/*
-!*pytigon/prj/_schserverless/*
-!*pytigon/prj/_schtools/*
-!*pytigon/prj/_schwebtrapper/*
-!*pytigon/prj/_schwiki/*
-!*pytigon/prj/schdevtools/*
-!*pytigon/prj/schcomponents/*
-!*pytigon/prj/scheditor/*
-!*pytigon/prj/schodf/*
-!*pytigon/prj/schportal/*
-!*pytigon/prj/schpytigondemo/*
-!*pytigon/prj/schsetup/*
+# Build artifacts
+build/
+dist/
+*.egg-info/
 
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.cache
+
+# Documentation site
+site/
+
+# Test artifacts
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -11,7 +11,7 @@ Converts HTML files to a human-readable indented text format where:
 
 import logging
 import re
-from typing import List, Optional, TextIO
+from typing import List, TextIO
 
 from pytigon_lib.schparser.parser import Parser
 
@@ -233,8 +233,8 @@ def convert(file_name_in: str, file_name_out: str) -> None:
         OSError: If file operations fail.
     """
     with (
-        open(file_name_in, "rt", encoding="utf-8") as f_in,
-        open(file_name_out, "wt", encoding="utf-8") as f_out,
+        open(file_name_in, encoding="utf-8") as f_in,
+        open(file_name_out, "w", encoding="utf-8") as f_out,
     ):
         parser = Html2IhtmlParser(f_out, 256)
         parser.feed(f_in.read())

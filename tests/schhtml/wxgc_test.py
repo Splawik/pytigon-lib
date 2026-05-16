@@ -1,7 +1,7 @@
-from pytigon_lib.schhtml.wxgc import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schhtml.wxgc import *
 
 
 def test_graphics_context_dc():

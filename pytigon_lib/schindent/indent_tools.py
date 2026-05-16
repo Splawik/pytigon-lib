@@ -10,7 +10,8 @@ Provides utilities for:
 
 import io
 import logging
-from typing import Generator, List, Optional, Tuple
+from collections.abc import Generator
+from typing import List, Optional, Tuple
 
 from pytigon_lib.schparser.parser import Parser
 
@@ -418,7 +419,7 @@ if __name__ == "__main__":
     if False:
         input_path = os.path.join(test_dir, "test11.html")
         output_path = os.path.join(test_dir, "test11.ihtml")
-        with open(input_path, "r") as f_in, open(output_path, "w") as f_out:
+        with open(input_path) as f_in, open(output_path, "w") as f_out:
             ret = norm_html(f_in.read())
             f_out.write(ret)
 
@@ -426,6 +427,6 @@ if __name__ == "__main__":
     if True:
         input_path = os.path.join(test_dir, "test11.ihtml")
         output_path = os.path.join(test_dir, "_test11.html")
-        with open(input_path, "r") as f_in, open(output_path, "w") as f_out:
+        with open(input_path) as f_in, open(output_path, "w") as f_out:
             ret = indent_html(f_in.read())
             f_out.write(ret)

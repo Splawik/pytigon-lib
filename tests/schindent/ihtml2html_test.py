@@ -1,8 +1,9 @@
 import os
-import tempfile
 import pathlib
+import tempfile
 
 from pytigon.pytigon_run import run
+
 from pytigon_lib.schtest.html_test import html_content_cmp
 from pytigon_lib.schtools.main_paths import get_main_paths
 

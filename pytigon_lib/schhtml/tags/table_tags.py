@@ -1,22 +1,23 @@
+from collections import deque
+
+from pytigon_lib.schhtml.atom import Atom
 from pytigon_lib.schhtml.basehtmltags import (
-    BaseHtmlElemParser,
     BaseHtmlAtomParser,
+    BaseHtmlElemParser,
     register_tag_map,
 )
-from pytigon_lib.schhtml.atom import Atom
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
     RenderMargin,
     get_size,
-    sizes_from_attr,
 )
-from collections import deque
-from .p_tags import Par
+
 from .block_tags import BodyTag
+from .p_tags import Par
 
 
-class TdRef(object):
+class TdRef:
     def __init__(self, tdref, parent, col, col_to_parent, row_to_parent, rowspan=0):
         self.parent = parent
         self.col = col
@@ -38,7 +39,7 @@ class TdRef(object):
         return self.tdref.calc_height()
 
 
-class TdEmptyTag(object):
+class TdEmptyTag:
     def __init__(self):
         self.colspan = 1
         self.rowspan = 1
@@ -73,7 +74,7 @@ class TdEmptyTag(object):
         return {}
 
 
-class TrRef(object):
+class TrRef:
     def __init__(self, row, attrs):
         self.row = row
         self.height = -1
@@ -379,7 +380,6 @@ class TableTag(BaseHtmlAtomParser):
             return dy
 
     def _row_rowspan_height(self, rows):
-        dy = 0
         for i in range(0, self.col_count):
             if rows[0][i].__class__ != TdRef and rows[0][i].rowspan > 1:
                 width = 0

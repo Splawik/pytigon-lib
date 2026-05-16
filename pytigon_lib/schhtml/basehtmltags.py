@@ -83,7 +83,7 @@ def rgb_to_hex(color):
         return "#000"
 
 
-class BaseHtmlElemParser(object):
+class BaseHtmlElemParser:
     @property
     def height(self):
         return self._height
@@ -164,9 +164,7 @@ class BaseHtmlElemParser(object):
         self.hover = enable
 
     def can_hover(self):
-        if len(self.hover_css_attrs) > 0:
-            return True
-        return False
+        return len(self.hover_css_attrs) > 0
 
     def get_parent_width(self):
         """Get the width of the nearest parent with a known width.

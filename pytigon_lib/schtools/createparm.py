@@ -1,5 +1,5 @@
-from urllib.parse import urlencode
 from typing import Any, Dict, List, Optional, Tuple, Union
+from urllib.parse import urlencode
 
 
 class DictParm:

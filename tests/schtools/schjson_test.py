@@ -7,17 +7,16 @@ from decimal import Decimal
 import pytest
 
 from pytigon_lib.schtools.schjson import (
-    ComplexEncoder,
+    _SAFE_EVAL_GLOBALS,
+    _STANDARD_TYPES,
     ComplexDecoder,
+    ComplexEncoder,
     as_complex,
     dumps,
-    loads,
     json_dumps,
     json_loads,
-    _STANDARD_TYPES,
-    _SAFE_EVAL_GLOBALS,
+    loads,
 )
-
 
 # ============================================================================
 # ComplexEncoder

@@ -5,8 +5,10 @@ function with automatic OAuth2 access token management.
 """
 
 import logging
+from collections.abc import Callable
+from typing import Dict, Optional
+
 import httpx
-from typing import Dict, Any, Callable, Optional
 
 LOGGER = logging.getLogger("rest_client")
 

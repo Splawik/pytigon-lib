@@ -1,8 +1,8 @@
-from django.urls import path
 from django.db.models import Model
-from rest_framework import serializers, generics
-from rest_framework.permissions import IsAuthenticated
+from django.urls import path
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
+from rest_framework import generics, serializers
+from rest_framework.permissions import IsAuthenticated
 
 
 def create_api_for_models(

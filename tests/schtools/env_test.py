@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.env import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.env import *
 
 
 def test_get_environ_no_path():

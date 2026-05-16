@@ -1,7 +1,7 @@
-from pytigon_lib.schtasks.term_tools import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtasks.term_tools import *
 
 
 def test_convert_m():

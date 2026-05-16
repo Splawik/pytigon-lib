@@ -1,15 +1,14 @@
 from itertools import chain
+
 from django.forms.utils import flatatt
 from django.forms.widgets import (
-    CheckboxSelectMultiple,
     CheckboxInput,
+    CheckboxSelectMultiple,
     RadioSelect,
-    TextInput,
-    TimeInput,
 )
-from django.utils.safestring import mark_safe
-from django.utils.html import conditional_escape, format_html, html_safe
 from django.utils.encoding import force_str
+from django.utils.html import conditional_escape, format_html, html_safe
+from django.utils.safestring import mark_safe
 
 
 @html_safe
@@ -123,9 +122,6 @@ class CheckboxSelectMultipleWithIcon(CheckboxSelectMultiple):
 
 class RadioInput2(RadioChoiceInput):
     def __str__(self):
-        label_for = (
-            f' for="{self.attrs["id"]}_{self.index}"' if "id" in self.attrs else ""
-        )
         choice_label = conditional_escape(self.choice_label)
         parts = choice_label.split("|")
         label = (

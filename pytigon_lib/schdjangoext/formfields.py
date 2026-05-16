@@ -1,15 +1,16 @@
 from django import forms
+from django_select2.forms import (
+    HeavySelect2MultipleWidget,
+    HeavySelect2Widget,
+    ModelSelect2MultipleWidget,
+    ModelSelect2Widget,
+    Select2MultipleWidget,
+    Select2Widget,
+)
+
 from pytigon_lib.schdjangoext.formwidgets import (
     CheckboxSelectMultipleWithIcon,
     RadioSelectWithIcon,
-)
-from django_select2.forms import (
-    Select2Widget,
-    Select2MultipleWidget,
-    HeavySelect2Widget,
-    HeavySelect2MultipleWidget,
-    ModelSelect2Widget,
-    ModelSelect2MultipleWidget,
 )
 
 

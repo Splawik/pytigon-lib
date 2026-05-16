@@ -1,6 +1,7 @@
 """Lightweight HTML element tree and ihtml template rendering."""
 
-from django.template import Template, Context
+from django.template import Context, Template
+
 from pytigon_lib.schindent.indent_style import ihtml_to_html_base
 
 
@@ -90,7 +91,7 @@ def make_start_tag(tag, attrs):
     ret = "<" + tag
     for key, value in attrs.items():
         if value is not None:
-            ret += ' {}="{}"'.format(key, value)
+            ret += f' {key}="{value}"'
         else:
             ret += " " + key
     ret += ">"

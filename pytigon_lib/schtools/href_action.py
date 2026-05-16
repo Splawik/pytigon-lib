@@ -1,7 +1,7 @@
-from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.template import Template
 from django.utils.html import escape
+from django.utils.translation import gettext_lazy as _
 
 STANDARD_ACTIONS = {
     "default": {
@@ -192,8 +192,7 @@ def set_attrs(obj, params, attr_tab, standard_web_browser):
         attr_tab: Ordered list of attribute names for positional matching.
         standard_web_browser: Whether the client is a standard web browser.
     """
-    i = 0
-    for pos in params:
+    for i, pos in enumerate(params):
         matched = False
         for attr in attr_tab:
             if pos.replace(" ", "").startswith(attr + "="):
@@ -207,7 +206,6 @@ def set_attrs(obj, params, attr_tab, standard_web_browser):
         if not matched:
             if i < len(attr_tab):
                 setattr(obj, attr_tab[i], unpack_value(standard_web_browser, pos))
-        i += 1
 
 
 def get_perm(app, table, action):

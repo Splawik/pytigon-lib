@@ -1,17 +1,16 @@
 """Tests for :mod:`pytigon_lib.schhtml.pdfdc`."""
 
-import os
 import io
+import os
 import pathlib
 import tempfile
 
 import pytest
 
 from pytigon_lib.schhtml.pdfdc import (
-    PDFSurface,
     PdfDc,
     PdfDcInfo,
-    IMAGE as _PDFDC_IMAGE,
+    PDFSurface,
 )
 
 TEST_PATH = pathlib.Path(__file__).parent.resolve()

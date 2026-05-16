@@ -4,8 +4,8 @@ from pytigon_lib import *
 # Pytest tests
 def test_init_paths():
     """Test the init_paths function."""
-    import tempfile
     import shutil
+    import tempfile
 
     # Create a temporary directory
     temp_dir = tempfile.mkdtemp()

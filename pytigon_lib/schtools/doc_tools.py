@@ -1,8 +1,8 @@
-import tempfile
-import shutil
-import os
-import subprocess
 import logging
+import os
+import shutil
+import subprocess
+import tempfile
 
 logger = logging.getLogger(__name__)
 

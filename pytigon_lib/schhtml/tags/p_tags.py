@@ -1,21 +1,19 @@
+from pytigon_lib.schhtml.atom import Atom, BrAtom
 from pytigon_lib.schhtml.basehtmltags import (
-    BaseHtmlAtomParser,
-    register_tag_map,
     ATOM_TAGS,
     PAR_TAGS,
+    BaseHtmlAtomParser,
+    register_tag_map,
 )
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
-    RenderCellSpacing,
     RenderCellPadding,
-    RenderPadding,
+    RenderCellSpacing,
     RenderMargin,
+    RenderPadding,
     get_size,
 )
-
-from pytigon_lib.schhtml.atom import Atom, BrAtom
-
 
 LI_INDENT = 20
 

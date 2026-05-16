@@ -1,8 +1,9 @@
-from pytigon_lib.schhttptools.asgi_bridge import *
+from unittest.mock import AsyncMock, MagicMock
 
 # Pytest tests
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+
+from pytigon_lib.schhttptools.asgi_bridge import *
 
 
 @pytest.mark.asyncio

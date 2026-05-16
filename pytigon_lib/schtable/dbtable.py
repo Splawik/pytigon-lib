@@ -1,4 +1,5 @@
 import django.apps.registry
+
 from pytigon_lib.schtable import table
 from pytigon_lib.schtools import schjson
 

@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.createparm import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.createparm import *
 
 
 def test_dict_parm():

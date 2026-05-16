@@ -1,11 +1,13 @@
-import os
 import codecs
-from django.conf import settings
-from django.template import Origin, TemplateDoesNotExist
-from django.utils._os import safe_join
-from django.template.loaders.base import Loader as BaseLoader
+import os
+
 import django.template.loaders.filesystem
+from django.conf import settings
 from django.core.exceptions import SuspiciousFileOperation
+from django.template import Origin, TemplateDoesNotExist
+from django.template.loaders.base import Loader as BaseLoader
+from django.utils._os import safe_join
+
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
 
 CONTENT_TYPE = None
@@ -72,7 +74,7 @@ def compile_template(
 
             if tried is not None:
                 tried.append(filepath)
-        except IOError:
+        except OSError:
             if tried is not None:
                 tried.append(filepath)
 

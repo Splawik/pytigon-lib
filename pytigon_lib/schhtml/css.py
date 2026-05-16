@@ -4,8 +4,9 @@ Provides classes for parsing both standard CSS and indentation-based CSS,
 and resolving styles for HTML elements in the render tree.
 """
 
-from .htmltools import superstrip
 import re
+
+from .htmltools import superstrip
 
 
 def comment_remover(text):

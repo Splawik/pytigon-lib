@@ -19,10 +19,11 @@ license: LGPL 3.0
 
 __version__ = "0.260511"
 
-import sys
 import os
-from pytigon_lib.schtools.main_paths import get_main_paths
+import sys
+
 from pytigon_lib.schtools.env import get_environ
+from pytigon_lib.schtools.main_paths import get_main_paths
 
 
 def init_paths(prj_name=None, env_path=None):

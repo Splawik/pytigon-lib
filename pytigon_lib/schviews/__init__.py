@@ -46,7 +46,8 @@ Functions:
 import datetime
 import logging
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Type
+from collections.abc import Callable
+from typing import Any, Dict, List, Optional, Type
 
 import django
 from django.apps import apps
@@ -58,10 +59,10 @@ from django.utils.functional import lazy
 from django.utils.translation import gettext_lazy as _
 from django.views import generic
 
-from pytigon_lib.schviews.actions import delete_row_ok, new_row_ok, update_row_ok
-from pytigon_lib.schviews.viewtools import render_to_response
 from pytigon_lib.schtools.schjson import json_loads
 from pytigon_lib.schtools.tools import is_in_cancan_rules
+from pytigon_lib.schviews.actions import delete_row_ok, new_row_ok, update_row_ok
+from pytigon_lib.schviews.viewtools import render_to_response
 
 from .perms import default_block, filter_by_permissions, make_perms_test_fun
 from .viewtools import DOC_TYPES, ExtTemplateResponse, LocalizationTemplateResponse
@@ -756,10 +757,10 @@ class GenericRows:
                         if parent_id > 0:
                             parent = self.model.objects.get(id=parent_id)
                         else:
-                            if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
+                            if self.kwargs.get("base_filter"):
                                 parent_id = int(self.kwargs["base_filter"])
                                 parent = self.model.objects.get(id=parent_id)
-                            elif "parent_pk" in self.kwargs and self.kwargs["parent_pk"]:
+                            elif self.kwargs.get("parent_pk"):
                                 parent = self.model.objects.get(id=int(self.kwargs["parent_pk"]))
                     except self.model.DoesNotExist:
                         parent = None
@@ -857,7 +858,7 @@ class GenericRows:
                 context["order"] = self.order
                 parent_class.table_paths_to_context(self, context)
 
-                if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
+                if self.kwargs.get("base_filter"):
                     context["base_filter"] = self.kwargs["base_filter"]
                 else:
                     context["base_filter"] = ""
@@ -944,7 +945,7 @@ class GenericRows:
                                 else:
                                     ret = self.model.objects.all()
                     ret = filter_by_permissions(self, self.model, ret, self.request)
-                    if "base_filter" in self.kwargs and self.kwargs["base_filter"]:
+                    if self.kwargs.get("base_filter"):
                         try:
                             parent = int(self.kwargs["base_filter"])
                             ret = ret.filter(parent=parent)
@@ -1058,7 +1059,7 @@ class GenericRows:
                 nonlocal parent_class
                 context = super().get_context_data(**kwargs)
                 context["view"] = self
-                context["title"] = f"{self.title} - {str(_('element information'))}"
+                context["title"] = f"{self.title} - {_('element information')!s}"
                 if "version" in self.request.GET:
                     context["version"] = self.request.GET["version"]
 
@@ -1465,7 +1466,7 @@ class GenericRows:
                     if "data" in ret:
                         data = ret["data"].copy()
                         for key, value in self.init_form.items():
-                            if key in data and data[key]:
+                            if data.get(key):
                                 continue
                             data[key] = value
 
@@ -1512,7 +1513,7 @@ class GenericRows:
                 form.save_m2m()
 
                 if self.object:
-                    if "redirect" in self.request.GET and self.request.GET["redirect"]:
+                    if self.request.GET.get("redirect"):
                         ctx = self.get_context_data(form=form)
                         tp = ctx["table_path"]
                         return HttpResponseRedirect(tp + ("%d/edit/" % self.object.pk))

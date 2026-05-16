@@ -6,13 +6,14 @@ zigcc helper binary.
 """
 
 import lzma
-import httpx
-import tarfile
-import zipfile
 import os
-import tempfile
 import stat
+import tarfile
+import tempfile
+import zipfile
 from typing import Optional
+
+import httpx
 
 from pytigon_lib.schtools.process import run
 
@@ -92,15 +93,15 @@ def install_nim(data_path: str) -> None:
     # Patch nim.cfg to use zigcc as the C compiler
     nim_cfg_path = os.path.join(nim_path, "config", "nim.cfg")
     try:
-        with open(nim_cfg_path, "rt") as f:
+        with open(nim_cfg_path) as f:
             buf = f.read()
             buf = buf.replace(
                 "cc = gcc",
                 "cc = clang\nclang.exe = zigcc\nclang.linkerexe = zigcc\n",
             )
-        with open(nim_cfg_path, "wt") as f:
+        with open(nim_cfg_path, "w") as f:
             f.write(buf)
-    except IOError as e:
+    except OSError as e:
         print(f"Failed to update nim.cfg: {e}")
         return
 
@@ -110,9 +111,9 @@ def install_nim(data_path: str) -> None:
     )
     zigcc_c = os.path.join(temp_dir, "zigcc.c")
     try:
-        with open(zigcc_c, "wt") as f:
+        with open(zigcc_c, "w") as f:
             f.write(ZIG_CC_C)
-    except IOError as e:
+    except OSError as e:
         print(f"Failed to write zigcc.c: {e}")
         return
 

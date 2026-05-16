@@ -1,8 +1,7 @@
-from pytigon_lib.schdjangoext.tools import *
+# Pytest tests
 from django.conf import settings
 
-# Pytest tests
-import pytest
+from pytigon_lib.schdjangoext.tools import *
 
 
 def test_import_model():

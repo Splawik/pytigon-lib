@@ -1,9 +1,10 @@
-from pytigon_lib.schspreadsheet.ooxml_tools import *
-from lxml import etree
+from unittest.mock import MagicMock
 
 # Pytest tests
 import pytest
-from unittest.mock import MagicMock
+from lxml import etree
+
+from pytigon_lib.schspreadsheet.ooxml_tools import *
 
 
 def test_make_update_filter_fun():

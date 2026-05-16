@@ -1,10 +1,11 @@
-import secrets
 import base64
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from django.conf import settings
+import secrets
 from typing import Union
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from django.conf import settings
 
 KDF_ALGORITHM = hashes.SHA256()
 KDF_LENGTH = 32
@@ -23,7 +24,7 @@ def _get_salt() -> bytes:
     environments where it is not set.
     """
     return base64.b64encode(
-        f"{getattr(settings, 'SECRET_KEY', 'fallback-key'):<32}".encode("utf-8")
+        f"{getattr(settings, 'SECRET_KEY', 'fallback-key'):<32}".encode()
     )
 
 

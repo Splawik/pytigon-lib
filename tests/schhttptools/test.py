@@ -1,4 +1,5 @@
 from pytigon.django_min_init import init
+
 from pytigon_lib.schhttptools.httpclient import HttpClient
 
 init(pytigon_standard=True, embeded_django=True)

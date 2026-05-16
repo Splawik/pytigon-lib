@@ -4,11 +4,12 @@ Provides utilities for starting and stopping a Django-channels
 server (via Daphne) or a WSGI server (via Waitress) in a subprocess.
 """
 
-import sys
-import socket
 import datetime
-import time
 import multiprocessing
+import socket
+import sys
+import time
+
 import django
 
 
@@ -66,9 +67,9 @@ def _run(addr, port, prod, params=None):
             django.setup()
             run(["embeded", f"--listen={addr}:{port}", "wsgi:application"])
         else:
-            from daphne.server import Server
-            from daphne.endpoints import build_endpoint_description_strings
             from channels.routing import get_default_application
+            from daphne.endpoints import build_endpoint_description_strings
+            from daphne.server import Server
 
             django.setup()
             endpoints = build_endpoint_description_strings(host=addr, port=int(port))
@@ -131,7 +132,7 @@ def run_server(address, port, prod=True, params=None):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((address, port))
             break
-        except (ConnectionRefusedError, socket.error):
+        except (OSError, ConnectionRefusedError):
             time.sleep(0.1)
 
     print("Server started")

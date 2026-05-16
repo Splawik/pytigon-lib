@@ -6,10 +6,9 @@ import email.generator
 import hashlib
 import os
 import re
-import tempfile
 import zipfile
 from tempfile import NamedTemporaryFile
-from typing import Any, Callable, Optional, Union
+from typing import Any, Optional, Union
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -449,13 +448,12 @@ def convert_file(
         OSError: If any file or stream operation fails.
     """
     # Lazy imports to avoid circular dependencies at module level.
-    from pytigon_lib.schhtml.basedc import BaseDc  # noqa: F811
-    from pytigon_lib.schhtml.pdfdc import PdfDc
     from pytigon_lib.schhtml.docxdc import DocxDc
-    from pytigon_lib.schhtml.xlsxdc import XlsxDc
     from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
-    from pytigon_lib.schindent.indent_style import ihtml_to_html_base
+    from pytigon_lib.schhtml.pdfdc import PdfDc
+    from pytigon_lib.schhtml.xlsxdc import XlsxDc
     from pytigon_lib.schindent.indent_markdown import markdown_to_html
+    from pytigon_lib.schindent.indent_style import ihtml_to_html_base
 
     # Recognised output formats that require a dc (document-converter) object.
     _DC_FORMATS = frozenset({"pdf", "xpdf", "spdf", "docx", "xlsx"})

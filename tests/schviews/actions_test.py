@@ -1,8 +1,8 @@
-from pytigon_lib.schviews.actions import *
-
 # Pytest tests
 import pytest
 from django.test import RequestFactory
+
+from pytigon_lib.schviews.actions import *
 
 
 @pytest.fixture

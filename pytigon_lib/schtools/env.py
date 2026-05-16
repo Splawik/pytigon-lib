@@ -1,6 +1,7 @@
 import os
-import environ
 from typing import Optional
+
+import environ
 
 # Global environment variable instance (singleton)
 _ENV = None

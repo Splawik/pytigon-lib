@@ -418,7 +418,6 @@ class IndentMarkdownProcessor:
         func_buffer: List[str] = []
         in_func = False
         in_func_indent = 0
-        root = self.get_root()
         self.lines = indent_wiki_source.replace("\r", "").split("\n")
 
         sentinel = "."

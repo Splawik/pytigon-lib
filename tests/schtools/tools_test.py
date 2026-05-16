@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.tools import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.tools import *
 
 
 def test_split2():

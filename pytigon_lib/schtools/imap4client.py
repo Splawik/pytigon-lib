@@ -3,11 +3,12 @@
 Provides connection management, message fetching, and sending via IMAP.
 """
 
-from twisted.mail import imap4
-from twisted.internet import reactor, protocol, defer, ssl
-from email.mime.text import MIMEText
 import io
 import logging
+from email.mime.text import MIMEText
+
+from twisted.internet import defer, protocol, reactor, ssl
+from twisted.mail import imap4
 
 logger = logging.getLogger(__name__)
 

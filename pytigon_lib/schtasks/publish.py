@@ -1,5 +1,7 @@
+from collections.abc import Callable
+from typing import Any, Optional
+
 from django.core.cache import cache
-from typing import Optional, Callable, Any
 
 DEFAULT_TIMEOUT = 60 * 60
 

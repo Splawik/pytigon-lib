@@ -29,13 +29,13 @@ Functions:
         based on the object's attributes.
 """
 
-import zipfile
 import io
+import zipfile
 
-from pytigon_lib.schtools.schjson import json_loads, json_dumps
+from pytigon_lib.schtools.schjson import json_dumps, json_loads
 
 
-class BaseDc(object):
+class BaseDc:
     def __init__(
         self,
         calc_only=False,
@@ -747,7 +747,6 @@ class BaseDc(object):
         """
         self.last_style = "None"
         dx = 0
-        test = 0
         for obj in line.objs:
             if obj.style and obj.style >= 0:
                 style = self.set_style(obj.style)
@@ -794,7 +793,7 @@ class BaseDc(object):
         pass
 
 
-class BaseDcInfo(object):
+class BaseDcInfo:
     def __init__(self, dc):
         """
         Initializes the BaseDcInfo instance.
@@ -998,7 +997,7 @@ def convert_fun_arg(fn):
     return fun
 
 
-class SubDc(object):
+class SubDc:
     def __init__(self, parent, x, y, dx, dy, reg_max=True):
         """
         Initializes a SubDc object.
@@ -1316,7 +1315,7 @@ class SubDc(object):
         return self._parent.draw_atom_line(x, y, line)
 
 
-class NullDc(object):
+class NullDc:
     def __init__(self, ref_dc):
         """
         Initializes the NullDc instance.
@@ -1564,7 +1563,7 @@ class NullDc(object):
         return None
 
 
-class NullDcinfo(object):
+class NullDcinfo:
     def __init__(self, dc):
         """
         Initializes the NullDcinfo instance.

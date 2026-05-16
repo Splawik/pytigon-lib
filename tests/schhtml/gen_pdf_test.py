@@ -1,17 +1,15 @@
 import os
+import pathlib
 import tempfile
 
-
-from pytigon.pytigon_run import run
-from pytigon_lib.schtest.html_test import html_content_cmp
-from pytigon_lib.schtools.main_paths import get_main_paths
-from pytigon_lib.schtools.images import compare_images
-from pytigon_lib.schtools.doc_tools import soffice_convert
-
-import pypdfium2 as pdfium
 import PIL
+import pypdfium2 as pdfium
+from pytigon.pytigon_run import run
 
-import pathlib
+from pytigon_lib.schtest.html_test import html_content_cmp
+from pytigon_lib.schtools.doc_tools import soffice_convert
+from pytigon_lib.schtools.images import compare_images
+from pytigon_lib.schtools.main_paths import get_main_paths
 
 os.environ["SCRIPT_MODE"] = "1"
 
@@ -81,7 +79,7 @@ def test_gen_pdf():
                     img2 = PIL.Image.open(wzr_image_path)
 
                     delta += compare_images(img1, img2)
-                except:
+                except Exception:
                     delta + 1000
             assert delta < 1
         else:

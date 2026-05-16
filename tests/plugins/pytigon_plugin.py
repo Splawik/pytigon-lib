@@ -1,5 +1,6 @@
 import os
 
+
 def pytest_configure(config):
     os.environ["SECRET_KEY"] = "anawa"
     os.environ["SCRIPT_MODE"] = "1"

@@ -1,14 +1,39 @@
-httpx
-lxml
-fs
-Django
-django-environ
-pyexcel
-pyexcel-xlsx
-pyexcel-ods3
-xlsxwriter
-openpyxl
-python-docx
-python-dateutil
-markdown
-pyquery
+# Core
+Django>=6.0
+django-environ>=0.10
+lxml>=4.6
+fs>=2.4
+httpx>=0.20
+cryptography>=3.4
+
+# Document rendering
+fpdf2>=2.5
+Pillow>=9.0
+python-docx>=0.8
+htmldocx>=0.1
+xlsxwriter>=3.0
+openpyxl>=3.0
+markdown>=3.3
+pyquery>=1.4
+
+# Spreadsheet processing
+pyexcel>=0.7
+pyexcel-xlsx>=0.6
+pyexcel-ods3>=0.6
+python-dateutil>=2.8
+
+# LLVM integration (optional)
+llvmlite>=0.40
+
+# WebSocket
+autobahn>=22.0
+
+# Plotting (optional)
+plotly>=5.0
+numpy>=1.20
+
+# Python-to-JS compilation (optional)
+pscript>=0.7
+
+# SVG processing (optional)
+svglib>=1.1

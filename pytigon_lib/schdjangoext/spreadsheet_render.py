@@ -7,13 +7,12 @@ to control the place where dynamic structures are activated.
 """
 
 import os
-import io
-from zipfile import ZipFile
 import xml.dom.minidom
+from zipfile import ZipFile
 
-from django.template import Template, Context
-from django.http import HttpResponse
 from django.conf import settings
+from django.http import HttpResponse
+from django.template import Context, Template
 from django.template.exceptions import TemplateDoesNotExist
 
 from pytigon_lib.schfs.vfstools import get_temp_filename

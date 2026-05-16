@@ -6,9 +6,9 @@ Usage: python -m pytigon_lib.schhtml.main [html_file]
 import sys
 from pathlib import Path
 
-from pytigon_lib.schhtml.pdfdc import PdfDc
 from pytigon_lib.schhtml.cairodc import CairoDc
 from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
+from pytigon_lib.schhtml.pdfdc import PdfDc
 
 
 def main():

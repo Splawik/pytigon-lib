@@ -10,15 +10,16 @@ This module provides parsers for:
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from pyquery import PyQuery as pq
+
+from pytigon_lib.schhtml.htmltools import Td
 from pytigon_lib.schparser.parser import (
-    Parser,
     Elem,
+    Parser,
     Script,
     content_tostring,
     tostring,
 )
-from pytigon_lib.schhtml.htmltools import Td
-from pyquery import PyQuery as pq
 
 
 class ExtList(list):
@@ -340,7 +341,7 @@ class ShtmlParser(Parser):
 # ------------------------------------------------------------------
 if __name__ == "__main__":
     try:
-        with open("test.html", "rt") as f:
+        with open("test.html") as f:
             data = f.read()
         mp = ShtmlParser()
         mp.process(data)

@@ -6,7 +6,8 @@ hierarchies using a callback-based pattern for node rendering.
 
 import html
 import logging
-from typing import Any, Callable, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

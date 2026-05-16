@@ -1,22 +1,23 @@
 """Module contains classes for defining HTTP client."""
 
 import base64
-import os
-import mimetypes
-import threading
 import logging
-import httpx
+import mimetypes
+import os
+import threading
 from threading import Thread
+
+import httpx
 from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.core.wsgi import get_wsgi_application
 from django.test import Client
-from django.contrib.staticfiles import finders
 
-from pytigon_lib.schfs import open_file, get_vfs
+from pytigon_lib.schfs import get_vfs, open_file
 from pytigon_lib.schfs.vfstools import norm_path
-from pytigon_lib.schtools.schjson import json_loads
-from pytigon_lib.schtools.platform_info import platform_name
 from pytigon_lib.schhttptools.asgi_bridge import websocket
+from pytigon_lib.schtools.platform_info import platform_name
+from pytigon_lib.schtools.schjson import json_loads
 
 LOGGER = logging.getLogger("httpclient")
 
@@ -48,7 +49,6 @@ def init_embeded_django():
         from channels.routing import get_default_application
 
         ASGI_APPLICATION = get_default_application()
-    import pytigon.schserw.urls
 
 
 def set_http_error_func(func):

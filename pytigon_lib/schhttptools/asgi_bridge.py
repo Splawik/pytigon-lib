@@ -6,9 +6,9 @@ embedded Django/Channels instances to handle HTTP and WebSocket
 requests without a real network stack.
 """
 
-import urllib.parse
 import copy
-from typing import Dict, List, Tuple, Any, Optional
+import urllib.parse
+from typing import Any, Dict, List, Optional, Tuple
 
 SCOPE_TEMPLATE = {
     "type": "http",

@@ -1,5 +1,6 @@
 import io
 from math import pi
+
 import cairo
 
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo

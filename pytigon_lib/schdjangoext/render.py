@@ -6,7 +6,8 @@ DOCX) document generation through template-based rendering.
 
 import os
 
-from django.template import loader, Context
+from django.template import Context, loader
+
 from pytigon_lib.schdjangoext.spreadsheet_render import render_odf, render_ooxml
 from pytigon_lib.schhtml.htmlviewer import stream_from_html
 

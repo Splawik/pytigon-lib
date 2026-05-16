@@ -1,6 +1,8 @@
-import wx
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 import io
+
+import wx
+
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 
 
 class DcDc(BaseDc):

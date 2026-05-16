@@ -1,7 +1,7 @@
-from pytigon_lib.schindent.py_to_js import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schindent.py_to_js import *
 
 
 def test_compile_success():

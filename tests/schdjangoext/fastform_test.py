@@ -1,9 +1,7 @@
-from pytigon_lib.schdjangoext.fastform import *
-
 # Pytest tests
 import pytest
-from django.core.exceptions import ValidationError
 
+from pytigon_lib.schdjangoext.fastform import *
 
 
 def test_form_from_str():

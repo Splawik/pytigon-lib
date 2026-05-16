@@ -1,6 +1,7 @@
-from pytigon_lib.schparser.parser import Parser
-from urllib.request import urlopen
 from urllib.error import URLError
+from urllib.request import urlopen
+
+from pytigon_lib.schparser.parser import Parser
 
 
 def superstrip(s):

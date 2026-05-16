@@ -93,16 +93,16 @@ def compile_file_to_module(llvm_ir_path):
     """
     if isinstance(llvm_ir_path, str):
         try:
-            with open(llvm_ir_path, "rt") as f:
+            with open(llvm_ir_path) as f:
                 return compile_str_to_module(f.read())
-        except IOError as e:
+        except OSError as e:
             raise RuntimeError(f"Error reading file {llvm_ir_path}: {e}")
     elif isinstance(llvm_ir_path, (list, tuple)):
         for path in llvm_ir_path:
             try:
-                with open(path, "rt") as f:
+                with open(path) as f:
                     compile_str_to_module(f.read())
-            except IOError as e:
+            except OSError as e:
                 raise RuntimeError(f"Error reading file {path}: {e}")
     else:
         raise TypeError("Expected a string or list of strings for file paths.")

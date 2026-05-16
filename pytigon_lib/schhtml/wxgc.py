@@ -1,5 +1,7 @@
-import wx
 import io
+
+import wx
+
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 
 

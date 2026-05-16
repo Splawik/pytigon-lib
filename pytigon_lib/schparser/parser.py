@@ -16,7 +16,8 @@ Functions:
 
 import io
 import re
-from typing import Any, Callable, Dict, List, Optional, Union
+from collections.abc import Callable
+from typing import Dict, List, Optional, Union
 
 try:
     from lxml import etree
@@ -24,6 +25,7 @@ try:
     _LXML_AVAILABLE = True
 except ImportError:
     import xml.etree.ElementTree as etree
+
     from naivehtmlparser import NaiveHTMLParser
 
     _LXML_AVAILABLE = False

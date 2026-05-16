@@ -1,14 +1,14 @@
 """Project installation and database export/import utilities."""
 
 import datetime
-import zipfile
 import io
 import os
+import zipfile
 
 from pytigon_lib.schdjangoext.django_manage import cmd
 from pytigon_lib.schfs.vfstools import extractall
-from pytigon_lib.schtools.process import py_run
 from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
+from pytigon_lib.schtools.process import py_run
 
 
 def install():
@@ -23,7 +23,6 @@ def install():
 
     prj_name = get_prj_name()
     data_path = settings.DATA_PATH
-    prj_path = settings.PRJ_PATH
     app_data_path = os.path.join(data_path, prj_name)
     db_path = os.path.join(app_data_path, prj_name + ".db")
 
@@ -113,7 +112,7 @@ def export_to_db(withoutapp=None, to_local_db=True):
 
     prj_name = settings.PRJ_NAME
     data_path = settings.DATA_PATH
-    app_data_path = os.path.join(data_path, prj_name)
+    _ = os.path.join(data_path, prj_name)
     db_path = settings.DATABASES["local"]["NAME"]
 
     temp_path = os.path.join(data_path, "temp")
@@ -123,10 +122,8 @@ def export_to_db(withoutapp=None, to_local_db=True):
 
     if to_local_db:
         source_db = "default"
-        target_db = "local"
     else:
         source_db = "local"
-        target_db = "default"
 
     parameters = [
         "dumpdata",

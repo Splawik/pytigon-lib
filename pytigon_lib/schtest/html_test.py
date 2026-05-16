@@ -40,8 +40,8 @@ def html_content_cmp(file_path1, file_path2):
         bool: True if the content of the two files is the same, False otherwise.
     """
     with (
-        open(file_path1, "rt") as f1,
-        open(file_path2, "rt") as f2,
+        open(file_path1) as f1,
+        open(file_path2) as f2,
     ):
         content1 = extract_body_content(f1.read())
         content2 = extract_body_content(f2.read())

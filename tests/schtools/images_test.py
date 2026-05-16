@@ -1,8 +1,8 @@
-from pytigon_lib.schtools.images import *
-from PIL import Image
-
 # Pytest tests
 import pytest
+from PIL import Image
+
+from pytigon_lib.schtools.images import *
 
 
 def test_spec_resize():

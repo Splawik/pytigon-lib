@@ -1,5 +1,5 @@
+
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
-from django.contrib.staticfiles import finders
 
 
 class Css(BaseHtmlElemParser):

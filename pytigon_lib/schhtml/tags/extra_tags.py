@@ -1,10 +1,10 @@
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
 from pytigon_lib.schhtml.atom import Atom
+from pytigon_lib.schhtml.basehtmltags import BaseHtmlAtomParser, register_tag_map
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
-    RenderCellSpacing,
     RenderCellPadding,
+    RenderCellSpacing,
     get_size,
 )
 

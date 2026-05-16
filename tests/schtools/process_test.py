@@ -1,8 +1,9 @@
-from pytigon_lib.schtools.process import *
+from unittest.mock import patch
 
 # Pytest tests
 import pytest
-from unittest.mock import patch, MagicMock
+
+from pytigon_lib.schtools.process import *
 
 
 def test_run_success():
@@ -12,8 +13,8 @@ def test_run_success():
 
         exit_code, output, err = run(["ls", "-la"])
         assert exit_code == 0
-        assert type(output) == list
-        assert err == None
+        assert isinstance(output, list)
+        assert err is None
 
 
 if __name__ == "__main__":

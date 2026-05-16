@@ -1,0 +1,10 @@
+include LICENSE
+include requirements.txt
+include ruff.toml
+recursive-include pytigon_lib/schhtml/icss *.icss
+recursive-include tests/templates *
+recursive-include tests/static *
+recursive-include tests/schhtml/assets *
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo

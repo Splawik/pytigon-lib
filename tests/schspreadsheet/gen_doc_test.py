@@ -1,13 +1,11 @@
-import os
 import datetime
-import tempfile
+import os
 import pathlib
+import tempfile
 
-from pytigon_lib.schdjangoext.spreadsheet_render import render_ooxml, render_odf
-from pytigon_lib.schtools.doc_tools import soffice_convert
+from pytigon_lib.schdjangoext.spreadsheet_render import render_odf, render_ooxml
 from pytigon_lib.schtest.html_test import html_content_cmp
-from django.conf import settings
-
+from pytigon_lib.schtools.doc_tools import soffice_convert
 
 TEST_PATH = pathlib.Path(__file__).parent.resolve()
 
@@ -50,7 +48,7 @@ def test_gen_doc():
         in_file_path.replace("assets/rep_wzr.xlsx", "wzr/rep_wzr_out.ods.html"),
     )
 
-    assert (True if cmp1 and cmp2 else False) == True
+    assert cmp1 and cmp2
 
 
 if __name__ == "__main__":

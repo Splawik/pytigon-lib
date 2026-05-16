@@ -1,4 +1,5 @@
 import logging
+
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 
 # Initialize logger
@@ -32,4 +33,4 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
             }
             LOGGER.error(error_dict)
         except Exception as e:
-            LOGGER.error(f"Failed to log authentication error: {str(e)}")
+            LOGGER.error(f"Failed to log authentication error: {e!s}")

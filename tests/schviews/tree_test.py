@@ -1,8 +1,9 @@
-from pytigon_lib.schviews.tree import *
+from unittest.mock import MagicMock
 
 # Pytest tests
 import pytest
-from unittest.mock import MagicMock
+
+from pytigon_lib.schviews.tree import *
 
 
 @pytest.fixture

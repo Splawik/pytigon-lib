@@ -5,7 +5,6 @@ Based on the cefpython example: screenshot.py
 Requires cefpython3 and PIL (Pillow) to be installed.
 """
 
-import os
 import sys
 
 cef = None

@@ -1,7 +1,7 @@
-from pytigon_lib.schtools import *
-
 # Pytest tests for sch_import function
 import pytest
+
+from pytigon_lib.schtools import *
 
 
 def test_sch_import_success():

@@ -1,7 +1,7 @@
-from pytigon_lib.schhtml.atom import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schhtml.atom import *
 
 
 def test_unescape():

@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.schhtmlgen import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.schhtmlgen import *
 
 
 def test_html_dump():

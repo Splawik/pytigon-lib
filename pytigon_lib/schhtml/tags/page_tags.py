@@ -1,5 +1,6 @@
-from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
 import io
+
+from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
 
 
 class Page(BaseHtmlElemParser):

@@ -1,7 +1,6 @@
-from pytigon_lib.schtable.table import *
-
 # Pytest tests
-import pytest
+
+from pytigon_lib.schtable.table import *
 
 
 def test_table_py_page():

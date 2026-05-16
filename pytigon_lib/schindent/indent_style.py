@@ -17,16 +17,15 @@ import io
 import logging
 import os
 import os.path
-import sys
-import traceback
-from typing import Any, Callable, Dict, Generator, List, Optional, TextIO, Tuple, Union
+from collections.abc import Callable, Generator
+from typing import Any, Dict, List, Optional, TextIO, Tuple, Union
 
 from django.conf import settings
 
-from pytigon_lib.schindent.py_to_js import compile as py_to_js_compile
 from pytigon_lib.schindent.indent_tools import convert_js
-from pytigon_lib.schtools.tools import norm_indent
+from pytigon_lib.schindent.py_to_js import compile as py_to_js_compile
 from pytigon_lib.schtools.main_paths import get_prj_name
+from pytigon_lib.schtools.tools import norm_indent
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +132,7 @@ def _build_translator(lang: str) -> Tuple[Callable[[str], str], List[str]]:
     # Try to load existing translations from translate.py
     try:
         translate_path = os.path.join(base_path, "translate.py")
-        with open(translate_path, "rt", encoding="utf-8") as f:
+        with open(translate_path, encoding="utf-8") as f:
             for line in f:
                 parts = line.split('_("')
                 if len(parts) > 1:
@@ -251,7 +250,7 @@ def iter_lines(
         if "site-packages" not in base_path:
             try:
                 translate_path = os.path.join(base_path, "translate.py")
-                with open(translate_path, "wt", encoding="utf-8") as f:
+                with open(translate_path, "w", encoding="utf-8") as f:
                     for word in collected_words:
                         f.write(f'_("{word}")\n')
             except Exception:
@@ -1014,13 +1013,7 @@ class IhtmlToHtml:
             if line[1]:
                 output += line[1]
             # Line break for status 2
-            if line[2] == 2:
-                output += "\n"
-            # Line break for status 4 when next is deeper
-            elif line[2] == 4 and nextline and nextline[0] > line[0]:
-                output += "\n"
-            # Line break between non-tag content
-            elif (
+            if line[2] == 2 or (line[2] == 4 and nextline and nextline[0] > line[0]) or (
                 line[1]
                 and nextline
                 and nextline[1]

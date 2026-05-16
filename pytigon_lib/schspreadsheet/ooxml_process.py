@@ -6,16 +6,18 @@ Provides utilities for Excel address conversion, shared string processing,
 comment injection, XML repair, and pivot table filtering.
 """
 
-import zipfile
-import shutil
-import os
 import datetime
 import logging
+import os
+import shutil
+import zipfile
 from xml.sax.saxutils import escape
-from django.template import Context
-from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
-from pytigon_lib.schfs.vfstools import delete_from_zip
+
 import dateutil.parser
+from django.template import Context
+
+from pytigon_lib.schfs.vfstools import delete_from_zip
+from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
 
 logger = logging.getLogger(__name__)
 
@@ -565,8 +567,8 @@ class OOXmlDocTransform(OdfDocTransform):
 
 
 if __name__ == "__main__":
-    from django.conf import settings
     import django
+    from django.conf import settings
 
     settings.configure(
         TEMPLATES=[

@@ -1,8 +1,9 @@
-from pytigon_lib.schfs import *
+from unittest.mock import patch
 
 # Pytest tests
 import pytest
-from unittest.mock import patch
+
+from pytigon_lib.schfs import *
 
 
 def test_get_vfs_success():

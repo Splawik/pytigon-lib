@@ -1,7 +1,7 @@
-from pytigon_lib.schparser.parser import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schparser.parser import *
 
 
 def test_parser_init():

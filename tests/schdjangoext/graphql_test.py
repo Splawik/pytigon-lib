@@ -1,11 +1,9 @@
-from django.conf import settings
-
-from pytigon_lib.schdjangoext.graphql import *
 
 # Pytest tests
 import pytest
 from django.db import models
-from graphene import Schema
+
+from pytigon_lib.schdjangoext.graphql import *
 
 
 class SampleModel(models.Model):

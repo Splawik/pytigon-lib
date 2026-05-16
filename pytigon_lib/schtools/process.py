@@ -1,14 +1,14 @@
 """Subprocess and Django management command execution utilities."""
 
-import sys
-import os
 import asyncio
-from subprocess import Popen, PIPE
+import os
+import sys
+from subprocess import PIPE, Popen
 from threading import Thread
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
-from pytigon_lib.schtools.tools import get_executable
 from pytigon_lib.schtools.platform_info import platform_name
+from pytigon_lib.schtools.tools import get_executable
 
 
 class FrozenModules:

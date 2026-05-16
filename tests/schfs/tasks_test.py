@@ -1,8 +1,8 @@
-from pytigon_lib.schfs.tasks import *
 
 # Pytest tests
 import pytest
-from unittest.mock import MagicMock
+
+from pytigon_lib.schfs.tasks import *
 
 
 def test_filesystemcmd_delete():

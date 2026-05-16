@@ -1,22 +1,17 @@
 import io
+
+from pytigon_lib.schhtml.atom import Atom, BrAtom, NullAtom
 from pytigon_lib.schhtml.basehtmltags import (
-    BaseHtmlAtomParser,
-    register_tag_map,
     ATOM_TAGS,
     PAR_TAGS,
+    BaseHtmlAtomParser,
+    register_tag_map,
 )
-from pytigon_lib.schhtml.atom import Atom, NullAtom, BrAtom
 from pytigon_lib.schhtml.render_helpers import (
-    RenderBackground,
-    RenderBorder,
-    RenderCellSpacing,
-    RenderCellPadding,
-    RenderPadding,
     RenderMargin,
     get_size,
 )
-from pytigon_lib.schtools.images import svg_to_png, spec_resize
-
+from pytigon_lib.schtools.images import svg_to_png
 
 IMAGE = None
 
@@ -104,7 +99,7 @@ class Atag(AtomTag):
         self.parent.append_atom_list(self.atom_list)
 
     def __repr__(self):
-        return f"ATag({self.tag};{str(self.attrs)})"
+        return f"ATag({self.tag};{self.attrs!s})"
 
 
 class ImgDraw:

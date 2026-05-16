@@ -1,9 +1,10 @@
-from pytigon_lib.schfs.vfstools import *
+import os
+import tempfile
 
 # Pytest tests
 import pytest
-import os
-import tempfile
+
+from pytigon_lib.schfs.vfstools import *
 
 
 def test_norm_path():
@@ -70,17 +71,14 @@ def test_zip_writer():
 
 def test_convert_file():
     with tempfile.NamedTemporaryFile(suffix=".html") as tmp:
-        assert (
-            convert_file(
-                "/app/_schtest/test.md",
-                tmp.name,
-                input_format="md",
-                output_format="html",
-                for_vfs_output=False,
-            )
-            == True
+        assert convert_file(
+            "/app/_schtest/test.md",
+            tmp.name,
+            input_format="md",
+            output_format="html",
+            for_vfs_output=False,
         )
-        with open(tmp.name, "r") as f:
+        with open(tmp.name) as f:
             assert "<p>" in f.read()
 
 

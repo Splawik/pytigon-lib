@@ -1,8 +1,7 @@
-from pytigon_lib.schdjangoext.spreadsheet_render import *
-
 # Pytest tests
-import pytest
 from django.template import Context
+
+from pytigon_lib.schdjangoext.spreadsheet_render import *
 
 
 def test_oo_dict():

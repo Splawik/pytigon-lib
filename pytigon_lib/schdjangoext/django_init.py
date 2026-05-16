@@ -5,7 +5,8 @@ and a smarter model-import mechanism.
 """
 
 from importlib import import_module
-from django.apps.config import AppConfig, MODELS_MODULE_NAME
+
+from django.apps.config import MODELS_MODULE_NAME, AppConfig
 from django.utils.module_loading import module_has_submodule
 
 

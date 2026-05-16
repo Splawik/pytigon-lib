@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.wiki import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.wiki import *
 
 
 def test_wiki_from_str():

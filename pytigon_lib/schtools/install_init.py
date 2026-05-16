@@ -1,11 +1,12 @@
 """Project initialization and dependency installation utilities."""
 
-import os
-import sys
-import zipfile
-import shutil
 import configparser
 import logging
+import os
+import shutil
+import sys
+import zipfile
+
 from pytigon_lib.schfs import extractall
 from pytigon_lib.schtools.process import py_manage, py_run
 
@@ -114,7 +115,7 @@ def build_all(path):
         for name in files:
             if name.endswith("_build.py"):
                 p = os.path.join(root, name)
-                with open(p, "rt") as f:
+                with open(p) as f:
                     local_ns = {}
                     buf = f.read()
                     exec(buf, globals(), local_ns)
@@ -321,7 +322,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         if not x:
             ok = False
         if ok:
-            with open(os.path.join(prjlib, "install.txt"), "wt") as f:
+            with open(os.path.join(prjlib, "install.txt"), "w") as f:
                 f.write("OK")
 
     if os.path.exists(prjlib):
@@ -331,7 +332,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     syslib = os.path.join(_data_path, prj, "syslib")
     if not os.path.exists(syslib):
         os.makedirs(syslib)
-        with open(os.path.join(syslib, "__init__.py"), "wt") as f:
+        with open(os.path.join(syslib, "__init__.py"), "w") as f:
             f.write(" ")
 
     _release_lock(lock)

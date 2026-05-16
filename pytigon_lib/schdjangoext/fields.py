@@ -2,17 +2,16 @@
 
 # from itertools import chain
 
-from django.utils.translation import gettext_lazy as _
-from django.db import models
 from django import forms
-from django_select2.forms import ModelSelect2Widget, ModelSelect2MultipleWidget
+from django.db import models
 from django.forms.widgets import HiddenInput
+from django_select2.forms import ModelSelect2MultipleWidget, ModelSelect2Widget
 
-from pytigon_lib.schdjangoext.tools import make_href
 from pytigon_lib.schdjangoext.formfields import (
-    ModelMultipleChoiceFieldWithIcon,
     ModelChoiceFieldWithIcon,
+    ModelMultipleChoiceFieldWithIcon,
 )
+from pytigon_lib.schdjangoext.tools import make_href
 
 
 class ModelSelect2WidgetExt(ModelSelect2Widget):
@@ -238,11 +237,6 @@ class ManyToManyField(models.ManyToManyField):
         When search_fields or query are provided, wraps the field in a
         custom ModelMultipleChoiceField that uses Select2 for filtering.
         """
-        if isinstance(self.to, str):
-            to = self.model
-        else:
-            to = self.to
-
         field = self
 
         if self.search_fields or self.query:
@@ -292,8 +286,7 @@ class HiddenForeignKey(models.ForeignKey):
     """Version of django models.ForeignKey class with hidden widget."""
 
     def __init__(self, *argi, **argv):
-        if "select2" in argv:
-            del argv["select2"]
+        argv.pop("select2", None)
         super().__init__(*argi, **argv)
 
     def formfield(self, **kwargs):

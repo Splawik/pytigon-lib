@@ -8,7 +8,8 @@ system and optional CANCAN-style access control.
 
 import logging
 import threading
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 from django.conf import settings
 from django.contrib.auth import authenticate

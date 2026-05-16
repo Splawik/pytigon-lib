@@ -1,9 +1,10 @@
-import datetime
 import asyncio
-import types
+import datetime
 import logging
+import types
+
 from twisted.internet import reactor
-from twisted.web import xmlrpc, server
+from twisted.web import server, xmlrpc
 
 LOGGER = logging.getLogger("pytigon_task")
 INIT_TIME = datetime.datetime.now()
@@ -287,7 +288,7 @@ class SChScheduler:
                 self.tasks.sort(key=_key)
                 try:
                     done, pending = await asyncio.wait(processes)
-                    results = [future.result() for future in done]
+                    _ = [future.result() for future in done]
                 except Exception as e:
                     LOGGER.exception(f"An error occurred in task: {e}")
 
@@ -311,7 +312,7 @@ class SChScheduler:
         while self.tasks or self.rpcserver_activated:
             try:
                 loop = asyncio.get_event_loop()
-                loop.create_task(self.process(datetime.datetime.now()))
+                _ = loop.create_task(self.process(datetime.datetime.now()))  # noqa: RUF006
             except Exception as e:
                 LOGGER.exception(f"Problem with scheduler: {e}")
             await asyncio.sleep(1)
@@ -339,7 +340,7 @@ if __name__ == "__main__":
 
     async def hello2(scheduler):
         print("Hello world 2")
-        x = 1 / 0  # Simulate an error
+        _ = 1 / 0  # Simulate an error
 
     async def exit(scheduler):
         scheduler.clear()

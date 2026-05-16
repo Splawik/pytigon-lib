@@ -1,5 +1,5 @@
-from html.parser import HTMLParser
 import io
+from html.parser import HTMLParser
 
 
 def _convert_strings(lines):

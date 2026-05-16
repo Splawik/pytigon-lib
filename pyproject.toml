@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytigon-lib"
+version = "0.260511"
+description = "Pytigon library — Python/Django application framework with multi-format rendering and indentation-based HTML preprocessor"
+authors = [{name = "Slawomir Cholaj", email = "slawomir.cholaj@gmail.com"}]
+license = {text = "LGPL-3.0-only"}
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "Django>=6.0",
+    "django-environ>=0.10",
+    "lxml>=4.6",
+    "fs>=2.4",
+    "httpx>=0.20",
+    "cryptography>=3.4",
+    "fpdf2>=2.5",
+    "Pillow>=9.0",
+    "python-docx>=0.8",
+    "xlsxwriter>=3.0",
+    "openpyxl>=3.0",
+    "markdown>=3.3",
+    "pyquery>=1.4",
+    "python-dateutil>=2.8",
+    "autobahn>=22.0",
+]
+
+[project.optional-dependencies]
+spreadsheet = ["pyexcel>=0.7", "pyexcel-xlsx>=0.6", "pyexcel-ods3>=0.6"]
+llvm = ["llvmlite>=0.40"]
+plotting = ["plotly>=5.0", "numpy>=1.20"]
+pscript = ["pscript>=0.7"]
+svg = ["svglib>=1.1"]
+dev = ["ruff>=0.3", "pytest>=7.0", "pytest-django>=4.5"]
+
+[project.urls]
+Documentation = "https://pytigon.github.io/pytigon-lib"
+Repository = "https://github.com/pytigon/pytigon-lib"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "SIM", "RUF"]
+ignore = [
+    "SIM102", "SIM105", "SIM108", "SIM115",
+    "SIM116", "SIM117", "SIM118",
+    "UP006",   # list[X] breaks on Python <3.9 and Cython
+    "UP007",   # X | Y breaks on Python <3.10 and Cython
+    "UP031",   # f-string instead of % (needs manual review)
+    "UP035",   # builtin subscriptable types break on Python <3.9
+    "UP045",   # T | None breaks on Python <3.10 and Cython
+    "RUF002", "RUF003", "RUF005", "RUF012", "RUF059",
+]
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["F403", "F405"]
+"tests/schindent/assets/*.py" = ["F821"]
+"tests/schindent/test2.py" = ["F821"]
+"tests/schindent/test.py" = ["E402"]
+"tests/schhttptools/test2.py" = ["E501"]
+"tests/schtools/wiki_test.py" = ["E501"]
+"pytigon_lib/schhtml/html_tags.py" = ["F403"]
+"pytigon_lib/schfs/__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+norecursedirs = ["tests/schindent/assets"]
+filterwarnings = ["ignore::DeprecationWarning"]

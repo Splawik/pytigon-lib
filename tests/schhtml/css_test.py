@@ -1,7 +1,7 @@
-from pytigon_lib.schhtml.css import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schhtml.css import *
 
 
 def test_comment_remover():

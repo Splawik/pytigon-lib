@@ -1,21 +1,22 @@
-import os
-import sys
-import socket
 import fcntl
+import os
+import socket
 import struct
+import sys
 from os.path import expanduser
+
+from kivy.animation import Animation
 from kivy.app import App
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.spinner import Spinner
-from kivy.animation import Animation
 from kivy.properties import NumericProperty
-from kivy.clock import Clock
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.image import Image
+from kivy.uix.label import Label
+from kivy.uix.spinner import Spinner
 
 try:
-    from android.permissions import request_permissions, check_permission, Permission
+    from android.permissions import Permission, check_permission, request_permissions
 except ImportError:
     request_permissions = None
     check_permission = None
@@ -49,6 +50,7 @@ from pytigon_lib import init_paths  # noqa: E402
 
 init_paths()
 from pytigon.schserw import settings as schserw_settings  # noqa: E402
+
 from pytigon_lib.schtools.install_init import init  # noqa: E402
 
 if schserw_settings.PRJ_PATH not in sys.path:
@@ -89,7 +91,7 @@ class InterfaceManager(BoxLayout):
     angle = NumericProperty(0)
 
     def __init__(self, **kwargs):
-        super(InterfaceManager, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.base_path = BASE_PATH
         self.webview = None
         self.app = None

@@ -2,15 +2,16 @@ from pytigon_lib.schhtml.basehtmltags import (
     BaseHtmlElemParser,
     register_tag_map,
 )
+from pytigon_lib.schhtml.htmltools import HtmlProxyParser
 from pytigon_lib.schhtml.render_helpers import (
     RenderBackground,
     RenderBorder,
-    RenderPadding,
     RenderMargin,
+    RenderPadding,
     get_size,
 )
+
 from .p_tags import InlineElements
-from pytigon_lib.schhtml.htmltools import HtmlProxyParser
 
 
 class BodyTag(InlineElements):

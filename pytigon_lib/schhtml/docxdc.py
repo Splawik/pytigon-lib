@@ -1,8 +1,10 @@
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 import io
+
+import docx.enum.text
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
-import docx.enum.text
+
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 
 IMAGE = None
 

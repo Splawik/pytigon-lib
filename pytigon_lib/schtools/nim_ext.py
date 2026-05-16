@@ -5,9 +5,10 @@ into Python module attributes.
 """
 
 import json
-from cffi import FFI
-import sys
 import os
+import sys
+
+from cffi import FFI
 
 ffi = FFI()
 

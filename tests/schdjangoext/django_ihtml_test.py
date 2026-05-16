@@ -1,7 +1,7 @@
-from pytigon_lib.schdjangoext.django_ihtml import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schdjangoext.django_ihtml import *
 
 
 def test_fa_icons():

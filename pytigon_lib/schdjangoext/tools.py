@@ -1,5 +1,6 @@
 import sys
 import traceback
+
 from django.conf import settings
 
 
@@ -23,7 +24,7 @@ def import_model(app, tab):
         models = getattr(module, "models", module)
         return getattr(models, tab)
 
-    except (ImportError, AttributeError) as e:
+    except (ImportError, AttributeError):
         traceback.print_exc()
         return None
 

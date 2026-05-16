@@ -1,9 +1,7 @@
-import json
 
 from django.http import JsonResponse
-from oauth2_provider.views import ProtectedResourceView
-from oauth2_provider.views.mixins import ProtectedResourceMixin
 from graphene_django.views import GraphQLView
+from oauth2_provider.views import ProtectedResourceView
 
 
 class OAuth2ProtectedResourceMixin(ProtectedResourceView):

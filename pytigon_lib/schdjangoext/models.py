@@ -3,19 +3,19 @@
 import sys
 from typing import Any, Dict, List, Optional, Type
 
-from django.db import models
 from django import forms
-from django.core import serializers
-from django.contrib import admin
 from django.conf import settings
+from django.contrib import admin
+from django.core import serializers
+from django.db import models
 
 try:
     from django.contrib.contenttypes.models import ContentType
 except ImportError:
     ContentType = None
 
-from pytigon_lib.schtools.schjson import ComplexEncoder, ComplexDecoder
 from pytigon_lib.schdjangoext.fastform import form_from_str
+from pytigon_lib.schtools.schjson import ComplexDecoder, ComplexEncoder
 
 
 class CallProxy:

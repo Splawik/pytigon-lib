@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.encrypt import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.encrypt import *
 
 
 def test_encrypt_decrypt():

@@ -6,12 +6,14 @@ Provides both local (in-process via asyncio.Queue) and remote
 
 import asyncio
 import logging
+
 from autobahn.twisted.websocket import (
     WebSocketClientFactory,
     WebSocketClientProtocol,
     connectWS,
 )
-from pytigon_lib.schtools.schjson import json_dumps, json_loads
+
+from pytigon_lib.schtools.schjson import json_dumps
 
 LOGGER = logging.getLogger("pytigon.websocket")
 

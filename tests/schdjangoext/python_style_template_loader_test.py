@@ -1,10 +1,10 @@
-from pytigon_lib.schdjangoext.python_style_template_loader import *
+from unittest.mock import mock_open, patch
 
 # Pytest tests
 import pytest
-from unittest.mock import patch, mock_open
 from django.template.engine import Engine
-from django.template import Origin
+
+from pytigon_lib.schdjangoext.python_style_template_loader import *
 
 
 @pytest.fixture

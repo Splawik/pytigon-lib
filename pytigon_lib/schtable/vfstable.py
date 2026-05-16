@@ -1,27 +1,22 @@
 import binascii
 import datetime
-import re
-import sys
-import gettext
-import uuid
 import functools
+import gettext
 import io
 import mimetypes
+import re
+import uuid
 
 import fs.path
 from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.http import HttpResponse
+from django_q.tasks import async_task
 
-from fs.osfs import OSFS
-
-from pytigon_lib.schfs.vfstools import norm_path, automount, convert_file
+from pytigon_lib.schfs.vfstools import automount, convert_file, norm_path
 from pytigon_lib.schtable.table import Table
-
 from pytigon_lib.schtools import schjson
-from pytigon_lib.schtools.tools import bencode, bdecode, is_null
-
-from django_q.tasks import async_task, result
+from pytigon_lib.schtools.tools import bdecode, bencode, is_null
 
 _ = gettext.gettext
 
@@ -240,7 +235,7 @@ class VfsTable(Table):
         elif value[0] == "NEWFILE":
             path = bdecode(value[2][0])
             name = bdecode(value[2][1])
-            with default_storage.fs.open(f"{path}/{name}", "wb") as f:
+            with default_storage.fs.open(f"{path}/{name}", "wb") as _f:
                 pass
             c = {}
         elif value[0] == "RENAME":

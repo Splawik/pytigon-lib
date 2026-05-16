@@ -8,8 +8,8 @@ import email
 from email.mime.image import MIMEImage
 
 from django.core.mail import EmailMultiAlternatives
+from django.template import Context, Template
 from django.template.loader import get_template
-from django.template import Template, Context
 
 
 def _extract_charset(content_type_header, default="utf-8"):
@@ -146,7 +146,7 @@ class PytigonEmailMessage(EmailMultiAlternatives):
         try:
             template_eml = get_template(eml_template_name)
             eml_name = template_eml.origin.name
-            with open(eml_name, "rt", encoding="utf-8") as f:
+            with open(eml_name, encoding="utf-8") as f:
                 t = Template(f.read())
                 c = Context(context)
                 txt = t.render(c)

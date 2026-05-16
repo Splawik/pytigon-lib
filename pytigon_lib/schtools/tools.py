@@ -1,12 +1,12 @@
 """Common utility functions: string handling, introspection, encoding, dict operations."""
 
-import types
-import sys
+import inspect
 import os
 import platform
-import inspect
+import sys
+import types
+from base64 import b64decode, b64encode
 from collections.abc import Mapping as MappingABC
-from base64 import b64encode, b64decode
 
 
 def split2(txt, sep):
@@ -170,9 +170,10 @@ def get_request():
             frame = frame_info.frame
             code = frame.f_code
             varnames = code.co_varnames
-            if varnames[:1] == ("request",) and "request" in frame.f_locals:
-                request = frame.f_locals["request"]
-            elif varnames[:2] == ("self", "request") and "request" in frame.f_locals:
+            if (
+                (varnames[:1] == ("request",) and "request" in frame.f_locals)
+                or (varnames[:2] == ("self", "request") and "request" in frame.f_locals)
+            ):
                 request = frame.f_locals["request"]
             else:
                 continue

@@ -1,6 +1,6 @@
 import asyncio
-import tempfile
 import os
+import tempfile
 
 from playwright.async_api import async_playwright
 

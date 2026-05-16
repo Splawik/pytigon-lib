@@ -4,14 +4,15 @@ Provides convenience wrappers for file operations that work transparently
 with both the local filesystem and Django's virtual filesystem storage.
 """
 
-from pytigon_lib.schfs.vfstools import (
-    open_file,
-    open_and_create_dir,
-    get_unique_filename,
-    get_temp_filename,
-    extractall,
-)
 from django.core.files.storage import default_storage
+
+from pytigon_lib.schfs.vfstools import (
+    extractall,
+    get_temp_filename,
+    get_unique_filename,
+    open_and_create_dir,
+    open_file,
+)
 
 
 def get_vfs():

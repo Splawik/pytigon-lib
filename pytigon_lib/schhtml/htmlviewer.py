@@ -1,18 +1,17 @@
 """Module contains classes for rendering HTML content."""
 
-import sys
-import traceback
-import os
 import io
+import os
+import traceback
 from tempfile import NamedTemporaryFile
 
-from pytigon_lib.schhtml.htmltools import HtmlModParser
-from pytigon_lib.schhtml.html_tags import HtmlTag
-from pytigon_lib.schhtml.basedc import NullDc, BaseDc
-from pytigon_lib.schhtml.css import Css
+from pytigon_lib.schhtml.basedc import BaseDc, NullDc
 from pytigon_lib.schhtml.basehtmltags import get_tag_preprocess_map
-from pytigon_lib.schhttptools.httpclient import HttpClient
+from pytigon_lib.schhtml.css import Css
+from pytigon_lib.schhtml.html_tags import HtmlTag
+from pytigon_lib.schhtml.htmltools import HtmlModParser
 from pytigon_lib.schhtml.pdfdc import PdfDc
+from pytigon_lib.schhttptools.httpclient import HttpClient
 
 ALIAS_TAG = {
     "em": "i",
@@ -249,7 +248,7 @@ class HtmlViewerParser(HtmlModParser):
         try:
             if self.tag_parser:
                 self.tag_parser.handle_data(data)
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
 
     def close(self):

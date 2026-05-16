@@ -6,7 +6,6 @@ from django.forms.widgets import ClearableFileInput
 
 from pytigon_lib.schdjangoext.widgets import ImgFileInput
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

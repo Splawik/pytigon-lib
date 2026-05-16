@@ -1,7 +1,7 @@
-from pytigon_lib.schtools.llvm_exec import *
-
 # Pytest tests
 import pytest
+
+from pytigon_lib.schtools.llvm_exec import *
 
 
 def test_compile_str_to_module():

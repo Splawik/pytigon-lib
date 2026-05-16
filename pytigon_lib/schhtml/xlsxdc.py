@@ -1,10 +1,12 @@
 import io
 import os
-from decimal import Decimal
 from datetime import date, datetime
+from decimal import Decimal
+
 import xlsxwriter
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+
 from pytigon_lib.schfs.vfstools import get_temp_filename
+from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 
 IMAGE = None
 

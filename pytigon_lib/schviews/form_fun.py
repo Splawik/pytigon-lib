@@ -6,7 +6,8 @@ form views and combined list+form views.
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any, Dict, Optional
 
 from django.http import HttpRequest, HttpResponse
 from django.template import RequestContext

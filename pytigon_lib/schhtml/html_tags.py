@@ -1,11 +1,12 @@
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
-from .tags.block_tags import *
-from .tags.table_tags import *
-from .tags.p_tags import *
-from .tags.css_tags import *
+
 from .tags.atom_tags import *
-from .tags.page_tags import *
+from .tags.block_tags import *
+from .tags.css_tags import *
 from .tags.extra_tags import *
+from .tags.p_tags import *
+from .tags.page_tags import *
+from .tags.table_tags import *
 
 
 class HtmlTag(BaseHtmlElemParser):
