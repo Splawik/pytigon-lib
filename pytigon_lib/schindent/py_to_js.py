@@ -21,9 +21,7 @@ from pscript.parser1 import JSError, reprs
 logger = logging.getLogger(__name__)
 
 
-def get_class_definition(
-    name: str, base: str = "Object", docstring: str = ""
-) -> List[str]:
+def get_class_definition(name: str, base: str = "Object", docstring: str = "") -> List[str]:
     """Generate JavaScript class definition lines from Python class info.
 
     Produces JS code that creates a class constructor with proper prototype
@@ -48,15 +46,10 @@ def get_class_definition(
         code.append("    var obj;")
         code.append("    if ('js_get_base_arguments' in this) {")
         code.append(
-            f"        obj = Reflect.construct("
-            f"{base.split('.')[1]}, "
-            f"this.js_get_base_arguments(arguments), "
-            f"{name});"
+            f"        obj = Reflect.construct({base.split('.')[1]}, this.js_get_base_arguments(arguments), {name});"
         )
         code.append("    } else {")
-        code.append(
-            f"        obj = Reflect.construct({base.split('.')[1]}, [], {name});"
-        )
+        code.append(f"        obj = Reflect.construct({base.split('.')[1]}, [], {name});")
         code.append("    }")
         code.append(f"    {stdlib.FUNCTION_PREFIX}op_instantiate(obj, arguments);")
         code.append("    return obj")
@@ -171,8 +164,8 @@ def prepare_python_code(code: str) -> str:
             except IndexError:
                 continue
 
-    if exported_ids:
-        code += f"\n\nRawJS('export {{{', '.join(exported_ids)}}}')\n"
+    # if exported_ids:
+    #    code += f"\n\nRawJS('export {{{', '.join(exported_ids)}}}')\n"
 
     return code
 
