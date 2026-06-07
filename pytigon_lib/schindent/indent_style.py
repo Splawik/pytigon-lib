@@ -219,23 +219,13 @@ def iter_lines(
         # Table syntax detection and conversion
         line3 = line2.strip()
         if line3 and (line3[0] == "[" or line3[-1] == "]" or "|" in line3):
-            if line3[0] == "[" and (
-                line3[-1] == "|" or (line3[-1] == "]" and "|" in line3)
-            ):
+            if line3[0] == "[" and (line3[-1] == "|" or (line3[-1] == "]" and "|" in line3)):
                 in_table = 2 if line3[1] == "[" else 1
 
             if in_table == 1:
-                line2 = (
-                    line2.replace("[", "<tr><td>")
-                    .replace("]", "</td></tr>")
-                    .replace(" |", " </td><td>")
-                )
+                line2 = line2.replace("[", "<tr><td>").replace("]", "</td></tr>").replace(" |", " </td><td>")
             elif in_table == 2:
-                line2 = (
-                    line2.replace("[[", "<tr><th>")
-                    .replace("]]", "</th></tr>")
-                    .replace(" |", " </th><th>")
-                )
+                line2 = line2.replace("[[", "<tr><th>").replace("]]", "</th></tr>").replace(" |", " </th><th>")
 
             if line3[-1] == "]":
                 in_table = 0
@@ -343,9 +333,7 @@ def _pre_process_line(line: str) -> List[Optional[Tuple[int, Optional[str], str,
     first_char = line2[0]
 
     # Non-element lines (text, comments)
-    if not (
-        ("a" <= first_char <= "z") or ("A" <= first_char <= "Z") or first_char == "%"
-    ):
+    if not (("a" <= first_char <= "z") or ("A" <= first_char <= "Z") or first_char == "%"):
         if first_char == ".":
             return [(n, None, line2[1:], 0)]
         return [(n, None, line2, 0)]
@@ -516,9 +504,7 @@ class IhtmlToHtml:
         """
         # Double %% = inline block with auto-endblock
         if line[1][1] == "%":
-            if next_line[0] <= line[0] and not (
-                next_line[1] is None and next_line[2] is None
-            ):
+            if next_line[0] <= line[0] and not (next_line[1] is None and next_line[2] is None):
                 # Next line at same or lower level - wrap as inline block
                 tag_content = (line[1])[2:].lstrip()
                 self.output.append(
@@ -572,9 +558,7 @@ class IhtmlToHtml:
         tag_name = _get_elem(line[1])
 
         # Check if next line closes this tag
-        next_closes = next_line[0] <= line[0] and not (
-            next_line[1] is None and next_line[2] is None
-        )
+        next_closes = next_line[0] <= line[0] and not (next_line[1] is None and next_line[2] is None)
 
         if next_closes:
             if line[2] or tag_name not in self.simple_close_tags:
@@ -634,10 +618,7 @@ class IhtmlToHtml:
                 if first_line.startswith("@@@"):
                     # Template reference: include another file
                     ref_name = first_line[3:].strip()
-                    ref_path = (
-                        os.path.join(os.path.dirname(self.file_name), ref_name)
-                        + ".ihtml"
-                    )
+                    ref_path = os.path.join(os.path.dirname(self.file_name), ref_name) + ".ihtml"
 
                     with codecs.open(ref_path, "r", encoding="utf-8") as f2:
                         content2 = f.read()[len(first_line) :]
@@ -666,9 +647,7 @@ class IhtmlToHtml:
         indent_pos = 0
 
         for raw_line in iter_lines(file_stream, self.file_name, self.lang):
-            line = (
-                raw_line.replace("\n", "").replace("\r", "").replace("\t", "        ")
-            )
+            line = raw_line.replace("\n", "").replace("\r", "").replace("\t", "        ")
 
             # Handle %else in templates
             if line.replace(" ", "") in ("%else", "%else:"):
@@ -681,11 +660,7 @@ class IhtmlToHtml:
                 return
 
             if test:
-                if (
-                    test > TEST_RAW
-                    and len(line.strip()) > 0
-                    and _space_count(line) <= indent_pos
-                ):
+                if test > TEST_RAW and len(line.strip()) > 0 and _space_count(line) <= indent_pos:
                     cont = True
 
                 if cont or MARKER_PS + ">" in line:
@@ -729,10 +704,7 @@ class IhtmlToHtml:
 
                         elif test == TEST_PS:
                             # pscript block
-                            x = _pre_process_line(
-                                buf0.replace("pscript", "script language=python")
-                                + buf.getvalue()
-                            )
+                            x = _pre_process_line(buf0.replace("pscript", "script language=python") + buf.getvalue())
                             test = TEST_NONE
 
                         elif test == TEST_PY2JS:
@@ -751,10 +723,7 @@ class IhtmlToHtml:
                             v = buf.getvalue()
                             codejs = _py_to_js_wrapper(v)
                             x = _pre_process_line(
-                                buf0.replace("pscript", "script").replace(
-                                    " language=python", ""
-                                )
-                                + codejs
+                                buf0.replace("pscript", "script").replace(" language=python", "") + codejs
                             )
 
                         elif test == TEST_MD:
@@ -780,13 +749,7 @@ class IhtmlToHtml:
                         buf2 = None
                         test = TEST_NONE
                 else:
-                    buf.write(
-                        line.replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                        + "\n"
-                    )
+                    buf.write(line.replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip() + "\n")
                     continue
 
             if cont or not test:
@@ -801,13 +764,7 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_RAW, ".|||")
                     buf = io.StringIO()
-                    buf.write(
-                        line[pos + 3 :]
-                        .replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                    )
+                    buf.write(line[pos + 3 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
                     test = TEST_RAW
 
                 elif MARKER_JS in line:
@@ -819,13 +776,7 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_JS, ".|||")
                     buf = io.StringIO()
-                    buf.write(
-                        line[pos + 4 :]
-                        .replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                    )
+                    buf.write(line[pos + 4 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
                     test = TEST_JS
 
                 elif MARKER_PS in line:
@@ -837,13 +788,7 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_PS, ".|||")
                     buf = io.StringIO()
-                    buf.write(
-                        line[pos + 4 :]
-                        .replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                    )
+                    buf.write(line[pos + 4 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
                     test = TEST_PS
 
                 elif "script language=python" in line:
@@ -851,13 +796,7 @@ class IhtmlToHtml:
                     pos = line.find("script language=python")
                     buf0 = line + "...|||"
                     buf = io.StringIO()
-                    buf.write(
-                        line[pos + 22 :]
-                        .replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                    )
+                    buf.write(line[pos + 22 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
                     test = TEST_PS
 
                 elif "pscript" in line:
@@ -866,10 +805,7 @@ class IhtmlToHtml:
                     buf = io.StringIO()
                     test = TEST_PS
 
-                elif (
-                    line.strip().startswith("script")
-                    and "language=py2javascript" in line
-                ):
+                elif line.strip().startswith("script") and "language=py2javascript" in line:
                     indent_pos = _space_count(line)
                     buf0 = line + "...|||"
                     buf = io.StringIO()
@@ -890,23 +826,12 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_MD, ".|||")
                     buf = io.StringIO()
-                    buf.write(
-                        line[pos + 4 :]
-                        .replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                    )
+                    buf.write(line[pos + 4 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
                     test = TEST_MD
 
                 else:
                     # Regular line
-                    l_clean = (
-                        line.replace("\n", "")
-                        .replace("\r", "")
-                        .replace("\t", "        ")
-                        .rstrip()
-                    )
+                    l_clean = line.replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip()
                     x = _pre_process_line(l_clean)
                     for pos in x:
                         if pos:
@@ -1013,16 +938,15 @@ class IhtmlToHtml:
             if line[1]:
                 output += line[1]
             # Line break for status 2
-            if line[2] == 2 or (line[2] == 4 and nextline and nextline[0] > line[0]) or (
-                line[1]
-                and nextline
-                and nextline[1]
-                and not (
-                    line[1].strip().startswith("<") or line[1].strip().startswith("{")
-                )
-                and not (
-                    nextline[1].strip().startswith("<")
-                    or nextline[1].strip().startswith("{")
+            if (
+                line[2] == 2
+                or (line[2] == 4 and nextline and nextline[0] > line[0])
+                or (
+                    line[1]
+                    and nextline
+                    and nextline[1]
+                    and not (line[1].strip().startswith("<") or line[1].strip().startswith("{"))
+                    and not (nextline[1].strip().startswith("<") or nextline[1].strip().startswith("{"))
                 )
             ):
                 output += "\n"
@@ -1092,12 +1016,7 @@ class IhtmlToHtml:
             sub_parts = item.split("</inline:>")
             lines = sub_parts[0].split("\n")
             s = " ".join(ln.replace("\r", "").strip() for ln in lines)
-            s = (
-                s.replace("> ", ">")
-                .replace("} ", "}")
-                .replace(" <", "<")
-                .replace(" {", "{")
-            )
+            s = s.replace("> ", ">").replace("} ", "}").replace(" <", "<").replace(" {", "{")
             result.append(s)
             result.append(sub_parts[1])
 
@@ -1110,9 +1029,7 @@ class IhtmlToHtml:
 ConwertToHtml = IhtmlToHtml
 
 
-def ihtml_to_html_base(
-    file_name: Optional[str] = None, input_str: Optional[str] = None, lang: str = "en"
-) -> str:
+def ihtml_to_html_base(file_name: Optional[str] = None, input_str: Optional[str] = None, lang: str = "en") -> str:
     """Convert ihtml source to standard HTML.
 
     Args:
@@ -1175,9 +1092,7 @@ def _py_to_js_wrapper(script: str) -> str:
         for pos in x:
             if in_tabstring:
                 converted = ihtml_to_html_base(None, pos)
-                converted = (
-                    converted.replace("\r", "").replace("'", "\\'").replace('"', '\\"')
-                )
+                converted = converted.replace("\r", "").replace("'", "\\'").replace('"', '\\"')
                 tab_string.append(converted)
                 tab_script.append("'$$$compiled_str$$$'")
                 in_tabstring = False
