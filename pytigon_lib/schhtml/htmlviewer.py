@@ -113,9 +113,7 @@ class HtmlViewerParser(HtmlModParser):
         self.css = Css()
         if init_css_str:
             if init_css_str.startswith("@"):
-                with open(
-                    os.path.join(os.path.dirname(__file__), "icss", init_css_str[1:])
-                ) as f:
+                with open(os.path.join(os.path.dirname(__file__), "icss", init_css_str[1:])) as f:
                     init_css_str = f.read()
                     css_type = "icss"
             if css_type == self.CSS_TYPE_STANDARD:
@@ -317,7 +315,7 @@ def stream_from_html(
         def notify_callback(event_name, data):
             if event_name == "end":
                 dc = data["dc"]
-                dc.surf.set_subject(html2)
+                dc.surf.pdf.set_subject(html2)
 
         dc = PdfDc(
             calc_only=False,

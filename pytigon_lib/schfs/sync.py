@@ -4,6 +4,10 @@ import filecmp
 
 
 def rsync_style_sync(src, dst):
+    if os.path.isfile(src):
+        shutil.copy2(src, dst)
+        return
+
     if not os.path.exists(dst):
         os.makedirs(dst)
 
