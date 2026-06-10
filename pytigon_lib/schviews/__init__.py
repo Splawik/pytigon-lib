@@ -60,8 +60,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views import generic
 
 from pytigon_lib.schtools.schjson import json_loads
-from pytigon_lib.schtools.tools import is_in_cancan_rules
 from pytigon_lib.schviews.actions import delete_row_ok, new_row_ok, update_row_ok
+from pytigon_lib.schviews.schrules import filter_queryset_by_rules, is_rules_active, user_can
 from pytigon_lib.schviews.viewtools import render_to_response
 
 from .perms import default_block, filter_by_permissions, make_perms_test_fun
@@ -272,7 +272,7 @@ def view_editor(
     inline-editable widget or as a full-page code/text editor with
     fragment support (using ``$$$`` as fragment separator).
 
-    CANCAN permission checks are performed when the rules engine is
+    django-rules permission checks are performed when the rules engine is
     active.
 
     Args:
@@ -301,12 +301,8 @@ def view_editor(
             pk = request.POST["pk"]
             obj = model.objects.get(id=pk)
 
-            if (
-                obj
-                and hasattr(settings, "CANCAN")
-                and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
-            ):
-                if not request.ability.can(f"editor_{field_edit_name}", obj):
+            if obj and is_rules_active():
+                if not user_can(request.user, f"editor_{field_edit_name}", type(obj), obj):
                     return default_block(request)
 
             setattr(obj, field_edit_name, value)
@@ -317,12 +313,8 @@ def view_editor(
             buf = data.replace("\r\n", "\n")
             obj = model.objects.get(id=pk)
 
-            if (
-                obj
-                and hasattr(settings, "CANCAN")
-                and is_in_cancan_rules(type(obj), request.ability.access_rules.rules)
-            ):
-                if not request.ability.can(f"editor_{field_edit_name}", obj):
+            if obj and is_rules_active():
+                if not user_can(request.user, f"editor_{field_edit_name}", type(obj), obj):
                     return default_block(request)
 
             if "fragment" in request.GET:
@@ -340,8 +332,8 @@ def view_editor(
     else:
         obj = model.objects.get(id=pk)
 
-        if obj and hasattr(settings, "CANCAN") and is_in_cancan_rules(type(obj), request.ability.access_rules.rules):
-            if not request.ability.can(f"editor_{field_edit_name}", obj):
+        if obj and is_rules_active():
+            if not user_can(request.user, f"editor_{field_edit_name}", type(obj), obj):
                 return default_block(request)
 
         table_name = model._meta.object_name
@@ -895,10 +887,8 @@ class GenericRows:
                         if self.queryset:
                             ret = self.queryset
                         else:
-                            if hasattr(settings, "CANCAN") and is_in_cancan_rules(
-                                self.model, self.request.ability.access_rules.rules
-                            ):
-                                ret = self.request.ability.queryset_for("view", self.model)
+                            if is_rules_active():
+                                ret = filter_queryset_by_rules(self.request.user, "view", self.model)
                             else:
                                 ret = self.model.objects.all()
                         if "pk" not in self.request.GET:
@@ -930,18 +920,13 @@ class GenericRows:
                                 if hasattr(self.model, "filter"):
                                     ret = self.model.filter(filter, self, self.request)
                                 else:
-                                    if hasattr(settings, "CANCAN") and is_in_cancan_rules(
-                                        self.model,
-                                        self.request.ability.access_rules.rules,
-                                    ):
-                                        ret = self.request.ability.queryset_for("view", self.model)
+                                    if is_rules_active():
+                                        ret = filter_queryset_by_rules(self.request.user, "view", self.model)
                                     else:
                                         ret = self.model.objects.all()
                             else:
-                                if hasattr(settings, "CANCAN") and is_in_cancan_rules(
-                                    self.model, self.request.ability.access_rules.rules
-                                ):
-                                    ret = self.request.ability.queryset_for("view", self.model)
+                                if is_rules_active():
+                                    ret = filter_queryset_by_rules(self.request.user, "view", self.model)
                                 else:
                                     ret = self.model.objects.all()
                     ret = filter_by_permissions(self, self.model, ret, self.request)
@@ -1070,12 +1055,8 @@ class GenericRows:
             def get(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
                 self.object = self.get_object()
 
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), request.ability.access_rules.rules)
-                ):
-                    if not request.ability.can("detail", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(request.user, "detail", type(self.object), self.object):
                         return default_block(request)
 
                 if self.kwargs["vtype"] == "row_action":
@@ -1181,12 +1162,8 @@ class GenericRows:
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object()
 
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), self.request.ability.access_rules.rules)
-                ):
-                    if not self.request.ability.can("change", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(self.request.user, "change", type(self.object), self.object):
                         return default_block(request)
 
                 if self.object and hasattr(self.object, "redirect_href"):
@@ -1217,12 +1194,8 @@ class GenericRows:
             def post(self, request, *args, **kwargs):
                 self.object = self.get_object()
 
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), self.request.ability.access_rules.rules)
-                ):
-                    if not self.request.ability.can("change", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(self.request.user, "change", type(self.object), self.object):
                         return default_block(request)
 
                 if "init" in kwargs:
@@ -1399,12 +1372,8 @@ class GenericRows:
             def get(self, request, *args, **kwargs):
                 form = self._get_form(request, *args, **kwargs)
 
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), self.request.ability.access_rules.rules)
-                ):
-                    if not self.request.ability.can("add", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(self.request.user, "add", type(self.object), self.object):
                         return default_block(request)
 
                 if form:
@@ -1422,12 +1391,8 @@ class GenericRows:
             def post(self, request, *args, **kwargs):
                 form = self._get_form(request, *args, **kwargs)
 
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), self.request.ability.access_rules.rules)
-                ):
-                    if not self.request.ability.can("add", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(self.request.user, "add", type(self.object), self.object):
                         return default_block(request)
 
                 if self.model and hasattr(self.model, "is_form_valid"):
@@ -1627,24 +1592,16 @@ class GenericRows:
 
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object(self.queryset)
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), self.request.ability.access_rules.rules)
-                ):
-                    if not self.request.ability.can("delete", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(self.request.user, "delete", type(self.object), self.object):
                         return default_block(request)
 
                 return super().get(request, *args, **kwargs)
 
             def post(self, request, *args, **kwargs):
                 self.object = self.get_object(self.queryset)
-                if (
-                    self.object
-                    and hasattr(settings, "CANCAN")
-                    and is_in_cancan_rules(type(self.object), self.request.ability.access_rules.rules)
-                ):
-                    if not self.request.ability.can("delete", self.object):
+                if self.object and is_rules_active():
+                    if not user_can(self.request.user, "delete", type(self.object), self.object):
                         return default_block(request)
 
                 if hasattr(self.object, "on_delete"):

@@ -3,7 +3,7 @@
 Provides functions and wrapper factories that protect views by
 verifying user permissions and model-level access rights before
 allowing view execution. Integrates with the Django authentication
-system and optional CANCAN-style access control.
+system and optional django-rules object-level access control.
 """
 
 import logging

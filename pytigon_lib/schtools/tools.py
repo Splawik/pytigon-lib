@@ -224,19 +224,6 @@ def get_from_dicts(elem, dicts):
     return None
 
 
-def is_in_cancan_rules(model, rules):
-    """Check if a model is referenced as a subject in CanCan rules.
-
-    Args:
-        model: The model class or name to check.
-        rules: A list of rule dictionaries with 'subject' keys.
-
-    Returns:
-        True if any rule references the model.
-    """
-    return any(rule["subject"] == model for rule in rules)
-
-
 def update_nested_dict(d, u):
     """Recursively update dictionary *d* with values from *u*.
 
