@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pytigon-lib",
-    version="0.260511",
+    version="0.260611",
     description="Pytigon library — Python/Django application framework with multi-format rendering and indentation-based HTML preprocessor",
     long_description=long_description,
     long_description_content_type="text/markdown",
