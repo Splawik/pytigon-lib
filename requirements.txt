@@ -1,7 +1,7 @@
 # Core
 Django>=6.0
 django-environ>=0.10
-django-rules>=3.5
+rules>=3.5
 lxml>=4.6
 fs>=2.4
 httpx>=0.20
