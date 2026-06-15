@@ -7,7 +7,7 @@ retrieve function pointers from the JIT-compiled code.
 import llvmlite.binding as llvm
 
 # Initialize LLVM components once at module load
-llvm.initialize()
+# llvm.initialize()
 llvm.initialize_native_target()
 llvm.initialize_native_asmprinter()
 

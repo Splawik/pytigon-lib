@@ -223,9 +223,17 @@ def iter_lines(
                 in_table = 2 if line3[1] == "[" else 1
 
             if in_table == 1:
-                line2 = line2.replace("[", "<tr><td>").replace("]", "</td></tr>").replace(" |", " </td><td>")
+                line2 = (
+                    line2.replace("[", "<tr><td>")
+                    .replace("]", "</td></tr>")
+                    .replace(" |", " </td><td>")
+                )
             elif in_table == 2:
-                line2 = line2.replace("[[", "<tr><th>").replace("]]", "</th></tr>").replace(" |", " </th><th>")
+                line2 = (
+                    line2.replace("[[", "<tr><th>")
+                    .replace("]]", "</th></tr>")
+                    .replace(" |", " </th><th>")
+                )
 
             if line3[-1] == "]":
                 in_table = 0
@@ -558,7 +566,9 @@ class IhtmlToHtml:
         tag_name = _get_elem(line[1])
 
         # Check if next line closes this tag
-        next_closes = next_line[0] <= line[0] and not (next_line[1] is None and next_line[2] is None)
+        next_closes = next_line[0] <= line[0] and not (
+            next_line[1] is None and next_line[2] is None
+        )
 
         if next_closes:
             if line[2] or tag_name not in self.simple_close_tags:
@@ -704,7 +714,9 @@ class IhtmlToHtml:
 
                         elif test == TEST_PS:
                             # pscript block
-                            x = _pre_process_line(buf0.replace("pscript", "script language=python") + buf.getvalue())
+                            x = _pre_process_line(
+                                buf0.replace("pscript", "script language=python") + buf.getvalue()
+                            )
                             test = TEST_NONE
 
                         elif test == TEST_PY2JS:
@@ -723,7 +735,8 @@ class IhtmlToHtml:
                             v = buf.getvalue()
                             codejs = _py_to_js_wrapper(v)
                             x = _pre_process_line(
-                                buf0.replace("pscript", "script").replace(" language=python", "") + codejs
+                                buf0.replace("pscript", "script").replace(" language=python", "")
+                                + codejs
                             )
 
                         elif test == TEST_MD:
@@ -749,7 +762,10 @@ class IhtmlToHtml:
                         buf2 = None
                         test = TEST_NONE
                 else:
-                    buf.write(line.replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip() + "\n")
+                    buf.write(
+                        line.replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip()
+                        + "\n"
+                    )
                     continue
 
             if cont or not test:
@@ -764,7 +780,13 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_RAW, ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 3 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
+                    buf.write(
+                        line[pos + 3 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = TEST_RAW
 
                 elif MARKER_JS in line:
@@ -776,7 +798,13 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_JS, ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 4 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
+                    buf.write(
+                        line[pos + 4 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = TEST_JS
 
                 elif MARKER_PS in line:
@@ -788,7 +816,13 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_PS, ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 4 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
+                    buf.write(
+                        line[pos + 4 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = TEST_PS
 
                 elif "script language=python" in line:
@@ -796,7 +830,13 @@ class IhtmlToHtml:
                     pos = line.find("script language=python")
                     buf0 = line + "...|||"
                     buf = io.StringIO()
-                    buf.write(line[pos + 22 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
+                    buf.write(
+                        line[pos + 22 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = TEST_PS
 
                 elif "pscript" in line:
@@ -826,12 +866,20 @@ class IhtmlToHtml:
                     else:
                         buf0 = prefix.replace(MARKER_MD, ".|||")
                     buf = io.StringIO()
-                    buf.write(line[pos + 4 :].replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip())
+                    buf.write(
+                        line[pos + 4 :]
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "        ")
+                        .rstrip()
+                    )
                     test = TEST_MD
 
                 else:
                     # Regular line
-                    l_clean = line.replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip()
+                    l_clean = (
+                        line.replace("\n", "").replace("\r", "").replace("\t", "        ").rstrip()
+                    )
                     x = _pre_process_line(l_clean)
                     for pos in x:
                         if pos:
@@ -946,7 +994,9 @@ class IhtmlToHtml:
                     and nextline
                     and nextline[1]
                     and not (line[1].strip().startswith("<") or line[1].strip().startswith("{"))
-                    and not (nextline[1].strip().startswith("<") or nextline[1].strip().startswith("{"))
+                    and not (
+                        nextline[1].strip().startswith("<") or nextline[1].strip().startswith("{")
+                    )
                 )
             ):
                 output += "\n"
@@ -1029,7 +1079,9 @@ class IhtmlToHtml:
 ConwertToHtml = IhtmlToHtml
 
 
-def ihtml_to_html_base(file_name: Optional[str] = None, input_str: Optional[str] = None, lang: str = "en") -> str:
+def ihtml_to_html_base(
+    file_name: Optional[str] = None, input_str: Optional[str] = None, lang: str = "en"
+) -> str:
     """Convert ihtml source to standard HTML.
 
     Args:
@@ -1056,7 +1108,7 @@ def ihtml_to_html_base(file_name: Optional[str] = None, input_str: Optional[str]
         return ""
 
 
-def _py_to_js_wrapper(script: str) -> str:
+def _py_to_js_wrapper(script: str, append_exports=False) -> str:
     """Compile Python script to JavaScript with ihtml template support.
 
     Removes common indentation before compilation. Handles triple-quoted
@@ -1119,7 +1171,7 @@ def _py_to_js_wrapper(script: str) -> str:
 
         tab_string = tmp
 
-    error, code = py_to_js_compile(script2)
+    error, code = py_to_js_compile(script2, append_exports)
 
     if error:
         logger.warning("Python-to-JS compilation error: %s", code)

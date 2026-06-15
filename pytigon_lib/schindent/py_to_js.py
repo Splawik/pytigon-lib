@@ -136,7 +136,7 @@ def parse_ClassDef(self, node) -> List[str]:
 pscript.parser2.Parser2.parse_ClassDef = parse_ClassDef
 
 
-def prepare_python_code(code: str) -> str:
+def prepare_python_code(code: str, append_exports=False) -> str:
     """Prepare Python code for JS compilation by adding export statements.
 
     Scans Python code for top-level function and class definitions
@@ -154,8 +154,8 @@ def prepare_python_code(code: str) -> str:
 
     for line in code.split("\n"):
         stripped = line.strip()
-        if (stripped.startswith("def ") and not stripped.startswith("def _")) or (
-            stripped.startswith("class ") and not stripped.startswith("class _")
+        if (line.startswith("def ") and not line.startswith("def _")) or (
+            line.startswith("class ") and not line.startswith("class _")
         ):
             try:
                 # Extract identifier: "def func_name(...)" -> "func_name"
@@ -164,13 +164,13 @@ def prepare_python_code(code: str) -> str:
             except IndexError:
                 continue
 
-    # if exported_ids:
-    #    code += f"\n\nRawJS('export {{{', '.join(exported_ids)}}}')\n"
+    if append_exports and exported_ids:
+        code += f"\n\nRawJS('export {{{', '.join(exported_ids)}}}')\n"
 
     return code
 
 
-def compile(python_code: str) -> Tuple[bool, str]:
+def compile(python_code: str, append_exports=False) -> Tuple[bool, str]:
     """Compile Python code to JavaScript using PScript.
 
     Args:
@@ -182,7 +182,7 @@ def compile(python_code: str) -> Tuple[bool, str]:
         - result is the JavaScript code on success, or error message on failure
     """
     try:
-        prepared = prepare_python_code(python_code)
+        prepared = prepare_python_code(python_code, append_exports)
         js = pscript.py2js(prepared, inline_stdlib=False)
         return (False, js)
     except Exception:

@@ -1,6 +1,8 @@
 import io
 import os
 
+from pathlib import Path
+
 from pytigon_lib.schfs.vfstools import get_temp_filename
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 from pytigon_lib.schtools.main_paths import get_main_paths
@@ -58,7 +60,7 @@ class PDFSurface:
         ]
         for family, style, filename in fonts:
             try:
-                self.pdf.add_font(family, style, filename, uni=True)
+                self.pdf.add_font(family, style, Path(filename), uni=True)
             except (FileNotFoundError, OSError, RuntimeError):
                 # Skip fonts that cannot be loaded; fall back to default
                 pass
@@ -186,10 +188,7 @@ class PdfDc(BaseDc):
         self._draw = True
         self._fill = False
 
-        if (
-            self._last_pen_color != self._color
-            or self._last_line_width != self._line_width
-        ):
+        if self._last_pen_color != self._color or self._last_line_width != self._line_width:
             self.dc.set_draw_color(*self._color[:3])
             self.dc.set_text_color(*self._color[:3])
             self.dc.set_line_width(self._line_width)
@@ -350,9 +349,7 @@ class PdfDc(BaseDc):
         old_point = None
         for point in points:
             if old_point:
-                self.dc.line(
-                    int(old_point[0]), int(old_point[1]), int(point[0]), int(point[1])
-                )
+                self.dc.line(int(old_point[0]), int(old_point[1]), int(point[0]), int(point[1]))
             old_point = point
 
     def _rect(self, x, y, dx, dy):
