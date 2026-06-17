@@ -61,7 +61,11 @@ from django.views import generic
 
 from pytigon_lib.schtools.schjson import json_loads
 from pytigon_lib.schviews.actions import delete_row_ok, new_row_ok, update_row_ok
-from pytigon_lib.schviews.schrules import filter_queryset_by_rules, is_rules_active, user_can
+from pytigon_lib.schviews.schrules import (
+    filter_queryset_by_rules,
+    is_rules_active,
+    user_can,
+)
 from pytigon_lib.schviews.viewtools import render_to_response
 
 from .perms import default_block, filter_by_permissions, make_perms_test_fun
@@ -137,7 +141,9 @@ def convert_str_to_model_field(s: str, field: Any) -> Any:
         return datetime.date.fromisoformat(s)
     if _isinstance(field, (django.db.models.FloatField,)):
         return float(s)
-    if _isinstance(field, (django.db.models.IntegerField, django.db.models.BigAutoField)):
+    if _isinstance(
+        field, (django.db.models.IntegerField, django.db.models.BigAutoField)
+    ):
         return int(s)
     if _isinstance(field, (django.db.models.BooleanField,)):
         return s and s != "0" and s != "False"
@@ -149,7 +155,9 @@ def convert_str_to_model_field(s: str, field: Any) -> Any:
 # ==========================================================================
 
 
-def gen_tab_action(table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None) -> path:
+def gen_tab_action(
+    table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None
+) -> path:
     """Generate a URL pattern for a table action.
 
     Args:
@@ -195,7 +203,9 @@ def gen_tab_field_action(
     )
 
 
-def gen_row_action(table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None) -> path:
+def gen_row_action(
+    table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None
+) -> path:
     """Generate a URL pattern for a row action.
 
     Args:
@@ -302,7 +312,9 @@ def view_editor(
             obj = model.objects.get(id=pk)
 
             if obj and is_rules_active():
-                if not user_can(request.user, f"editor_{field_edit_name}", type(obj), obj):
+                if not user_can(
+                    request.user, f"editor_{field_edit_name}", type(obj), obj
+                ):
                     return default_block(request)
 
             setattr(obj, field_edit_name, value)
@@ -314,7 +326,9 @@ def view_editor(
             obj = model.objects.get(id=pk)
 
             if obj and is_rules_active():
-                if not user_can(request.user, f"editor_{field_edit_name}", type(obj), obj):
+                if not user_can(
+                    request.user, f"editor_{field_edit_name}", type(obj), obj
+                ):
                     return default_block(request)
 
             if "fragment" in request.GET:
@@ -356,10 +370,14 @@ def view_editor(
         if field_name:
             save_path = f"{app}/table/{tab}/{parent_pk}/{table_name}/{pk}/{field_edit_name}/py/editor/{get_param}"
         else:
-            save_path = f"{app}/table/{table_name}/{pk}/{field_edit_name}/py/editor/{get_param}"
+            save_path = (
+                f"{app}/table/{table_name}/{pk}/{field_edit_name}/py/editor/{get_param}"
+            )
 
         if not txt and hasattr(obj, f"get_{field_edit_name}_if_empty"):
-            txt = getattr(obj, f"get_{field_edit_name}_if_empty")(request, template_name, ext, extra_context, target)
+            txt = getattr(obj, f"get_{field_edit_name}_if_empty")(
+                request, template_name, ext, extra_context, target
+            )
 
         c = {
             "app": app,
@@ -373,7 +391,11 @@ def view_editor(
             "verbose_field_name": f.verbose_name if f else "",
         }
 
-        t = obj.template_for_object(view_editor, c, ext) if hasattr(obj, "template_for_object") else None
+        t = (
+            obj.template_for_object(view_editor, c, ext)
+            if hasattr(obj, "template_for_object")
+            else None
+        )
         t = t or "schsys/db_field_edt.html"
 
         return render_to_response(t, context=c, request=request)
@@ -424,7 +446,9 @@ class GenericTable:
             else:
                 table_name = tab.lower()
             if ":" in table_name:
-                rows.template_name = f"{self.app.lower()}/{table_name.split(':')[-1]}.html"
+                rows.template_name = (
+                    f"{self.app.lower()}/{table_name.split(':')[-1]}.html"
+                )
             else:
                 rows.template_name = f"{self.app.lower()}/{table_name}.html"
         if "." in tab:
@@ -598,16 +622,23 @@ class GenericRows:
         x2 = x[1].split("/")
 
         bf = 0
-        if "base_filter" in view_class.kwargs and view_class.kwargs["base_filter"] is not None:
+        if (
+            "base_filter" in view_class.kwargs
+            and view_class.kwargs["base_filter"] is not None
+        ):
             bf = 1
 
         if "parent_pk" in view_class.kwargs:
             context["table_path"] = f"{x[0]}/table/{'/'.join(x2[:3])}/"
-            context["table_path_and_base_filter"] = f"{x[0]}/table/{'/'.join(x2[: 3 + bf])}/"
+            context["table_path_and_base_filter"] = (
+                f"{x[0]}/table/{'/'.join(x2[: 3 + bf])}/"
+            )
             context["table_path_and_filter"] = f"{x[0]}/table/{'/'.join(x2[:-3])}/"
         else:
             context["table_path"] = f"{x[0]}/table/{x2[0]}/"
-            context["table_path_and_base_filter"] = f"{context['table_path']}{x2[1]}/" if bf else context["table_path"]
+            context["table_path_and_base_filter"] = (
+                f"{context['table_path']}{x2[1]}/" if bf else context["table_path"]
+            )
             context["table_path_and_filter"] = f"{x[0]}/table/{'/'.join(x2[:-3])}/"
 
     def set_field(self, field: Optional[str] = None) -> "GenericRows":
@@ -615,10 +646,14 @@ class GenericRows:
         self.field = field
         return self
 
-    def _append(self, url_str: str, fun: Callable, parm: Optional[Dict] = None) -> "GenericRows":
+    def _append(
+        self, url_str: str, fun: Callable, parm: Optional[Dict] = None
+    ) -> "GenericRows":
         """Append a URL pattern to the urlpatterns."""
         if parm:
-            self.table.urlpatterns.append(re_path(self._get_base_path() + url_str, fun, parm))
+            self.table.urlpatterns.append(
+                re_path(self._get_base_path() + url_str, fun, parm)
+            )
         else:
             self.table.urlpatterns.append(re_path(self._get_base_path() + url_str, fun))
         return self
@@ -679,14 +714,20 @@ class GenericRows:
             def _context_for_tree(self) -> Dict:
                 try:
                     parent_pk = int(self.kwargs["filter"])
-                    parent = self.model.objects.get(pk=parent_pk) if parent_pk > 0 else None
+                    parent = (
+                        self.model.objects.get(pk=parent_pk) if parent_pk > 0 else None
+                    )
                 except (ValueError, self.model.DoesNotExist):
                     parent_pk = None
                     parent = None
                 try:
                     base_parent_pk = int(self.kwargs["base_filter"])
-                    base_parent = self.model.objects.get(pk=base_parent_pk) if base_parent_pk > 0 else None
-                except (ValueError, self.model.DoesNotExist):
+                    base_parent = (
+                        self.model.objects.get(pk=base_parent_pk)
+                        if base_parent_pk > 0
+                        else None
+                    )
+                except (ValueError, KeyError, self.model.DoesNotExist):
                     base_parent_pk = None
                     base_parent = None
                 if not parent_pk and base_parent_pk:
@@ -718,7 +759,9 @@ class GenericRows:
                             f"{app}/{self.template_name.split('/')[-1].replace('.html', t + '.html')}",
                         )
                     else:
-                        names.insert(0, self.template_name.replace(".html", target2 + ".html"))
+                        names.insert(
+                            0, self.template_name.replace(".html", target2 + ".html")
+                        )
                 if "version" in self.request.GET:
                     v = self.request.GET["version"]
                     if "__" in v:
@@ -753,7 +796,9 @@ class GenericRows:
                                 parent_id = int(self.kwargs["base_filter"])
                                 parent = self.model.objects.get(id=parent_id)
                             elif self.kwargs.get("parent_pk"):
-                                parent = self.model.objects.get(id=int(self.kwargs["parent_pk"]))
+                                parent = self.model.objects.get(
+                                    id=int(self.kwargs["parent_pk"])
+                                )
                     except self.model.DoesNotExist:
                         parent = None
 
@@ -769,7 +814,9 @@ class GenericRows:
                                 if isinstance(request.body, str):
                                     data = json_loads(request.body.strip())
                                 else:
-                                    data = json_loads(request.body.decode("utf-8").strip())
+                                    data = json_loads(
+                                        request.body.decode("utf-8").strip()
+                                    )
                             except ValueError:
                                 raise Http404("Invalid data format")
 
@@ -788,12 +835,16 @@ class GenericRows:
                     if c["parent_pk"] is not None and c["parent_pk"] < 0:
                         parent_old = c["parent_pk"]
                         try:
-                            parent = self.model.objects.get(id=-1 * parent_old).parent.id
+                            parent = self.model.objects.get(
+                                id=-1 * parent_old
+                            ).parent.id
                         except (self.model.DoesNotExist, AttributeError):
                             parent = 0
 
                         path2 = ("/" + str(parent) + "/").join(
-                            request.get_full_path().rsplit("/" + str(parent_old) + "/", 1)
+                            request.get_full_path().rsplit(
+                                "/" + str(parent_old) + "/", 1
+                            )
                         )
                         return HttpResponseRedirect(path2)
 
@@ -810,7 +861,9 @@ class GenericRows:
                 form_name = None
                 if "target" in self.kwargs and "__" in self.kwargs["target"]:
                     template_name = self.kwargs["target"].split("__")[-1]
-                    form_name = f"_FilterForm{self.model._meta.object_name}_{template_name}"
+                    form_name = (
+                        f"_FilterForm{self.model._meta.object_name}_{template_name}"
+                    )
                     if not hasattr(views_module, form_name):
                         form_name = None
                 if not form_name:
@@ -881,14 +934,18 @@ class GenericRows:
                 if "tree" in self.kwargs["vtype"]:
                     filter = self.kwargs["filter"]
                     c = self._context_for_tree()
-                    if hasattr(self.model, "filter") and not (isinstance(filter, str) and filter.isdigit()):
+                    if hasattr(self.model, "filter") and not (
+                        isinstance(filter, str) and filter.isdigit()
+                    ):
                         ret = self.model.filter(filter, self, self.request)
                     else:
                         if self.queryset:
                             ret = self.queryset
                         else:
                             if is_rules_active():
-                                ret = filter_queryset_by_rules(self.request.user, "view", self.model)
+                                ret = filter_queryset_by_rules(
+                                    self.request.user, "view", self.model
+                                )
                             else:
                                 ret = self.model.objects.all()
                         if "pk" not in self.request.GET:
@@ -901,7 +958,11 @@ class GenericRows:
                                 ret = ret.filter(parent=None)
 
                     if "pk" not in self.request.GET:
-                        if (not filter or filter == "-") and c["base_parent_pk"] and c["base_parent_pk"] > 0:
+                        if (
+                            (not filter or filter == "-")
+                            and c["base_parent_pk"]
+                            and c["base_parent_pk"] > 0
+                        ):
                             ret = ret.filter(parent=c["base_parent_pk"])
                     ret = filter_by_permissions(self, self.model, ret, self.request)
                 else:
@@ -921,12 +982,16 @@ class GenericRows:
                                     ret = self.model.filter(filter, self, self.request)
                                 else:
                                     if is_rules_active():
-                                        ret = filter_queryset_by_rules(self.request.user, "view", self.model)
+                                        ret = filter_queryset_by_rules(
+                                            self.request.user, "view", self.model
+                                        )
                                     else:
                                         ret = self.model.objects.all()
                             else:
                                 if is_rules_active():
-                                    ret = filter_queryset_by_rules(self.request.user, "view", self.model)
+                                    ret = filter_queryset_by_rules(
+                                        self.request.user, "view", self.model
+                                    )
                                 else:
                                     ret = self.model.objects.all()
                     ret = filter_by_permissions(self, self.model, ret, self.request)
@@ -937,8 +1002,14 @@ class GenericRows:
                         except ValueError:
                             pass
                 if self.search:
-                    fields = [f for f in self.model._meta.fields if isinstance(f, django.db.models.CharField)]
-                    queries = [Q(**{f.name + "__icontains": self.search}) for f in fields]
+                    fields = [
+                        f
+                        for f in self.model._meta.fields
+                        if isinstance(f, django.db.models.CharField)
+                    ]
+                    queries = [
+                        Q(**{f.name + "__icontains": self.search}) for f in fields
+                    ]
                     qs = Q()
                     for query in queries:
                         qs = qs | query
@@ -1027,7 +1098,9 @@ class GenericRows:
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
                     names.insert(
                         0,
-                        self.template_name.replace(".html", self.kwargs["target"][3:] + ".html"),
+                        self.template_name.replace(
+                            ".html", self.kwargs["target"][3:] + ".html"
+                        ),
                     )
                 if "version" in self.request.GET:
                     v = self.request.GET["version"]
@@ -1056,12 +1129,16 @@ class GenericRows:
                 self.object = self.get_object()
 
                 if self.object and is_rules_active():
-                    if not user_can(request.user, "detail", type(self.object), self.object):
+                    if not user_can(
+                        request.user, "detail", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 if self.kwargs["vtype"] == "row_action":
                     if hasattr(self.object, "row_action"):
-                        ret = getattr(self.model, "row_action")(self.model, request, args, kwargs)
+                        ret = getattr(self.model, "row_action")(
+                            self.model, request, args, kwargs
+                        )
                         if ret is None:
                             raise Http404("Action doesn't exists")
                         return JsonResponse(ret)
@@ -1134,7 +1211,9 @@ class GenericRows:
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
                     names.insert(
                         0,
-                        self.template_name.replace(".html", self.kwargs["target"][3:] + ".html"),
+                        self.template_name.replace(
+                            ".html", self.kwargs["target"][3:] + ".html"
+                        ),
                     )
                 if "version" in self.request.GET:
                     v = self.request.GET["version"]
@@ -1163,7 +1242,9 @@ class GenericRows:
                 self.object = self.get_object()
 
                 if self.object and is_rules_active():
-                    if not user_can(self.request.user, "change", type(self.object), self.object):
+                    if not user_can(
+                        self.request.user, "change", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 if self.object and hasattr(self.object, "redirect_href"):
@@ -1195,7 +1276,9 @@ class GenericRows:
                 self.object = self.get_object()
 
                 if self.object and is_rules_active():
-                    if not user_can(self.request.user, "change", type(self.object), self.object):
+                    if not user_can(
+                        self.request.user, "change", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 if "init" in kwargs:
@@ -1312,7 +1395,9 @@ class GenericRows:
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
                     names.insert(
                         0,
-                        self.template_name.replace(".html", self.kwargs["target"][3:] + ".html"),
+                        self.template_name.replace(
+                            ".html", self.kwargs["target"][3:] + ".html"
+                        ),
                     )
                 if "version" in self.request.GET:
                     v = self.request.GET["version"]
@@ -1344,7 +1429,9 @@ class GenericRows:
 
                 if hasattr(self.model, "init_new"):
                     if kwargs["add_param"] and kwargs["add_param"] != "-":
-                        self.init_form = self.object.init_new(request, self, kwargs["add_param"])
+                        self.init_form = self.object.init_new(
+                            request, self, kwargs["add_param"]
+                        )
                     else:
                         self.init_form = self.object.init_new(request, self)
                     if self.init_form:
@@ -1373,7 +1460,9 @@ class GenericRows:
                 form = self._get_form(request, *args, **kwargs)
 
                 if self.object and is_rules_active():
-                    if not user_can(self.request.user, "add", type(self.object), self.object):
+                    if not user_can(
+                        self.request.user, "add", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 if form:
@@ -1392,7 +1481,9 @@ class GenericRows:
                 form = self._get_form(request, *args, **kwargs)
 
                 if self.object and is_rules_active():
-                    if not user_can(self.request.user, "add", type(self.object), self.object):
+                    if not user_can(
+                        self.request.user, "add", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 if self.model and hasattr(self.model, "is_form_valid"):
@@ -1413,7 +1504,9 @@ class GenericRows:
 
                 for field in self.model._meta.fields:
                     if field.name in self.request.GET:
-                        value = convert_str_to_model_field(self.request.GET[field.name], field)
+                        value = convert_str_to_model_field(
+                            self.request.GET[field.name], field
+                        )
                         d[field.name] = value
 
                 if self.field:
@@ -1577,7 +1670,9 @@ class GenericRows:
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
                     names.insert(
                         0,
-                        self.template_name.replace(".html", self.kwargs["target"][3:] + ".html"),
+                        self.template_name.replace(
+                            ".html", self.kwargs["target"][3:] + ".html"
+                        ),
                     )
                 if "version" in self.request.GET:
                     v = self.request.GET["version"]
@@ -1593,7 +1688,9 @@ class GenericRows:
             def get(self, request, *args, **kwargs):
                 self.object = self.get_object(self.queryset)
                 if self.object and is_rules_active():
-                    if not user_can(self.request.user, "delete", type(self.object), self.object):
+                    if not user_can(
+                        self.request.user, "delete", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 return super().get(request, *args, **kwargs)
@@ -1601,7 +1698,9 @@ class GenericRows:
             def post(self, request, *args, **kwargs):
                 self.object = self.get_object(self.queryset)
                 if self.object and is_rules_active():
-                    if not user_can(self.request.user, "delete", type(self.object), self.object):
+                    if not user_can(
+                        self.request.user, "delete", type(self.object), self.object
+                    ):
                         return default_block(request)
 
                 if hasattr(self.object, "on_delete"):
@@ -1638,7 +1737,9 @@ class GenericRows:
         :rtype: str
         """
         url = r"(?P<pk>\d+)/(?P<field_edit_name>[\w_]*)/(?P<target>[\w_]*)/editor/$"
-        fun = make_perms_test_fun(self.table.app, self.base_model, self.base_perm % "change", view_editor)
+        fun = make_perms_test_fun(
+            self.table.app, self.base_model, self.base_perm % "change", view_editor
+        )
         if self.field:
             try:
                 f = getattr(self.base_model, self.field).related

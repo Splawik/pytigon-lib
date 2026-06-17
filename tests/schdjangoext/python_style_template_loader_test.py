@@ -23,7 +23,7 @@ def test_compile_template(mock_settings):
         with patch("os.path.exists", return_value=True):
             with patch("os.makedirs"):
                 with patch("os.path.getmtime", side_effect=[100, 200]):
-                    with patch("codecs.open", mock_open()) as mock_file:
+                    with patch("builtins.open", mock_open()) as mock_file:
                         compile_template("test.ihtml", force=True)
                         mock_file.assert_called()
 

@@ -11,7 +11,7 @@ Converts indented ihtml source files into standard HTML with support for:
 The ihtml format uses indentation to indicate nesting (like Python/HAML).
 """
 
-import codecs
+
 import gettext
 import io
 import logging
@@ -621,7 +621,7 @@ class IhtmlToHtml:
             StringIO containing the input content.
         """
         if self.file_name:
-            with codecs.open(self.file_name, "r", encoding="utf-8") as f:
+            with open(self.file_name, "r", encoding="utf-8") as f:
                 first_line = f.readline()
                 f.seek(0, 0)
 
@@ -630,7 +630,7 @@ class IhtmlToHtml:
                     ref_name = first_line[3:].strip()
                     ref_path = os.path.join(os.path.dirname(self.file_name), ref_name) + ".ihtml"
 
-                    with codecs.open(ref_path, "r", encoding="utf-8") as f2:
+                    with open(ref_path, "r", encoding="utf-8") as f2:
                         content2 = f.read()[len(first_line) :]
                         content = f2.read().replace("@@@", content2)
 
@@ -934,7 +934,7 @@ class IhtmlToHtml:
     def _no_convert_output(self) -> str:
         """Return raw input when no_convert is set."""
         if self.file_name:
-            with codecs.open(self.file_name, "r", encoding="utf-8") as f:
+            with open(self.file_name, "r", encoding="utf-8") as f:
                 output = f.read().replace("^^^", "")
         else:
             output = self.input_str.replace("^^^", "")

@@ -1,4 +1,4 @@
-import codecs
+
 import os
 
 import django.template.loaders.filesystem
@@ -65,7 +65,7 @@ def compile_template(
                                 if lang_code == "en"
                                 else filepath2.replace(".html", f"_{lang_code}.html")
                             )
-                            with codecs.open(output_path, "w", encoding="utf-8") as f:
+                            with open(output_path, "w", encoding="utf-8") as f:
                                 f.write(ret)
                             if compiled is not None:
                                 compiled.append(output_path)
@@ -186,7 +186,7 @@ class Loader(BaseLoader):
                                         ".html", f"_{lang_code}.html"
                                     )
                                 )
-                                with codecs.open(
+                                with open(
                                     output_path, "w", encoding="utf-8"
                                 ) as f:
                                     f.write(ret)
@@ -268,7 +268,7 @@ class DBLoader(BaseLoader):
                                             ".html", f"_{lang_code}.html"
                                         )
                                     )
-                                    with codecs.open(
+                                    with open(
                                         output_path, "w", encoding="utf-8"
                                     ) as f:
                                         f.write(ret)
