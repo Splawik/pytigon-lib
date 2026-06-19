@@ -21,6 +21,8 @@ __version__ = "0.260617"
 
 import os
 import sys
+import importlib.util
+from pathlib import Path
 
 from pytigon_lib.schtools.env import get_environ
 from pytigon_lib.schtools.main_paths import get_main_paths
@@ -40,23 +42,32 @@ def init_paths(prj_name=None, env_path=None):
         cfg = get_main_paths(prj_name)
 
         # Remove duplicate and relative paths from sys.path
-        sys.path = list(dict.fromkeys(pos for pos in sys.path if not pos.startswith(".")))
+        sys.path = list(
+            dict.fromkeys(pos for pos in sys.path if not pos.startswith("."))
+        )
 
         from pytigon_lib.schtools.platform_info import platform_name
 
         base_path = os.path.dirname(os.path.abspath(__file__))
         pname = platform_name()
 
+        pytigon_base_path = importlib.util.find_spec("pytigon")
+        p2 = None
         # Platform-specific path adjustments
         if pname == "Android":
             p = os.path.abspath(os.path.join(base_path, "..", "_android"))
-            p2 = os.path.abspath(os.path.join(base_path, "..", "ext_lib"))
+            if pytigon_base_path:
+                p2 = os.path.abspath(
+                    os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib")
+                )
             for path in [p, p2]:
-                if path not in sys.path:
+                if path and path not in sys.path:
                     sys.path.insert(0, path) if path == p else sys.path.append(path)
         else:
             if pname == "Windows":
-                p = os.path.abspath(os.path.join(base_path, "..", "python", "lib", "site-packages"))
+                p = os.path.abspath(
+                    os.path.join(base_path, "..", "python", "lib", "site-packages")
+                )
             else:
                 p = os.path.abspath(
                     os.path.join(
@@ -67,9 +78,12 @@ def init_paths(prj_name=None, env_path=None):
                         f"python{sys.version_info[0]}.{sys.version_info[1]}/site-packages",
                     )
                 )
-            p2 = os.path.abspath(os.path.join(base_path, "..", "ext_lib"))
+            if pytigon_base_path:
+                p2 = os.path.abspath(
+                    os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib")
+                )
             for path in [p, p2]:
-                if path not in sys.path:
+                if path and path not in sys.path:
                     sys.path.insert(0, path) if path == p else sys.path.append(path)
 
         # Add project-specific paths

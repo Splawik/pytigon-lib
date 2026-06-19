@@ -20,6 +20,7 @@ def install():
     """
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
     from django.conf import settings
+    from django.core.management import get_commands
 
     prj_name = get_prj_name()
     data_path = settings.DATA_PATH
@@ -89,6 +90,15 @@ def install():
             User.objects.db_manager("default").create_superuser(
                 "auto", "auto@pytigon.cloud", "anawa"
             )
+    if "after_install" in get_commands():
+        try:
+            cmd(
+                [
+                    "after_install",
+                ]
+            )
+        except Exception:
+            print("After install script fails")
 
 
 def export_to_db(withoutapp=None, to_local_db=True):
