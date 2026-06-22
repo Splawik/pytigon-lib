@@ -60,7 +60,7 @@ class PDFSurface:
         ]
         for family, style, filename in fonts:
             try:
-                self.pdf.add_font(family, style, Path(filename), uni=True)
+                self.pdf.add_font(family, style, Path(filename))
             except (FileNotFoundError, OSError, RuntimeError):
                 # Skip fonts that cannot be loaded; fall back to default
                 pass
