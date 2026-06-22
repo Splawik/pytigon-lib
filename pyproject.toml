@@ -38,6 +38,7 @@ dependencies = [
     "fpdf2>=2.5",
     "Pillow>=9.0",
     "python-docx>=0.8",
+    "htmldocx>=0.1",
     "xlsxwriter>=3.0",
     "openpyxl>=3.0",
     "markdown>=3.3",
@@ -67,7 +68,7 @@ include = ["pytigon_lib*"]
 exclude = ["tests*"]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]

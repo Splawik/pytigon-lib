@@ -394,11 +394,7 @@ class BaseDc:
         for page in self.pages:
             buf = io.BytesIO()
             for rec in page:
-                # try:
-                if True:
-                    buf.write(json_dumps(rec).encode("utf-8"))
-                # except:
-                #    print("basedc:", rec.__class__, rec)
+                buf.write(json_dumps(rec).encode("utf-8"))
                 buf.write(b"\n")
             zf.writestr("page_%d" % i, buf.getvalue())
             i += 1
@@ -793,46 +789,24 @@ class BaseDc:
         pass
 
 
-class BaseDcInfo:
-    def __init__(self, dc):
-        """
-        Initializes the BaseDcInfo instance.
+class _BaseDcInfoCommon:
+    """Shared text-measurement stubs for device-context info classes."""
 
-        :param dc: The device context associated with this BaseDcInfo instance.
-        :type dc: BaseDc
-        """
+    def __init__(self, dc):
         self.dc = dc
         self.styles = []
 
     def get_text_width(self, txt, style):
-        """
-        Calculates the width of the text in the given style.
-
-        :param txt: The text to measure.
-        :param style: The style to use for the measurement.
-        :return: The width of the text in the given style.
-        """
-
         return 12 * len(txt)
 
     def get_text_height(self, txt, style):
-        """
-        Calculates the height of the text in the given style.
-
-        :param txt: The text to measure.
-        :param style: The style to use for the measurement.
-        :return: The height of the text in the given style.
-        """
         return 12
 
     def get_line_dy(self, height):
-        """
-        Calculates the line spacing for the given line height.
-
-        :param height: The line height.
-        :return: The line spacing.
-        """
         return height * 12
+
+
+class BaseDcInfo(_BaseDcInfoCommon):
 
     def get_multiline_text_width(self, txt, style="default"):
         """
@@ -1563,45 +1537,7 @@ class NullDc:
         return None
 
 
-class NullDcinfo:
-    def __init__(self, dc):
-        """
-        Initializes the NullDcinfo instance.
-
-        :param dc: The device context associated with this NullDcinfo instance.
-        :type dc: NullDc
-        """
-        self.dc = dc
-        self.styles = []
-
-    def get_text_width(self, txt, style):
-        """
-        Calculates the width of the text in the given style.
-
-        :param txt: The text to measure.
-        :param style: The style to use for the measurement.
-        :return: The width of the text in the given style.
-        """
-        return 12 * len(txt)
-
-    def get_text_height(self, txt, style):
-        """
-        Calculates the height of the given text in the specified style.
-
-        :param txt: The text to measure.
-        :param style: The style to use for the measurement.
-        :return: The height of the text in the given style.
-        """
-        return 12
-
-    def get_line_dy(self, height):
-        """
-        Calculates the line spacing for the given line height.
-
-        :param height: The line height.
-        :return: The line spacing.
-        """
-        return height * 12
+class NullDcinfo(_BaseDcInfoCommon):
 
     def get_multiline_text_width(self, txt, style="default"):
         """

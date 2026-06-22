@@ -9,6 +9,7 @@ import zipfile
 
 from pytigon_lib.schfs import extractall
 from pytigon_lib.schtools.process import py_manage, py_run
+from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
 
 logger = logging.getLogger(__name__)
 
@@ -116,9 +117,8 @@ def build_all(path):
             if name.endswith("_build.py"):
                 p = os.path.join(root, name)
                 with open(p) as f:
-                    local_ns = {}
                     buf = f.read()
-                    exec(buf, globals(), local_ns)
+                    local_ns = _safe_exec(buf)
                     if "build" in local_ns:
                         x = local_ns["build"](path=p.replace("_build.py", ".nim"))
                         if not x:

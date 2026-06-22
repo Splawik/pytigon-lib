@@ -1,5 +1,5 @@
 """Extended JSON encoding/decoding with support for datetime, Decimal, and numpy types.
-
+ 
 Provides URL-safe encoding (via ``dumps``/``loads``) and plain JSON
 helpers (``json_dumps``/``json_loads``).
 """
@@ -8,6 +8,8 @@ import datetime
 import json
 from decimal import Decimal
 from urllib.parse import quote_plus, unquote_plus
+
+from pytigon_lib.schtools.safe_exec import safe_eval as _safe_eval
 
 # Types that JSONEncoder handles natively – we only intervene for others.
 _STANDARD_TYPES = frozenset(
@@ -26,17 +28,6 @@ _STANDARD_TYPES = frozenset(
 # Restricted builtins and allowed types for safe ``eval()`` in ``as_complex``.
 # Only types that the encoder may produce via ``repr()`` are permitted.
 _SAFE_EVAL_GLOBALS = {
-    "__builtins__": {
-        "True": True,
-        "False": False,
-        "None": None,
-        "int": int,
-        "float": float,
-        "str": str,
-        "list": list,
-        "dict": dict,
-        "tuple": tuple,
-    },
     "datetime": datetime,
     "Decimal": Decimal,
 }
@@ -88,7 +79,7 @@ def as_complex(dct):
     """
     if "object" in dct:
         try:
-            return eval(dct["object"], _SAFE_EVAL_GLOBALS)
+            return _safe_eval(dct["object"], extra_globals=_SAFE_EVAL_GLOBALS)
         except Exception:
             return None
     return dct

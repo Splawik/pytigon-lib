@@ -201,7 +201,6 @@ class ParCalc(AtomTag):
     that only allows basic math operations and a few predefined variables.
     """
 
-    # Allowed builtins for safe evaluation
     _SAFE_BUILTINS = {
         "abs": abs,
         "int": int,

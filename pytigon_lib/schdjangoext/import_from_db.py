@@ -9,6 +9,8 @@ from importlib.machinery import ModuleSpec
 
 from django.conf import settings
 
+from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
+
 CACHE = {}
 
 
@@ -223,16 +225,14 @@ def get_fun_from_db_field(
         return fun
 
     elif execute_mode == "exec_and_cache":
-        local_vars = {}
-        exec(field, globals(), local_vars)
+        local_vars = _safe_exec(field)
         fun = local_vars.get(function_name)
         if fun is not None:
             add_to_cache(src_name, fun)
         return fun
 
     else:
-        local_vars = {}
-        exec(field, globals(), local_vars)
+        local_vars = _safe_exec(field)
         return local_vars.get(function_name)
 
 

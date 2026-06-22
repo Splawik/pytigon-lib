@@ -238,7 +238,7 @@ class SChScheduler:
                         if pos[0] in self.fmap:
                             x = pos.split("(")
                             pos = f"{self.fmap[pos[0]].__name__}({x[1] if len(x) > 1 else ''})"
-                    y = eval(pos, globals())
+                    y = eval(pos, {"__builtins__": {}}, {fn.__name__: fn for fn in self.fmap.values()})
                     if isinstance(y, (list, tuple)):
                         functions.extend(y)
                     else:

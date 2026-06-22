@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import email.generator
 import hashlib
 import os
@@ -13,10 +15,13 @@ from typing import Any, Optional, Union
 from django.conf import settings
 from django.core.files.storage import default_storage
 
+logger = logging.getLogger(__name__)
+
 try:
     from fs.osfs import OSFS
-except:
-    print("error while importing the fs module!")
+except ImportError:
+    OSFS = None
+    logger.warning("PyFilesystem (fs) not installed — OSFS is unavailable")
 
 
 def norm_path(url: Optional[str]) -> str:

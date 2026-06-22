@@ -1,5 +1,5 @@
 """Fast form generation from string definitions.
-
+ 
 Provides the ability to create Django forms from a compact
 declarative string syntax, enabling rapid form prototyping
 without writing full Python form classes.
@@ -13,6 +13,8 @@ Syntax example::
 """
 
 from django import forms
+
+from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
 
 FAST_FORM_EXAMPLE = """#Example
 
@@ -180,42 +182,14 @@ def _read_form_line(line):
     return name, field_type, title, required, kwargs
 
 
-def _safe_exec(source, global_ns, local_ns):
-    """Execute code with restricted builtins for basic safety.
+def _safe_exec_form(source, global_ns, local_ns):
+    """Execute user-provided form-definition code with restricted builtins.
 
-    Args:
-        source: Python source code string.
-        global_ns: Global namespace dict.
-        local_ns: Local namespace dict.
-
-    Raises:
-        RuntimeError: If the code execution fails.
+    Uses the project-wide :func:`~pytigon_lib.schtools.safe_exec.safe_exec`
+    with extra globals merged in for backward compatibility.
     """
-    safe_builtins = {
-        "True": True,
-        "False": False,
-        "None": None,
-        "print": print,
-        "len": len,
-        "range": range,
-        "int": int,
-        "float": float,
-        "str": str,
-        "bool": bool,
-        "list": list,
-        "dict": dict,
-        "tuple": tuple,
-        "set": set,
-        "isinstance": isinstance,
-        "issubclass": issubclass,
-        "hasattr": hasattr,
-        "getattr": getattr,
-        "setattr": setattr,
-        "super": super,
-    }
-    restricted_globals = {"__builtins__": safe_builtins}
-    restricted_globals.update(global_ns)
-    exec(source, restricted_globals, local_ns)
+    result = _safe_exec(source, extra_globals=global_ns, local_ns=local_ns)
+    local_ns.update(result)
 
 
 def form_from_str(input_str, init_data=None, base_form_class=forms.Form, prefix=""):
@@ -247,7 +221,7 @@ def form_from_str(input_str, init_data=None, base_form_class=forms.Form, prefix=
 
     if "make_form_class" in input_str:
         locals_dict = {}
-        _safe_exec(input_str, globals(), locals_dict)
+        _safe_exec_form(input_str, globals(), locals_dict)
         return locals_dict["make_form_class"](base_form_class, init_data)
 
     class _Form(base_form_class):
