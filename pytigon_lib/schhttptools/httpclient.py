@@ -49,6 +49,7 @@ def init_embeded_django():
         from channels.routing import get_default_application
 
         ASGI_APPLICATION = get_default_application()
+    settings.ALLOWED_HOSTS.append("testserver")
 
 
 def set_http_error_func(func):
@@ -65,13 +66,7 @@ def set_http_idle_func(func):
 
 def schurljoin(base, address):
     """Join base URL and address."""
-    if (
-        address
-        and base
-        and base[-1] == "/"
-        and address[0] == "/"
-        and not base.endswith("://")
-    ):
+    if address and base and base[-1] == "/" and address[0] == "/" and not base.endswith("://"):
         return base + address[1:]
     return base + address
 
@@ -120,9 +115,7 @@ class RetHttp:
 CLIENT = None
 
 
-def asgi_or_wsgi_get_or_post(
-    application, url, headers, params=None, post=False, ret=None, user_agent="Pytigon"
-):
+def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False, ret=None, user_agent="Pytigon"):
     """Handle GET or POST request for Emscripten or WSGI."""
     if params is None:
         params = {}
@@ -130,11 +123,7 @@ def asgi_or_wsgi_get_or_post(
         ret = []
     global CLIENT
     if not CLIENT:
-        CLIENT = Client(
-            HTTP_USER_AGENT=(
-                "Emscripten" if platform_name() == "Emscripten" else user_agent
-            )
-        )
+        CLIENT = Client(HTTP_USER_AGENT=("Emscripten" if platform_name() == "Emscripten" else user_agent))
     url2 = url.replace("http://127.0.0.2", "")
     if post:
         params2 = {}
@@ -181,14 +170,8 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
     ret = []
     if direct_access and ASGI_APPLICATION:
         post = method == "post"
-        headers = [
-            (key.encode("utf-8"), value.encode("utf-8"))
-            for key, value in argv["headers"].items()
-        ]
-        cookies = ";".join(
-            f"{key}={value.split(';', 1)[0]}"
-            for key, value in argv.get("cookies", {}).items()
-        )
+        headers = [(key.encode("utf-8"), value.encode("utf-8")) for key, value in argv["headers"].items()]
+        cookies = ";".join(f"{key}={value.split(';', 1)[0]}" for key, value in argv.get("cookies", {}).items())
         if cookies:
             headers.append((b"cookie", cookies.encode("utf-8")))
         if platform_name() == "Emscripten" or FORCE_WSGI:
@@ -230,9 +213,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
             if platform_name() == "Emscripten" or FORCE_WSGI:
                 requests_request(method, url, argv, ret)
             else:
-                t = Thread(
-                    target=requests_request, args=(method, url, argv, ret), daemon=True
-                )
+                t = Thread(target=requests_request, args=(method, url, argv, ret), daemon=True)
                 t.start()
                 try:
                     while t.is_alive():
@@ -247,9 +228,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
 class HttpResponse:
     """HTTP response wrapper."""
 
-    def __init__(
-        self, url, ret_code=200, response=None, content=None, ret_content_type=None
-    ):
+    def __init__(self, url, ret_code=200, response=None, content=None, ret_content_type=None):
         self.url = url
         self.ret_code = ret_code
         self.response = response
@@ -260,9 +239,7 @@ class HttpResponse:
     def process_response(self, http_client, parent, post_request):
         """Process HTTP response."""
         global COOKIES, COOKIES_EMBEDED, BLOCK, HTTP_ERROR_FUNC
-        cookies = (
-            COOKIES_EMBEDED if self.url.startswith("http://127.0.0.2/") else COOKIES
-        )
+        cookies = COOKIES_EMBEDED if self.url.startswith("http://127.0.0.2/") else COOKIES
         self.content = self.response.content
         self.ret_code = self.response.status_code
         if self.response.status_code != 200:
@@ -288,9 +265,7 @@ class HttpResponse:
                 HTTP_ERROR_FUNC(parent, self.content)
                 BLOCK = False
             else:
-                with open(
-                    os.path.join(settings.DATA_PATH, "last_error.html"), "wb"
-                ) as f:
+                with open(os.path.join(settings.DATA_PATH, "last_error.html"), "wb") as f:
                     f.write(self.content)
             self.ret_content_type = "500"
             self.content = b""
@@ -302,11 +277,7 @@ class HttpResponse:
             and (b"Cache-control" in self.content or "/plugins" in self.url)
         ):
             http_client.http_cache[self.url] = (self.ret_content_type, self.content)
-        self.new_url = (
-            self.response.url
-            if isinstance(self.response.url, str)
-            else self.response.url.path
-        )
+        self.new_url = self.response.url if isinstance(self.response.url, str) else self.response.url.path
 
     def ptr(self):
         """Return request content."""
@@ -314,16 +285,8 @@ class HttpResponse:
 
     def str(self):
         """Return request content as string."""
-        dec = (
-            "iso-8859-2"
-            if self.ret_content_type and "iso-8859-2" in self.ret_content_type
-            else "utf-8"
-        )
-        return (
-            decode(self.content, dec)
-            if self.ret_content_type and "text" in self.ret_content_type
-            else self.content
-        )
+        dec = "iso-8859-2" if self.ret_content_type and "iso-8859-2" in self.ret_content_type else "utf-8"
+        return decode(self.content, dec) if self.ret_content_type and "text" in self.ret_content_type else self.content
 
     def json(self):
         """Return request content as JSON."""
@@ -404,20 +367,10 @@ class HttpClient:
                 except Exception:
                     return HttpResponse(address_str, 500)
         self.content = ""
-        address = (
-            "http://127.0.0.2/plugins/" + address_str[1:]
-            if address_str[0] == "^"
-            else address_str
-        )
-        adr = (
-            schurljoin(self.base_address, address)
-            if address[0] in ("/", ".")
-            else address
-        )
+        address = "http://127.0.0.2/plugins/" + address_str[1:] if address_str[0] == "^" else address_str
+        adr = schurljoin(self.base_address, address) if address[0] in ("/", ".") else address
         adr = norm_path(adr)
-        if adr.startswith("http://127.0.0.2") or self.base_address.startswith(
-            "http://127.0.0.2"
-        ):
+        if adr.startswith("http://127.0.0.2") or self.base_address.startswith("http://127.0.0.2"):
             cookies = COOKIES_EMBEDED
             direct_access = True
         else:
@@ -430,11 +383,7 @@ class HttpClient:
                 content=self.http_cache[adr][1],
                 ret_content_type=self.http_cache[adr][0],
             )
-        if (
-            adr.startswith("http://127.0.0")
-            and ("/static/" in adr or "/site_media" in adr)
-            and "?" not in adr
-        ):
+        if adr.startswith("http://127.0.0") and ("/static/" in adr or "/site_media" in adr) and "?" not in adr:
             path = adr.replace("http://127.0.0.2", "")
             try:
                 ext = "." + path.split(".")[-1]
@@ -456,9 +405,7 @@ class HttpClient:
                         },
                     )
 
-                    return HttpResponse(
-                        adr, content=content, response=ret_http, ret_content_type=mt
-                    )
+                    return HttpResponse(adr, content=content, response=ret_http, ret_content_type=mt)
             except (OSError, FileNotFoundError):
                 print(
                     "Static file load error: ",
@@ -477,11 +424,7 @@ class HttpClient:
                 return HttpResponse(adr, content=f.read(), ret_content_type=mt)
         if parm is None:
             parm = {}
-        headers = (
-            {"User-Agent": user_agent, "Referer": adr}
-            if user_agent
-            else {"Referer": adr}
-        )
+        headers = {"User-Agent": user_agent, "Referer": adr} if user_agent else {"Referer": adr}
         argv = {"headers": headers, "follow_redirects": True, "cookies": cookies}
         if credentials:
             argv["auth"] = credentials
@@ -497,9 +440,7 @@ class HttpClient:
                 files = {
                     key: open(value[1:], "rb")
                     for key, value in parm.items()
-                    if isinstance(value, str)
-                    and value.startswith("@")
-                    and os.path.exists(value[1:])
+                    if isinstance(value, str) and value.startswith("@") and os.path.exists(value[1:])
                 }
                 for key in files:
                     del parm[key]
@@ -542,9 +483,7 @@ async def local_websocket(path, input_queue, output):
     global COOKIES_EMBEDED, ASGI_APPLICATION
     user_agent = ""
     headers = [(b"User-Agent", user_agent), (b"Referer", path)]
-    cookies = ";".join(
-        f"{key}={value.split(';', 1)[0]}" for key, value in COOKIES_EMBEDED.items()
-    )
+    cookies = ";".join(f"{key}={value.split(';', 1)[0]}" for key, value in COOKIES_EMBEDED.items())
     if cookies:
         headers.append((b"cookie", cookies.encode("utf-8")))
     if "csrftoken" in COOKIES_EMBEDED:
