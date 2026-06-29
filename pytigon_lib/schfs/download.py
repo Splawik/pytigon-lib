@@ -43,13 +43,13 @@ def download_and_process_file(file_list):
         # Create a secure temporary directory that is automatically cleaned up
         temp_dir = tempfile.mkdtemp()
         download_destination = os.path.join(temp_dir, url_filename[:64])
-        print(f"Matching configuration found (Archive Mode)!")
+        print("Matching configuration found (Archive Mode)!")
         print(f" -> URL: {url}")
         print(f" -> Temporary Download Path: {download_destination}")
         print(f" -> Final Extraction Directory: {target_path}")
     else:
         download_destination = target_path
-        print(f"Matching configuration found (Direct Download Mode)!")
+        print("Matching configuration found (Direct Download Mode)!")
         print(f" -> URL: {url}")
         print(f" -> Target Path: {download_destination}")
 

@@ -11,7 +11,6 @@ import stat
 import tarfile
 import tempfile
 import zipfile
-from typing import Optional
 
 import httpx
 
@@ -132,7 +131,7 @@ def install_nim(data_path: str) -> None:
             print(f"Failed to set executable permissions on zigcc: {e}")
 
 
-def get_nim_path(data_path: str) -> Optional[str]:
+def get_nim_path(data_path: str) -> str | None:
     """Find the Nim installation directory under *data_path*/prg/.
 
     Args:
@@ -150,7 +149,7 @@ def get_nim_path(data_path: str) -> Optional[str]:
     return None
 
 
-def install_if_not_exists(data_path: str) -> Optional[str]:
+def install_if_not_exists(data_path: str) -> str | None:
     """Ensure Nim is installed, downloading it if necessary.
 
     Args:

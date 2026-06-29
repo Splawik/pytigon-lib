@@ -524,7 +524,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 except OSError:
                     LOGGER.warning("Failed to remove temporary file: %s", file_out)
             file_in_name = os.path.basename(file_in)
-            self["Content-Disposition"] = "attachment; filename=%s" % file_in_name
+            self["Content-Disposition"] = f"attachment; filename={file_in_name}"
         return self
 
     def _render_ooxml(self):
@@ -541,7 +541,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         else:
             self.content = stream_out.getvalue()
             file_in_name = os.path.basename(self.template_name[0])
-        self["Content-Disposition"] = "attachment; filename=%s" % file_in_name
+        self["Content-Disposition"] = f"attachment; filename={file_in_name}"
         return self
 
     def _render_hdoc(self, doc_type):
@@ -577,7 +577,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         dc.end_page()
 
         self.content = output.getvalue()
-        self["Content-Disposition"] = "attachment; filename=%s" % file_name
+        self["Content-Disposition"] = f"attachment; filename={file_name}"
         return self
 
     def _convert_to_pdf(self, stream_type):
@@ -596,7 +596,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             tname = self.template_name[0]
 
         filename = tname.rsplit("/", 1)[-1].replace(".html", ext)
-        self["Content-Disposition"] = "attachment; filename=%s" % filename
+        self["Content-Disposition"] = f"attachment; filename={filename}"
 
         pdf_stream = stream_from_html(
             self.content,
@@ -626,7 +626,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             c = len(tab) - 1
 
         for i in range(len(row_title)):
-            row_title[i] = "%d" % (i + 1)
+            row_title[i] = f"{i + 1}"
         row_title[0] = "cid"
         row_title[-1] = "caction"
         row_title.append("id")

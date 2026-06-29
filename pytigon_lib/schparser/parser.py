@@ -17,7 +17,7 @@ Functions:
 import io
 import re
 from collections.abc import Callable
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 try:
     from lxml import etree
@@ -62,7 +62,7 @@ class Parser:
             return f"<{self._cur_elem.tag} {attributes}>"
         return f"<{self._cur_elem.tag}>"
 
-    def handle_starttag(self, tag: str, attrib: Dict[str, str]) -> None:
+    def handle_starttag(self, tag: str, attrib: dict[str, str]) -> None:
         """Handle a start tag during tree crawling.
 
         Override in subclasses to process opening tags.
@@ -214,7 +214,7 @@ def content_tostring(elem: etree.Element) -> str:
     Returns:
         Concatenated string of all content within the element.
     """
-    parts: List[str] = []
+    parts: list[str] = []
     if elem.text:
         parts.append(elem.text)
     for child in elem:
@@ -246,7 +246,7 @@ class Elem:
             tostring_fun: Function to convert the element to a string.
         """
         self.elem: Optional[etree.Element] = elem
-        self._elem_txt: Optional[str] = None
+        self._elem_txt: str | None = None
         self._tostring_fun = tostring_fun
 
     def __str__(self) -> str:
@@ -291,7 +291,7 @@ class Elem:
 
     def tostream(
         self,
-        output: Optional[io.StringIO] = None,
+        output: io.StringIO | None = None,
         elem: Optional[etree.Element] = None,
         tab: int = 0,
     ) -> io.StringIO:

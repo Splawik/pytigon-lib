@@ -1,6 +1,6 @@
+import filecmp
 import os
 import shutil
-import filecmp
 
 
 def rsync_style_sync(src, dst):

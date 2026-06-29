@@ -18,7 +18,7 @@ import logging
 import os
 import os.path
 from collections.abc import Callable, Generator
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Union
+from typing import Any, TextIO
 
 from django.conf import settings
 
@@ -73,8 +73,8 @@ except Exception:
 
 
 def list_with_next_generator(
-    items: List[Any],
-) -> Generator[Tuple[Any, Optional[Any]], None, None]:
+    items: list[Any],
+) -> Generator[tuple[Any, Any | None], None, None]:
     """Yield each item paired with its successor (or None for the last).
 
     Args:
@@ -104,7 +104,7 @@ def translate(s: str) -> str:
     return s
 
 
-def _build_translator(lang: str) -> Tuple[Callable[[str], str], List[str]]:
+def _build_translator(lang: str) -> tuple[Callable[[str], str], list[str]]:
     """Build a gettext-based translator function for the given language.
 
     Also collects translatable strings into a list for later export.
@@ -120,7 +120,7 @@ def _build_translator(lang: str) -> Tuple[Callable[[str], str], List[str]]:
 
     base_path = os.path.join(settings.PRJ_PATH, get_prj_name())
     locale_path = os.path.join(base_path, "locale")
-    collected_words: List[str] = []
+    collected_words: list[str] = []
 
     # Try to load gettext translation
     try:
@@ -170,7 +170,7 @@ def _build_translator(lang: str) -> Tuple[Callable[[str], str], List[str]]:
 
 
 def iter_lines(
-    file_stream: Union[TextIO, io.StringIO], file_name: Optional[str], lang: str
+    file_stream: TextIO | io.StringIO, file_name: str | None, lang: str
 ) -> Generator[str, None, None]:
     """Iterate over lines from a file, applying translation and table formatting.
 
@@ -320,7 +320,7 @@ def _transform_elem(elem: str) -> str:
     return elem_tag + elem_attrs
 
 
-def _pre_process_line(line: str) -> List[Optional[Tuple[int, Optional[str], str, int]]]:
+def _pre_process_line(line: str) -> list[tuple[int, str | None, str, int] | None]:
     """Pre-process a single ihtml source line into structured components.
 
     Splits lines at ... separator into code and html parts, handles
@@ -371,7 +371,7 @@ def _pre_process_line(line: str) -> List[Optional[Tuple[int, Optional[str], str,
     return [(n, code, html, 0)]
 
 
-def _status_close(status: int, line: Tuple, next_line: Tuple) -> int:
+def _status_close(status: int, line: tuple, next_line: tuple) -> int:
     """Calculate the closing status for a line based on current and next line.
 
     Used in the output formatting to determine line break behavior.
@@ -436,13 +436,13 @@ class IhtmlToHtml:
 
     def __init__(
         self,
-        file_name: Optional[str],
-        simple_close_tags: List[str],
-        auto_close_tags: List[str],
-        no_auto_close_tags: List[str],
-        input_str: Optional[str] = None,
+        file_name: str | None,
+        simple_close_tags: list[str],
+        auto_close_tags: list[str],
+        no_auto_close_tags: list[str],
+        input_str: str | None = None,
         lang: str = "en",
-        output_processors: Optional[Dict[str, Callable]] = None,
+        output_processors: dict[str, Callable] | None = None,
     ) -> None:
         """Initialize the converter.
 
@@ -457,9 +457,9 @@ class IhtmlToHtml:
         """
         self.file_name = file_name
         self.input_str = input_str
-        self.code: List[Tuple[int, Optional[str], Optional[str], int]] = []
-        self.buffer: List[Tuple[int, str, int]] = []
-        self.output: List[Tuple[int, Optional[str], int]] = []
+        self.code: list[tuple[int, str | None, str | None, int]] = []
+        self.buffer: list[tuple[int, str, int]] = []
+        self.output: list[tuple[int, str | None, int]] = []
         self.no_convert = False
         self.simple_close_tags = simple_close_tags
         self.auto_close_tags = auto_close_tags
@@ -482,7 +482,7 @@ class IhtmlToHtml:
 
     # ---- Line transformation ----
 
-    def transform_line(self, line: Tuple, next_line: Tuple) -> None:
+    def transform_line(self, line: tuple, next_line: tuple) -> None:
         """Transform a parsed line and its successor into output entries.
 
         Handles HTML tags, template tags (%), and plain content lines.
@@ -503,7 +503,7 @@ class IhtmlToHtml:
         else:
             self.output.append([line[0], line[2], line[3]])
 
-    def _transform_template_line(self, line: Tuple, next_line: Tuple) -> None:
+    def _transform_template_line(self, line: tuple, next_line: tuple) -> None:
         """Handle Django template tag lines (starting with %).
 
         Args:
@@ -556,7 +556,7 @@ class IhtmlToHtml:
             if line[2]:
                 self.output.append([line[0], line[2], line[3]])
 
-    def _transform_html_line(self, line: Tuple, next_line: Tuple) -> None:
+    def _transform_html_line(self, line: tuple, next_line: tuple) -> None:
         """Handle HTML element lines.
 
         Args:
@@ -621,7 +621,7 @@ class IhtmlToHtml:
             StringIO containing the input content.
         """
         if self.file_name:
-            with open(self.file_name, "r", encoding="utf-8") as f:
+            with open(self.file_name, encoding="utf-8") as f:
                 first_line = f.readline()
                 f.seek(0, 0)
 
@@ -630,7 +630,7 @@ class IhtmlToHtml:
                     ref_name = first_line[3:].strip()
                     ref_path = os.path.join(os.path.dirname(self.file_name), ref_name) + ".ihtml"
 
-                    with open(ref_path, "r", encoding="utf-8") as f2:
+                    with open(ref_path, encoding="utf-8") as f2:
                         content2 = f.read()[len(first_line) :]
                         content = f2.read().replace("@@@", content2)
 
@@ -650,7 +650,7 @@ class IhtmlToHtml:
             file_stream: Input stream to read from.
         """
         old_pos = 0
-        buf: Optional[io.StringIO] = None
+        buf: io.StringIO | None = None
         buf0 = ""
         test = TEST_NONE
         cont = False
@@ -934,7 +934,7 @@ class IhtmlToHtml:
     def _no_convert_output(self) -> str:
         """Return raw input when no_convert is set."""
         if self.file_name:
-            with open(self.file_name, "r", encoding="utf-8") as f:
+            with open(self.file_name, encoding="utf-8") as f:
                 output = f.read().replace("^^^", "")
         else:
             output = self.input_str.replace("^^^", "")
@@ -1080,7 +1080,7 @@ ConwertToHtml = IhtmlToHtml
 
 
 def ihtml_to_html_base(
-    file_name: Optional[str] = None, input_str: Optional[str] = None, lang: str = "en"
+    file_name: str | None = None, input_str: str | None = None, lang: str = "en"
 ) -> str:
     """Convert ihtml source to standard HTML.
 

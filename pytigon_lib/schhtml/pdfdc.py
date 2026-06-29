@@ -1,6 +1,5 @@
 import io
 import os
-
 from pathlib import Path
 
 from pytigon_lib.schfs.vfstools import get_temp_filename

@@ -4,18 +4,16 @@ These operations work through Django's default storage virtual filesystem,
 supporting both individual files and directory trees.
 """
 
-from __future__ import annotations
-
 import logging
 import posixpath
-from typing import Any, Optional
+from typing import Any
 
 from django.core.files.storage import default_storage
 
 logger = logging.getLogger(__name__)
 
 
-def filesystemcmd(cproxy: Optional[Any] = None, **kwargs: Any) -> None:
+def filesystemcmd(cproxy: Any | None = None, **kwargs: Any) -> None:
     """Execute a batch file-system command (DELETE, COPY, or MOVE) via the VFS.
 
     Designed to run as a background task. Sends "start"/"stop" events

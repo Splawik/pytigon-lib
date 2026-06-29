@@ -616,19 +616,22 @@ class TrTag(BaseHtmlElemParser):
             return super().child_ready_to_render(child)
         self.td_list.append(child)
 
+    @property
+    def width(self):
+        return self.parent.get_width()
+
+    @width.setter
+    def width(self, value):
+        pass
+
     def get_width(self):
         return self.parent.get_width()
 
     def get_client_width(self):
         return self.parent.get_client_width()
 
-    def set_width(self, value):
-        pass
-
     def _get_pseudo_margins(self):
         return [1, 1, 1, 1]
-
-    width = property(get_width, set_width)
 
 
 class TdTag(Par):

@@ -1,5 +1,5 @@
 """Extended JSON encoding/decoding with support for datetime, Decimal, and numpy types.
- 
+
 Provides URL-safe encoding (via ``dumps``/``loads``) and plain JSON
 helpers (``json_dumps``/``json_loads``).
 """

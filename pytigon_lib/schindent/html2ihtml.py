@@ -11,7 +11,7 @@ Converts HTML files to a human-readable indented text format where:
 
 import logging
 import re
-from typing import List, TextIO
+from typing import TextIO
 
 from pytigon_lib.schparser.parser import Parser
 
@@ -30,7 +30,7 @@ _CONTENT_PREFIX = "."
 _ATTR_SEPARATOR = ",,,"
 
 
-def divide(txt: str, width: int) -> List[str]:
+def divide(txt: str, width: int) -> list[str]:
     """Split text into lines of maximum width while preserving word boundaries.
 
     Words longer than the specified width are placed on their own line.
@@ -95,8 +95,8 @@ class Html2IhtmlParser(Parser):
         """
         super().__init__()
         self.out_stream = out_stream
-        self.out_tab: List[List] = []
-        self.in_tag: List[str] = []
+        self.out_tab: list[list] = []
+        self.in_tag: list[str] = []
         self.level = 0
         self.width = width
         self.in_script = False

@@ -76,11 +76,6 @@ select = ["E", "W", "F", "I", "UP", "SIM", "RUF"]
 ignore = [
     "SIM102", "SIM105", "SIM108", "SIM115",
     "SIM116", "SIM117", "SIM118",
-    "UP006",   # list[X] breaks on Python <3.9 and Cython
-    "UP007",   # X | Y breaks on Python <3.10 and Cython
-    "UP031",   # f-string instead of % (needs manual review)
-    "UP035",   # builtin subscriptable types break on Python <3.9
-    "UP045",   # T | None breaks on Python <3.10 and Cython
     "RUF002", "RUF003", "RUF005", "RUF012", "RUF059",
 ]
 
@@ -96,6 +91,7 @@ line-ending = "lf"
 "tests/schtools/wiki_test.py" = ["E501"]
 "pytigon_lib/schhtml/html_tags.py" = ["F403"]
 "pytigon_lib/schfs/__init__.py" = ["F401"]
+"pytigon_lib/schparser/parser.py" = ["UP045"]
 
 [tool.pytest.ini_options]
 norecursedirs = ["tests/schindent/assets"]

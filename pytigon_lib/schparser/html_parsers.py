@@ -8,7 +8,7 @@ This module provides parsers for:
   header, footer, panel, body, and script fragments.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from pyquery import PyQuery as pq
 
@@ -45,7 +45,7 @@ class SimpleTabParserBase(Parser):
 
     def __init__(self) -> None:
         super().__init__()
-        self.tables: List[List[ExtList]] = []
+        self.tables: list[list[ExtList]] = []
 
     def _preprocess(self, td: Any) -> str:
         """Convert a table cell element to its string content.
@@ -68,7 +68,7 @@ class SimpleTabParserBase(Parser):
         if self._tree is None:
             return
         for table_elem in self._tree.iterfind(".//table"):
-            table: List[ExtList] = []
+            table: list[ExtList] = []
             for tr_elem in table_elem.iterfind(".//tr"):
                 tr = ExtList()
                 row_id = tr_elem.attrib.get("row-id")
@@ -122,13 +122,13 @@ class TreeParser(Parser):
 
     def __init__(self) -> None:
         super().__init__()
-        self.tree_parent: List[Any] = ["TREE", []]
-        self.list: List[Any] = self.tree_parent
-        self.stack: List[List[Any]] = []
-        self._attr_buffer: List[Tuple[str, str]] = []
+        self.tree_parent: list[Any] = ["TREE", []]
+        self.list: list[Any] = self.tree_parent
+        self.stack: list[list[Any]] = []
+        self._attr_buffer: list[tuple[str, str]] = []
         self._data_enabled: bool = False
 
-    def handle_starttag(self, tag: str, attrs: List[Tuple[str, str]]) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str]]) -> None:
         """Handle opening tags during tree crawling.
 
         Args:
@@ -186,14 +186,14 @@ class ShtmlParser(Parser):
 
     def __init__(self) -> None:
         super().__init__()
-        self.address: Optional[str] = None
-        self._title: Optional[str] = None
-        self._data: List[Any] = []
-        self.var: Dict[str, Optional[str]] = {}
-        self.schhtml: Optional[int] = None
+        self.address: str | None = None
+        self._title: str | None = None
+        self._data: list[Any] = []
+        self.var: dict[str, str | None] = {}
+        self.schhtml: int | None = None
 
     @staticmethod
-    def _data_to_string(item: Optional[Any]) -> str:
+    def _data_to_string(item: Any | None) -> str:
         """Serialize a data fragment to a string.
 
         Args:
@@ -205,7 +205,7 @@ class ShtmlParser(Parser):
         return tostring(item) if item is not None else ""
 
     @staticmethod
-    def _script_to_string(item: Optional[Any]) -> str:
+    def _script_to_string(item: Any | None) -> str:
         """Extract the text content of a script fragment.
 
         Args:
@@ -216,7 +216,7 @@ class ShtmlParser(Parser):
         """
         return item.text if item is not None else ""
 
-    def _reparent(self, selectors: Tuple[str, ...]) -> List[Optional[Any]]:
+    def _reparent(self, selectors: tuple[str, ...]) -> list[Any | None]:
         """Extract and remove elements matching CSS selectors from the tree.
 
         For each selector, returns a pair ``[element, script_element]``.
@@ -228,7 +228,7 @@ class ShtmlParser(Parser):
         Returns:
             A flat list of ``[elem, script, elem, script, ...]``.
         """
-        result: List[Optional[Any]] = []
+        result: list[Any | None] = []
         doc = pq(self._tree)
 
         for selector in selectors:
@@ -252,7 +252,7 @@ class ShtmlParser(Parser):
 
         return result
 
-    def process(self, html_txt: str, address: Optional[str] = None) -> None:
+    def process(self, html_txt: str, address: str | None = None) -> None:
         """Parse an HTML document and partition it into layout fragments.
 
         Args:
@@ -300,31 +300,31 @@ class ShtmlParser(Parser):
     # the fragment was not present in the source document.
     # ------------------------------------------------------------------
 
-    def get_body(self) -> Tuple[Optional[Elem], Optional[Script]]:
+    def get_body(self) -> tuple[Elem | None, Script | None]:
         """Return the body fragment (remainder after repartitioning)."""
         if len(self._data) < 2:
             return (None, None)
         return (Elem(self._data[0]), Script(self._data[1]))
 
-    def get_header(self) -> Tuple[Optional[Elem], Optional[Script]]:
+    def get_header(self) -> tuple[Elem | None, Script | None]:
         """Return the ``#header`` fragment."""
         if len(self._data) < 4:
             return (None, None)
         return (Elem(self._data[2]), Script(self._data[3]))
 
-    def get_footer(self) -> Tuple[Optional[Elem], Optional[Script]]:
+    def get_footer(self) -> tuple[Elem | None, Script | None]:
         """Return the ``#footer`` fragment."""
         if len(self._data) < 6:
             return (None, None)
         return (Elem(self._data[4]), Script(self._data[5]))
 
-    def get_panel(self) -> Tuple[Optional[Elem], Optional[Script]]:
+    def get_panel(self) -> tuple[Elem | None, Script | None]:
         """Return the ``#panel`` fragment."""
         if len(self._data) < 8:
             return (None, None)
         return (Elem(self._data[6]), Script(self._data[7]))
 
-    def get_body_attrs(self) -> Dict[str, str]:
+    def get_body_attrs(self) -> dict[str, str]:
         """Return attributes of the ``<body>`` element.
 
         Returns:

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from urllib.parse import urlencode
 
 
@@ -9,7 +9,7 @@ class DictParm:
     scattered KeyError handling in calling code.
     """
 
-    def __init__(self, data: Dict[str, Any]) -> None:
+    def __init__(self, data: dict[str, Any]) -> None:
         """Initialize with a parameter dictionary.
 
         Args:
@@ -45,7 +45,7 @@ class DictParm:
         return param in self.data
 
 
-def convert_param(param: Any) -> Union[str, List, bool]:
+def convert_param(param: Any) -> str | list | bool:
     """Convert a parameter value to a format suitable for URL encoding.
 
     - Objects with class name 'DateTime' are truncated to first 10 chars.
@@ -58,14 +58,14 @@ def convert_param(param: Any) -> Union[str, List, bool]:
     Returns:
         A URL-encoding-friendly representation.
     """
-    if hasattr(param, "__class__") and type(param).__name__ == "DateTime":
+    if hasattr(param, "__class__") and param.__class__.__name__ == "DateTime":
         return str(param)[:10]
     if isinstance(param, (list, bool)):
         return param
     return str(param)
 
 
-def dict_from_param(param: DictParm, fields: List[str]) -> Dict[str, Any]:
+def dict_from_param(param: DictParm, fields: list[str]) -> dict[str, Any]:
     """Build a dictionary from selected fields present in a DictParm.
 
     Args:
@@ -80,7 +80,7 @@ def dict_from_param(param: DictParm, fields: List[str]) -> Dict[str, Any]:
 
 def create_parm(
     address: str, dic: DictParm, no_encode: bool = False
-) -> Optional[Tuple[str, str, Union[Dict, str]]]:
+) -> tuple[str, str, dict | str] | None:
     """Parse an address string and build URL parameters from a DictParm.
 
     The address format is: ``base_url|param1,param2,param3``
@@ -135,7 +135,7 @@ def create_parm(
         return parts[0], separator, urlencode(encoded_params, doseq=True)
 
 
-def create_post_param(address: str, dic: DictParm) -> Tuple[str, Dict[str, Any]]:
+def create_post_param(address: str, dic: DictParm) -> tuple[str, dict[str, Any]]:
     """Parse an address string and build POST parameters from a DictParm.
 
     Args:

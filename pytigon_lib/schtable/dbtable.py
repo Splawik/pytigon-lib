@@ -1,4 +1,5 @@
 import django.apps.registry
+from django.db.models.fields.related import ForeignKey
 
 from pytigon_lib.schtable import table
 from pytigon_lib.schtools import schjson
@@ -114,7 +115,7 @@ class DbTable(table.Table):
     def _get_col_types(self):
         col_types = []
         for col in self.model_class._meta.fields:
-            if type(col).__name__ in ("ForeignKey", "HiddenForeignKey"):
+            if isinstance(col, ForeignKey):
                 pos = f"x:/{self.app}/table/{self.tab}/{col.name}/dict/"
                 if col.name[:-2] in self.foreign_key_parm:
                     pos += "|" + self.foreign_key_parm
@@ -171,7 +172,7 @@ class DbTable(table.Table):
                         if value in dict(field.choices)
                         else ""
                     )
-                elif type(field).__name__ in ("ForeignKey", "HiddenForeignKey"):
+                elif isinstance(field, ForeignKey):
                     value2 = getattr(rec, field.name)
                     value = f"{value2.id}:{value2}" if value2 else "0"
                 row.append(value)
@@ -194,7 +195,7 @@ class DbTable(table.Table):
             value = rec[i]
             if field.choices:
                 value = value.split(":")[0]
-            if type(field).__name__ in ("ForeignKey", "HiddenForeignKey"):
+            if isinstance(field, ForeignKey):
                 value = (
                     field.rel.to.objects.get(id=int(value.split(":")[0]))
                     if value
@@ -210,7 +211,7 @@ class DbTable(table.Table):
                 value = rec[i]
                 if field.choices:
                     value = value.split(":")[0]
-                if type(field).__name__ in ("ForeignKey", "HiddenForeignKey"):
+                if isinstance(field, ForeignKey):
                     value = (
                         field.rel.to.objects.get(id=int(value.split(":")[0]))
                         if value

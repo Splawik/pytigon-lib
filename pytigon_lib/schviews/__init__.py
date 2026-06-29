@@ -47,7 +47,7 @@ import datetime
 import logging
 import uuid
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Optional
 
 import django
 from django.apps import apps
@@ -78,7 +78,7 @@ logger = logging.getLogger(__name__)
 # (view_type, model).  Other parts of the framework can look up or
 # replace view classes via ``extend_generic_view``.
 # --------------------------------------------------------------------------
-VIEWS_REGISTER: Dict[str, Dict[Any, Any]] = {
+VIEWS_REGISTER: dict[str, dict[Any, Any]] = {
     "list": {},
     "detail": {},
     "edit": {},
@@ -92,7 +92,7 @@ VIEWS_REGISTER: Dict[str, Dict[Any, Any]] = {
 # ==========================================================================
 
 
-def make_path(view_name: str, args: Optional[List[Any]] = None) -> str:
+def make_path(view_name: str, args: list[Any] | None = None) -> str:
     """Generate a URL path for a given view name and optional arguments.
 
     If ``settings.URL_ROOT_FOLDER`` is set, the path is prefixed with it.
@@ -117,7 +117,7 @@ make_path_lazy = lazy(make_path, str)
 # ==========================================================================
 
 
-def _isinstance(field: Any, instances: List[Type]) -> bool:
+def _isinstance(field: Any, instances: list[type]) -> bool:
     """Return ``True`` if *field* is an instance of any type in *instances*."""
     return any(isinstance(field, instance) for instance in instances)
 
@@ -156,7 +156,7 @@ def convert_str_to_model_field(s: str, field: Any) -> Any:
 
 
 def gen_tab_action(
-    table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None
+    table: str, action: str, fun: Callable, extra_context: dict | None = None
 ) -> path:
     """Generate a URL pattern for a table action.
 
@@ -182,7 +182,7 @@ def gen_tab_field_action(
     field: str,
     action: str,
     fun: Callable,
-    extra_context: Optional[Dict] = None,
+    extra_context: dict | None = None,
 ) -> path:
     """Generate a URL pattern for a table field action.
 
@@ -204,7 +204,7 @@ def gen_tab_field_action(
 
 
 def gen_row_action(
-    table: str, action: str, fun: Callable, extra_context: Optional[Dict] = None
+    table: str, action: str, fun: Callable, extra_context: dict | None = None
 ) -> path:
     """Generate a URL pattern for a row action.
 
@@ -225,7 +225,7 @@ def gen_row_action(
     )
 
 
-def transform_extra_context(context1: Dict, context2: Optional[Dict]) -> Dict:
+def transform_extra_context(context1: dict, context2: dict | None) -> dict:
     """Merge *context2* into *context1*, calling any callable values.
 
     Args:
@@ -241,7 +241,7 @@ def transform_extra_context(context1: Dict, context2: Optional[Dict]) -> Dict:
     return context1
 
 
-def save(obj: Any, request: Any, view_type: str, param: Optional[Dict] = None) -> None:
+def save(obj: Any, request: Any, view_type: str, param: dict | None = None) -> None:
     """Persist an object, using ``save_from_request`` if the model provides it.
 
     Args:
@@ -271,10 +271,10 @@ def view_editor(
     field_edit_name: str,
     post_save_redirect: str,
     ext: str = "py",
-    extra_context: Optional[Dict] = None,
-    target: Optional[str] = None,
+    extra_context: dict | None = None,
+    target: str | None = None,
     parent_pk: int = 0,
-    field_name: Optional[str] = None,
+    field_name: str | None = None,
 ) -> HttpResponse:
     """Handle inline editing of a single model field.
 
@@ -404,7 +404,7 @@ def view_editor(
 class GenericTable:
     """GenericTable class for handling URL patterns and views."""
 
-    def __init__(self, urlpatterns: Any, app: str, views_module: Optional[Any] = None):
+    def __init__(self, urlpatterns: Any, app: str, views_module: Any | None = None):
         """Initialize GenericTable."""
         self.urlpatterns = urlpatterns
         self.app = app
@@ -414,13 +414,13 @@ class GenericTable:
     def new_rows(
         self,
         tab: str,
-        field: Optional[str] = None,
+        field: str | None = None,
         title: str = "",
         title_plural: str = "",
-        template_name: Optional[str] = None,
-        extra_context: Optional[Dict] = None,
-        queryset: Optional[Any] = None,
-        prefix: Optional[str] = None,
+        template_name: str | None = None,
+        extra_context: dict | None = None,
+        queryset: Any | None = None,
+        prefix: str | None = None,
     ) -> "GenericRows":
         """Create a new GenericRows instance."""
         rows = GenericRows(self, prefix, title, title_plural)
@@ -473,13 +473,13 @@ class GenericTable:
         self,
         schema: str,
         tab: str,
-        field: Optional[str] = None,
+        field: str | None = None,
         title: str = "",
         title_plural: str = "",
-        template_name: Optional[str] = None,
-        extra_context: Optional[Dict] = None,
-        queryset: Optional[Any] = None,
-        prefix: Optional[str] = None,
+        template_name: str | None = None,
+        extra_context: dict | None = None,
+        queryset: Any | None = None,
+        prefix: str | None = None,
     ) -> "GenericRows":
         """Create a GenericRows instance from a schema."""
         if not title_plural:
@@ -502,10 +502,10 @@ class GenericTable:
         tab: str,
         title: str = "",
         title_plural: str = "",
-        template_name: Optional[str] = None,
-        extra_context: Optional[Dict] = None,
-        queryset: Optional[Any] = None,
-        prefix: Optional[str] = None,
+        template_name: str | None = None,
+        extra_context: dict | None = None,
+        queryset: Any | None = None,
+        prefix: str | None = None,
     ) -> "GenericRows":
         """Create a standard set of views for a table."""
         schema = "add"
@@ -542,10 +542,10 @@ class GenericTable:
         field: str,
         title: str = "",
         title_plural: str = "",
-        template_name: Optional[str] = None,
-        extra_context: Optional[Dict] = None,
-        queryset: Optional[Any] = None,
-        prefix: Optional[str] = None,
+        template_name: str | None = None,
+        extra_context: dict | None = None,
+        queryset: Any | None = None,
+        prefix: str | None = None,
     ) -> "GenericRows":
         """Create views for a specific field in a table."""
         rows = self.new_rows(
@@ -567,10 +567,10 @@ class GenericTable:
         tab: str,
         title: str = "",
         title_plural: str = "",
-        template_name: Optional[str] = None,
-        extra_context: Optional[Dict] = None,
-        queryset: Optional[Any] = None,
-        prefix: Optional[str] = None,
+        template_name: str | None = None,
+        extra_context: dict | None = None,
+        queryset: Any | None = None,
+        prefix: str | None = None,
     ) -> None:
         """Create tree views for a table."""
         return None
@@ -582,7 +582,7 @@ class GenericRows:
     def __init__(
         self,
         table: GenericTable,
-        prefix: Optional[str],
+        prefix: str | None,
         title: str = "",
         title_plural: str = "",
         parent_rows: Optional["GenericRows"] = None,
@@ -616,7 +616,7 @@ class GenericRows:
             return f"{self.base_path[:-1]}_{self.prefix}/"
         return self.base_path
 
-    def table_paths_to_context(self, view_class: Any, context: Dict) -> None:
+    def table_paths_to_context(self, view_class: Any, context: dict) -> None:
         """Add table paths to the context."""
         x = view_class.request.path.split("/table/", 1)
         x2 = x[1].split("/")
@@ -641,13 +641,13 @@ class GenericRows:
             )
             context["table_path_and_filter"] = f"{x[0]}/table/{'/'.join(x2[:-3])}/"
 
-    def set_field(self, field: Optional[str] = None) -> "GenericRows":
+    def set_field(self, field: str | None = None) -> "GenericRows":
         """Set the field for the rows."""
         self.field = field
         return self
 
     def _append(
-        self, url_str: str, fun: Callable, parm: Optional[Dict] = None
+        self, url_str: str, fun: Callable, parm: dict | None = None
     ) -> "GenericRows":
         """Append a URL pattern to the urlpatterns."""
         if parm:
@@ -711,7 +711,7 @@ class GenericRows:
             order = None
             search = None
 
-            def _context_for_tree(self) -> Dict:
+            def _context_for_tree(self) -> dict:
                 try:
                     parent_pk = int(self.kwargs["filter"])
                     parent = (
@@ -748,7 +748,7 @@ class GenericRows:
                     return "json"
                 return "html"
 
-            def get_template_names(self) -> List[str]:
+            def get_template_names(self) -> list[str]:
                 names = super().get_template_names()
                 if "target" in self.kwargs and "__" in self.kwargs["target"]:
                     target2 = self.kwargs["target"].split("__", 1)[1]
@@ -773,7 +773,7 @@ class GenericRows:
                     names.insert(0, template2)
                 return names
 
-            def get_paginate_by(self, queryset: Any) -> Optional[int]:
+            def get_paginate_by(self, queryset: Any) -> int | None:
                 if self.doc_type() in DOC_TYPES and self.doc_type() != "json":
                     return None
                 return self.paginate_by
@@ -882,7 +882,7 @@ class GenericRows:
             def post(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
                 return self.get(request, *args, **kwargs)
 
-            def get_context_data(self, **kwargs: Any) -> Dict:
+            def get_context_data(self, **kwargs: Any) -> dict:
                 nonlocal parent_class
                 context = super().get_context_data(**kwargs)
                 context["view"] = self
@@ -1077,7 +1077,7 @@ class GenericRows:
             title = self.title
             response_class = ExtTemplateResponse
 
-            def get_object(self, queryset: Optional[Any] = None) -> Any:
+            def get_object(self, queryset: Any | None = None) -> Any:
                 obj = super().get_object(queryset)
                 if hasattr(obj, "get_derived_object"):
                     obj2 = obj.get_derived_object({"view": self})
@@ -1093,7 +1093,7 @@ class GenericRows:
                     return "json"
                 return "html"
 
-            def get_template_names(self) -> List[str]:
+            def get_template_names(self) -> list[str]:
                 names = super().get_template_names()
                 if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
                     names.insert(
@@ -1113,7 +1113,7 @@ class GenericRows:
                     names.insert(0, template2)
                 return names
 
-            def get_context_data(self, **kwargs: Any) -> Dict:
+            def get_context_data(self, **kwargs: Any) -> dict:
                 nonlocal parent_class
                 context = super().get_context_data(**kwargs)
                 context["view"] = self
@@ -1574,7 +1574,7 @@ class GenericRows:
                     if self.request.GET.get("redirect"):
                         ctx = self.get_context_data(form=form)
                         tp = ctx["table_path"]
-                        return HttpResponseRedirect(tp + ("%d/edit/" % self.object.pk))
+                        return HttpResponseRedirect(tp + f"{self.object.pk}/edit/")
                     else:
                         return new_row_ok(request, int(self.object.id), self.object)
                 else:

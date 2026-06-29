@@ -19,9 +19,9 @@ license: LGPL 3.0
 
 __version__ = "0.260628"
 
+import importlib.util
 import os
 import sys
-import importlib.util
 from pathlib import Path
 
 from pytigon_lib.schtools.env import get_environ

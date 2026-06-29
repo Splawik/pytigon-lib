@@ -11,7 +11,6 @@ Provides utilities for:
 import io
 import logging
 from collections.abc import Generator
-from typing import List, Optional, Tuple
 
 from pytigon_lib.schparser.parser import Parser
 
@@ -76,7 +75,7 @@ def count_leading_spaces(s: str) -> int:
     return len(s) - len(s.lstrip(" "))
 
 
-def norm_tab(file_stream: io.StringIO) -> List[Tuple[int, str]]:
+def norm_tab(file_stream: io.StringIO) -> list[tuple[int, str]]:
     """Normalize indentation levels in source code.
 
     Reads a stream of code, detects indentation changes, and produces
@@ -117,7 +116,7 @@ def norm_tab(file_stream: io.StringIO) -> List[Tuple[int, str]]:
     return result
 
 
-def reformat_js(tab_code: List[Tuple[int, str]]) -> List[List]:
+def reformat_js(tab_code: list[tuple[int, str]]) -> list[list]:
     """Reformat Python-style indented code to JavaScript syntax.
 
     Converts indentation-based block structure into brace-delimited
@@ -210,7 +209,7 @@ def reformat_js(tab_code: List[Tuple[int, str]]) -> List[List]:
 
 
 def file_norm_tab(
-    file_in: Optional[io.StringIO], file_out: Optional[io.StringIO]
+    file_in: io.StringIO | None, file_out: io.StringIO | None
 ) -> bool:
     """Normalize indentation in a file and write the result.
 
@@ -234,7 +233,7 @@ def file_norm_tab(
 
 
 def convert_js(
-    stream_in: Optional[io.StringIO], stream_out: Optional[io.StringIO]
+    stream_in: io.StringIO | None, stream_out: io.StringIO | None
 ) -> bool:
     """Convert Python-indented code to JavaScript syntax.
 

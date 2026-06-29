@@ -131,6 +131,6 @@ def wikify(value, path=None, section=None):
                 + subparts[1]
             )
         else:
-            result.append("[[%s" % part)
+            result.append(f"[[{part}")
 
     return "".join(result)

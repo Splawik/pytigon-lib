@@ -7,7 +7,7 @@ hierarchies using a callback-based pattern for node rendering.
 import html
 import logging
 from collections.abc import Callable
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class MakeTreeFromObject:
         self,
         model: Any,
         callback: TreeCallback,
-        field_name: Optional[str] = None,
+        field_name: str | None = None,
     ) -> None:
         """Initialize the tree generator.
 
@@ -62,7 +62,7 @@ class MakeTreeFromObject:
     @staticmethod
     def _build_node_html(
         label: str,
-        actions: List[Tuple[str, str]],
+        actions: list[tuple[str, str]],
         children_html: str,
     ) -> str:
         """Build the HTML fragment for a single tree node.

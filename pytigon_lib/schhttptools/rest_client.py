@@ -6,7 +6,6 @@ function with automatic OAuth2 access token management.
 
 import logging
 from collections.abc import Callable
-from typing import Dict, Optional
 
 import httpx
 
@@ -24,9 +23,9 @@ def get_rest_client(base_url: str, refresh_token: str) -> Callable:
     Returns:
         Callable: A function that can be used to make authenticated HTTP requests.
     """
-    tokens: Dict[str, str] = {"refresh_token": refresh_token}
+    tokens: dict[str, str] = {"refresh_token": refresh_token}
 
-    def _oauth2_httpx(httpx_method: Callable, relative_url: str, *args, **kwargs) -> Optional[httpx.Response]:
+    def _oauth2_httpx(httpx_method: Callable, relative_url: str, *args, **kwargs) -> httpx.Response | None:
         """
         Internal function to handle OAuth2 authentication and make HTTP requests.
 

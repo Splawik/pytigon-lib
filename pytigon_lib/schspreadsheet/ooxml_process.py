@@ -276,23 +276,23 @@ class OOXmlDocTransform(OdfDocTransform):
                     if s.startswith(":="):
                         pos.remove(v)
                         pos.attrib.pop("t", None)
-                        pos.append(etree.XML("<f>%s</f>" % escape(s[2:])))
+                        pos.append(etree.XML(f"<f>{escape(s[2:])}</f>"))
                     elif s.startswith(":?"):
                         pos.remove(v)
                         pos.attrib.pop("t", None)
-                        pos.append(etree.XML("<vauto>%s</vauto>" % escape(s[2:])))
+                        pos.append(etree.XML(f"<vauto>{escape(s[2:])}</vauto>"))
                     elif s.startswith(":0"):
                         pos.remove(v)
                         pos.attrib["t"] = "n"
-                        pos.append(etree.XML("<v>%s</v>" % escape(s[2:])))
+                        pos.append(etree.XML(f"<v>{escape(s[2:])}</v>"))
                     elif s.startswith(":*"):
                         pos.attrib["t"] = "inlineStr"
                         pos.remove(v)
-                        pos.append(etree.XML("<is><t>%s</t></is>" % escape(s[2:])))
+                        pos.append(etree.XML(f"<is><t>{escape(s[2:])}</t></is>"))
                     elif ("{{" in s and "}}" in s) or ("{%" in s and "%}" in s):
                         pos.attrib["t"] = "inlineStr"
                         pos.remove(v)
-                        pos.append(etree.XML("<is><t>%s</t></is>" % escape(s)))
+                        pos.append(etree.XML(f"<is><t>{escape(s)}</t></is>"))
 
     def repair_xml(self, sheet):
         """
@@ -356,13 +356,13 @@ class OOXmlDocTransform(OdfDocTransform):
                     try:
                         d = dateutil.parser.parse(txt)
                         x = date_to_float(d)
-                        parent.append(etree.XML("<v>%f</v>" % x))
+                        parent.append(etree.XML(f"<v>{x:f}</v>"))
                         continue
                     except (ValueError, dateutil.parser.ParserError):
                         pass
                 try:
                     x = float(txt)
-                    parent.append(etree.XML("<v>%s</v>" % escape(txt)))
+                    parent.append(etree.XML(f"<v>{escape(txt)}</v>"))
                     continue
                 except (ValueError, TypeError):
                     pass
@@ -370,7 +370,7 @@ class OOXmlDocTransform(OdfDocTransform):
             parent.attrib["t"] = "inlineStr"
             try:
                 if txt:
-                    parent.append(etree.XML("<is><t>%s</t></is>" % escape(txt)))
+                    parent.append(etree.XML(f"<is><t>{escape(txt)}</t></is>"))
                 else:
                     parent.append(etree.XML("<is><t></t></is>"))
             except Exception:

@@ -5,7 +5,6 @@ import os
 import sys
 from subprocess import PIPE, Popen
 from threading import Thread
-from typing import List, Optional, Tuple
 
 from pytigon_lib.schtools.platform_info import platform_name
 from pytigon_lib.schtools.tools import get_executable
@@ -58,8 +57,8 @@ class FrozenModules:
 
 
 def run(
-    cmd: List[str], shell: bool = False, env: Optional[dict] = None
-) -> Tuple[int, Optional[List[str]], Optional[List[str]]]:
+    cmd: list[str], shell: bool = False, env: dict | None = None
+) -> tuple[int, list[str] | None, list[str] | None]:
     """Run an external command and capture stdout and stderr.
 
     Args:
@@ -94,7 +93,7 @@ def run(
         return -1, None, None
 
 
-def py_run(cmd: List[str]) -> Tuple[int, Optional[List[str]], Optional[List[str]]]:
+def py_run(cmd: list[str]) -> tuple[int, list[str] | None, list[str] | None]:
     """Run a Python command using the current interpreter.
 
     Prepends the path to the current Python executable to the command list.
@@ -108,7 +107,7 @@ def py_run(cmd: List[str]) -> Tuple[int, Optional[List[str]], Optional[List[str]
     return run([get_executable()] + cmd)
 
 
-def _manage(path: str, cmd: List[str]):
+def _manage(path: str, cmd: list[str]):
     """Execute a Django management command in a clean module environment.
 
     Freezes existing Django modules so the management command can import
@@ -134,8 +133,8 @@ def _manage(path: str, cmd: List[str]):
 
 
 def py_manage(
-    cmd: List[str], thread_version: bool = False
-) -> Tuple[int, Optional[List[str]], Optional[List[str]]]:
+    cmd: list[str], thread_version: bool = False
+) -> tuple[int, list[str] | None, list[str] | None]:
     """Run a Django management command.
 
     On Emscripten, returns (0, [], []) as a no-op since management

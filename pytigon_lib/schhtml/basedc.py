@@ -396,7 +396,7 @@ class BaseDc:
             for rec in page:
                 buf.write(json_dumps(rec).encode("utf-8"))
                 buf.write(b"\n")
-            zf.writestr("page_%d" % i, buf.getvalue())
+            zf.writestr(f"page_{i}", buf.getvalue())
             i += 1
         zf.close()
 
@@ -426,7 +426,7 @@ class BaseDc:
             self.dc_info.styles = parm[7]
         for i in range(1, count + 1):
             rec = []
-            data = zf.read("page_%d" % i).decode("utf-8")
+            data = zf.read(f"page_{i}").decode("utf-8")
             for line in data.split("\n"):
                 if len(line) > 1:
                     buf = json_loads(line)

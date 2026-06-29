@@ -132,8 +132,7 @@ class ForeignKey(models.ForeignKey):
 
         if self.show_form:
             href1 = make_href(
-                "/%s/table/%s/%s/form%s/get/"
-                % (
+                "/{}/table/{}/{}/form{}/get/".format(
                     to._meta.app_label,
                     to._meta.object_name,
                     self.filter,
@@ -144,8 +143,7 @@ class ForeignKey(models.ForeignKey):
             href1 = None
         if self.can_add:
             href2 = make_href(
-                "/%s/table/%s/%s/add/"
-                % (to._meta.app_label, to._meta.object_name, self.filter)
+                f"/{to._meta.app_label}/table/{to._meta.object_name}/{self.filter}/add/"
             )
         else:
             href2 = None

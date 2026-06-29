@@ -1,5 +1,5 @@
 """Fast form generation from string definitions.
- 
+
 Provides the ability to create Django forms from a compact
 declarative string syntax, enabling rapid form prototyping
 without writing full Python form classes.

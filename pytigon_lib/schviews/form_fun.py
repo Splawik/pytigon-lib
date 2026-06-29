@@ -7,7 +7,7 @@ form views and combined list+form views.
 
 import logging
 from collections.abc import Callable
-from typing import Any, Dict, Optional
+from typing import Any
 
 from django.http import HttpRequest, HttpResponse
 from django.template import RequestContext
@@ -24,10 +24,10 @@ def form(
     app_name: str,
     form_class: Any,
     template_name: str,
-    object_id: Optional[int] = None,
+    object_id: int | None = None,
     form_end: bool = False,
-    param: Optional[Dict] = None,
-    mimetype: Optional[str] = None,
+    param: dict | None = None,
+    mimetype: str | None = None,
 ) -> HttpResponse:
     """Create and process a form view.
 
@@ -156,14 +156,14 @@ def list_and_form(
     form_class: Any,
     template_name: str,
     table_always: bool = True,
-    paginate_by: Optional[int] = None,
-    page: Optional[int] = None,
+    paginate_by: int | None = None,
+    page: int | None = None,
     allow_empty: bool = True,
-    extra_context: Optional[Dict] = None,
-    context_processors: Optional[Any] = None,
+    extra_context: dict | None = None,
+    context_processors: Any | None = None,
     template_object_name: str = "obj",
-    mimetype: Optional[str] = None,
-    param: Optional[Dict] = None,
+    mimetype: str | None = None,
+    param: dict | None = None,
 ) -> HttpResponse:
     """Display a list of objects alongside a form for filtering/processing.
 
@@ -229,8 +229,8 @@ def list_and_form(
 def direct_to_template(
     request: HttpRequest,
     template: str,
-    extra_context: Optional[Dict] = None,
-    mimetype: Optional[str] = None,
+    extra_context: dict | None = None,
+    mimetype: str | None = None,
     **kwargs: Any,
 ) -> HttpResponse:
     """Render a template directly with optional extra context.

@@ -11,7 +11,6 @@ Provides utilities for:
 import logging
 import sys
 import traceback
-from typing import List, Tuple
 
 import pscript
 import pscript.parser2
@@ -21,7 +20,7 @@ from pscript.parser1 import JSError, reprs
 logger = logging.getLogger(__name__)
 
 
-def get_class_definition(name: str, base: str = "Object", docstring: str = "") -> List[str]:
+def get_class_definition(name: str, base: str = "Object", docstring: str = "") -> list[str]:
     """Generate JavaScript class definition lines from Python class info.
 
     Produces JS code that creates a class constructor with proper prototype
@@ -71,7 +70,7 @@ def get_class_definition(name: str, base: str = "Object", docstring: str = "") -
 pscript.parser2.get_class_definition = get_class_definition
 
 
-def parse_ClassDef(self, node) -> List[str]:
+def parse_ClassDef(self, node) -> list[str]:
     """Custom class definition parser for PScript.
 
     Handles Python class definitions with enhanced support for
@@ -150,7 +149,7 @@ def prepare_python_code(code: str, append_exports=False) -> str:
         Modified Python code with export statement appended if public
         functions/classes are found.
     """
-    exported_ids: List[str] = []
+    exported_ids: list[str] = []
 
     for line in code.split("\n"):
         stripped = line.strip()
@@ -170,7 +169,7 @@ def prepare_python_code(code: str, append_exports=False) -> str:
     return code
 
 
-def compile(python_code: str, append_exports=False) -> Tuple[bool, str]:
+def compile(python_code: str, append_exports=False) -> tuple[bool, str]:
     """Compile Python code to JavaScript using PScript.
 
     Args:

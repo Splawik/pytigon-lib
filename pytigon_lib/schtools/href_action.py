@@ -391,9 +391,9 @@ class Action:
                         for pos in x:
                             if "-" in pos and pos != "fa-lg":
                                 if "fa-lg" in x:
-                                    self.icon_name = "fa://%s?size=2" % pos
+                                    self.icon_name = f"fa://{pos}?size=2"
                                 else:
-                                    self.icon_name = "fa://%s?size=1" % pos
+                                    self.icon_name = f"fa://{pos}?size=1"
                     else:
                         self.icon_name = ""
             else:
@@ -413,11 +413,11 @@ class Action:
         """
         ret = s.format(**self.d).strip()
         if self.d["x1"]:
-            buf = "x1=%s" % self.d["x1"]
+            buf = "x1={}".format(self.d["x1"])
             if self.d["x2"]:
-                buf += "&x2=%s" % self.d["x2"]
+                buf += "&x2={}".format(self.d["x2"])
                 if self.d["x3"]:
-                    buf += "&x3=%s" % self.d["x3"]
+                    buf += "&x3={}".format(self.d["x3"])
             if "?" in ret:
                 ret += "&" + buf
             else:
@@ -556,15 +556,7 @@ def action_fun(
     Returns:
         An actions dictionary as returned by :func:`actions_dict`.
     """
-    action_str = "%s,%s,%s,%s,%s,%s,%s" % (
-        action,
-        title,
-        icon_name,
-        target,
-        attrs,
-        tag_class,
-        url,
-    )
+    action_str = f"{action},{title},{icon_name},{target},{attrs},{tag_class},{url}"
     t = Template(action_str)
     output2 = t.render(context)
     return actions_dict(context, output2)

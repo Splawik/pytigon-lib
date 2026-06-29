@@ -69,7 +69,7 @@ class OdfDocTransform:
 
     def row_number(self, il=1):
         """Return template string for row increment followed by column reset."""
-        return """{{ tbl|args:%d|call:'IncRow' }}{{ tbl|args:1|call:'SetCol' }}""" % il
+        return f"{{{{ tbl|args:{il}|call:'IncRow' }}}}{{{{ tbl|args:1|call:'SetCol' }}}}"
 
     def clear_row_col(self):
         """Return template string to reset both row and column to 1."""
@@ -126,7 +126,7 @@ class OdfDocTransform:
                     if child.tag.endswith("v"):
                         comment_elem.remove(child)
                 comment_elem.append(
-                    etree.XML("<is><t>%s</t></is>" % escape(comment_txt[1:]))
+                    etree.XML(f"<is><t>{escape(comment_txt[1:])}</t></is>")
                 )
                 comment_elem.attrib["t"] = "inlineStr"
             return
@@ -146,7 +146,7 @@ class OdfDocTransform:
             if _level < 1:
                 parent.insert(
                     parent.index(comment_elem) + offset,
-                    etree.XML("<tmp>%s</tmp>" % escape(v)),
+                    etree.XML(f"<tmp>{escape(v)}</tmp>"),
                 )
             else:
                 gparent = parent
@@ -164,7 +164,7 @@ class OdfDocTransform:
                 if gparent is not None:
                     gparent.insert(
                         gparent.index(p) + offset,
-                        etree.XML("<tmp>%s</tmp>" % escape(v)),
+                        etree.XML(f"<tmp>{escape(v)}</tmp>"),
                     )
 
     def _process_annotations(self, doc, debug):

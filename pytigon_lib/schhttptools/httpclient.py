@@ -5,6 +5,7 @@ import logging
 import mimetypes
 import os
 import threading
+from contextlib import ExitStack
 from threading import Thread
 
 import httpx
@@ -437,20 +438,22 @@ class HttpClient:
             if "csrftoken" in cookies:
                 headers["X-CSRFToken"] = cookies["csrftoken"].split(";", 1)[0]
             if upload:
-                files = {
-                    key: open(value[1:], "rb")
-                    for key, value in parm.items()
-                    if isinstance(value, str) and value.startswith("@") and os.path.exists(value[1:])
-                }
-                for key in files:
-                    del parm[key]
-                if direct_access:
-                    if "data" not in argv:
-                        argv["data"] = {}
-                    for key, value in files.items():
-                        argv["data"][key] = value
-                else:
-                    argv["files"] = files
+                with ExitStack() as stack:
+                    files = {
+                        key: stack.enter_context(open(value[1:], "rb"))
+                        for key, value in parm.items()
+                        if isinstance(value, str) and value.startswith("@") and os.path.exists(value[1:])
+                    }
+                    for key in files:
+                        del parm[key]
+                    if direct_access:
+                        if "data" not in argv:
+                            argv["data"] = {}
+                        for key, value in files.items():
+                            argv["data"][key] = value
+                    else:
+                        argv["files"] = files
+                    response = request(method, adr, direct_access, argv, self.app, user_agent)
         else:
             argv["data"] = parm
         response = request(method, adr, direct_access, argv, self.app, user_agent)

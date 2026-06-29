@@ -268,14 +268,7 @@ class BaseHtmlElemParser:
             text_decoration = 1
         else:
             text_decoration = 0
-        p = "%s;%s;%d;%d;%d;%d" % (
-            color,
-            font_family,
-            font_size,
-            font_style,
-            font_weight,
-            text_decoration,
-        )
+        p = f"{color};{font_family};{font_size};{font_style};{font_weight};{text_decoration}"
         id = self.dc_info.get_style_id(p)
         return id
 

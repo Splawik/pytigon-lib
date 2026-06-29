@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from django.core.cache import cache
 
@@ -56,7 +56,7 @@ class CommunicationByCachePublisher(CommunicationBasePublisher):
 class CommunicationBaseReceiver:
     """Base class for communication receivers."""
 
-    def __init__(self, id: str, observer: Optional[Any] = None) -> None:
+    def __init__(self, id: str, observer: Any | None = None) -> None:
         """Initialize the receiver with a unique ID and an optional observer."""
         self.id = id
         self.observer = observer
@@ -84,7 +84,7 @@ class CommunicationBaseReceiver:
 class CommunicationByCacheReceiver(CommunicationBaseReceiver):
     """Receiver that uses Django cache for communication."""
 
-    def __init__(self, id: str, observer: Optional[Any] = None) -> None:
+    def __init__(self, id: str, observer: Any | None = None) -> None:
         """Initialize the receiver with a unique ID and an optional observer."""
         super().__init__(id, observer)
         self.process_events_count = 0

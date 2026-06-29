@@ -8,7 +8,7 @@ requests without a real network stack.
 
 import copy
 import urllib.parse
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 SCOPE_TEMPLATE = {
     "type": "http",
@@ -34,8 +34,8 @@ SCOPE_TEMPLATE = {
 
 
 def get_scope_and_content_http_get(
-    path: str, headers: List[Tuple[str, str]]
-) -> Tuple[Dict[str, Any], str]:
+    path: str, headers: list[tuple[str, str]]
+) -> tuple[dict[str, Any], str]:
     """Generate a scope dictionary and empty content for an HTTP GET request.
 
     Args:
@@ -64,8 +64,8 @@ def get_scope_and_content_http_get(
 
 
 def get_scope_and_content_http_post(
-    path: str, headers: List[Tuple[str, str]], params: Optional[Dict[str, str]] = None
-) -> Tuple[Dict[str, Any], str]:
+    path: str, headers: list[tuple[str, str]], params: dict[str, str] | None = None
+) -> tuple[dict[str, Any], str]:
     """Generate a scope dictionary and URL-encoded content for an HTTP POST request.
 
     Args:
@@ -91,7 +91,7 @@ def get_scope_and_content_http_post(
     return scope, content
 
 
-def get_scope_websocket(path: str, headers: List[Tuple[str, str]]) -> Dict[str, Any]:
+def get_scope_websocket(path: str, headers: list[tuple[str, str]]) -> dict[str, Any]:
     """Generate a scope dictionary for a WebSocket connection.
 
     Args:
@@ -109,10 +109,10 @@ def get_scope_websocket(path: str, headers: List[Tuple[str, str]]) -> Dict[str, 
 async def get_or_post(
     application,
     path: str,
-    headers: List[Tuple[str, str]],
-    params: Optional[Dict[str, str]] = None,
+    headers: list[tuple[str, str]],
+    params: dict[str, str] | None = None,
     post: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Invoke an ASGI application with GET or POST and return the response dict.
 
     Follows HTTP 302 redirects automatically.
@@ -134,13 +134,13 @@ async def get_or_post(
         else get_scope_and_content_http_get(path, headers)
     )
 
-    async def send(message: Dict[str, Any]) -> None:
+    async def send(message: dict[str, Any]) -> None:
         """Accumulate ASGI response messages into the ret dictionary."""
         nonlocal ret
         for key, value in message.items():
             ret[key] = ret.get(key, "") + value
 
-    async def receive() -> Dict[str, Any]:
+    async def receive() -> dict[str, Any]:
         """Provide the request body to the ASGI application."""
         nonlocal content
         return {"type": "http", "body": content.encode("utf-8")}
@@ -160,8 +160,8 @@ async def get_or_post(
 
 
 async def websocket(
-    application, path: str, headers: List[Tuple[str, str]], input_queue, output
-) -> Dict[str, Any]:
+    application, path: str, headers: list[tuple[str, str]], input_queue, output
+) -> dict[str, Any]:
     """Handle a WebSocket connection through an ASGI application.
 
     Args:
@@ -178,7 +178,7 @@ async def websocket(
     scope = get_scope_websocket(path.replace("ws://127.0.0.2/", ""), headers)
     connected = False
 
-    async def send(message: Dict[str, Any]) -> None:
+    async def send(message: dict[str, Any]) -> None:
         """Route ASGI WebSocket messages to output callbacks."""
         if message["type"] == "websocket.accept":
             output.onOpen()
@@ -189,7 +189,7 @@ async def websocket(
         elif message["type"] == "websocket.disconnect":
             output.onClose(None, None, None)
 
-    async def receive() -> Dict[str, Any]:
+    async def receive() -> dict[str, Any]:
         """Provide WebSocket events from the input queue."""
         nonlocal connected
         if not connected:

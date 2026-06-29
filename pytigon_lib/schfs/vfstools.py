@@ -1,16 +1,13 @@
 """Virtual filesystem tools: path normalisation, file I/O, zip handling, and format conversion."""
 
-from __future__ import annotations
-
-import logging
-
 import email.generator
 import hashlib
+import logging
 import os
 import re
 import zipfile
 from tempfile import NamedTemporaryFile
-from typing import Any, Optional, Union
+from typing import Any
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -24,7 +21,7 @@ except ImportError:
     logger.warning("PyFilesystem (fs) not installed — OSFS is unavailable")
 
 
-def norm_path(url: Optional[str]) -> str:
+def norm_path(url: str | None) -> str:
     """Normalize a path-like string by resolving ``..`` and ``.`` segments.
 
     The function also handles URL-encoded spaces and ``://``-style protocol
@@ -109,7 +106,7 @@ def open_and_create_dir(filename: str, mode: str, for_vfs: bool = False) -> Any:
         raise OSError(f"Failed to create directory or open file '{filename}': {e}") from e
 
 
-def get_unique_filename(base_name: Optional[str] = None, ext: Optional[str] = None) -> str:
+def get_unique_filename(base_name: str | None = None, ext: str | None = None) -> str:
     """Generate a unique filename using an email-style MIME boundary.
 
     Args:
@@ -128,8 +125,8 @@ def get_unique_filename(base_name: Optional[str] = None, ext: Optional[str] = No
 
 
 def get_temp_filename(
-    base_name: Optional[str] = None,
-    ext: Optional[str] = None,
+    base_name: str | None = None,
+    ext: str | None = None,
     for_vfs: bool = False,
 ) -> str:
     """Return a full path for a temporary file.
@@ -197,13 +194,13 @@ def _cmp_txt_str_content(data1: bytes, data2: bytes) -> bool:
 
 def extractall(
     zip_file: zipfile.ZipFile,
-    path: Optional[str] = None,
-    members: Optional[list[str]] = None,
-    pwd: Optional[str] = None,
-    exclude: Optional[list[str]] = None,
-    backup_zip: Optional[zipfile.ZipFile] = None,
-    backup_exts: Optional[list[str]] = None,
-    only_path: Optional[str] = None,
+    path: str | None = None,
+    members: list[str] | None = None,
+    pwd: str | None = None,
+    exclude: list[str] | None = None,
+    backup_zip: zipfile.ZipFile | None = None,
+    backup_exts: list[str] | None = None,
+    only_path: str | None = None,
 ) -> None:
     """Extract files from a zip archive, with optional backup of overwritten files.
 
@@ -257,7 +254,7 @@ class ZipWriter:
         self,
         filename: str,
         basepath: str = "",
-        exclude: Optional[list[str]] = None,
+        exclude: list[str] | None = None,
         sha256: bool = False,
     ) -> None:
         """Initialise the writer.
@@ -274,7 +271,7 @@ class ZipWriter:
         self.base_len = len(self.basepath)
         self.zip_file = zipfile.ZipFile(filename, "w", zipfile.ZIP_BZIP2, compresslevel=9)
         self.exclude = exclude or []
-        self.sha256_tab: Optional[list[tuple[str, str, int]]] = [] if sha256 else None
+        self.sha256_tab: list[tuple[str, str, int]] | None = [] if sha256 else None
 
     def close(self) -> None:
         """Finalise and close the underlying zip file."""
@@ -300,8 +297,8 @@ class ZipWriter:
     def write(
         self,
         file_name: str,
-        name_in_zip: Optional[str] = None,
-        base_path_in_zip: Optional[str] = None,
+        name_in_zip: str | None = None,
+        base_path_in_zip: str | None = None,
     ) -> None:
         """Add a file from the local filesystem to the archive.
 
@@ -336,7 +333,7 @@ class ZipWriter:
         self._sha256_gen(path, data)
         self.zip_file.writestr(path, data)
 
-    def to_zip(self, file: str, base_path_in_zip: Optional[str] = None) -> None:
+    def to_zip(self, file: str, base_path_in_zip: str | None = None) -> None:
         """Add *file* (or recursively add a directory) to the archive.
 
         Args:
@@ -348,7 +345,7 @@ class ZipWriter:
         else:
             self.add_folder_to_zip(file, base_path_in_zip=base_path_in_zip)
 
-    def add_folder_to_zip(self, folder: str, base_path_in_zip: Optional[str] = None) -> None:
+    def add_folder_to_zip(self, folder: str, base_path_in_zip: str | None = None) -> None:
         """Recursively add *folder* contents to the archive."""
         try:
             entries = os.listdir(folder)
@@ -393,10 +390,10 @@ def automount(path: str) -> str:
 
 
 def convert_file(
-    filename_or_stream_in: Union[str, Any],
-    filename_or_stream_out: Union[str, Any],
-    input_format: Optional[str] = None,
-    output_format: Optional[str] = None,
+    filename_or_stream_in: str | Any,
+    filename_or_stream_out: str | Any,
+    input_format: str | None = None,
+    output_format: str | None = None,
     for_vfs_input: bool = True,
     for_vfs_output: bool = True,
 ) -> bool:
@@ -478,7 +475,7 @@ def convert_file(
             )
 
             processor = IndentMarkdownProcessor(output_format="html")
-            buf: Optional[str] = processor.convert(fin.read())
+            buf: str | None = processor.convert(fin.read())
         elif input_format == "md":
             buf = markdown_to_html(fin.read())
         elif input_format == "ihtml":

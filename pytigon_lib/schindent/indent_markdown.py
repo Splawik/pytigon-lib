@@ -13,7 +13,7 @@ Key components:
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import markdown
 from django.template.loader import select_template
@@ -21,7 +21,7 @@ from django.template.loader import select_template
 logger = logging.getLogger(__name__)
 
 # Global registry of named object renderers
-REG_OBJ_RENDERER: Dict[str, type] = {}
+REG_OBJ_RENDERER: dict[str, type] = {}
 
 
 class BaseObjRenderer:
@@ -66,7 +66,7 @@ class BaseObjRenderer:
         return self.line_number
 
     @staticmethod
-    def get_info() -> Dict[str, Any]:
+    def get_info() -> dict[str, Any]:
         """Return metadata about this renderer.
 
         Returns:
@@ -84,7 +84,7 @@ class BaseObjRenderer:
         """Return the edit form class for this renderer, or None."""
         return None
 
-    def convert_form_to_dict(self, form, old_dict=None) -> Dict:
+    def convert_form_to_dict(self, form, old_dict=None) -> dict:
         """Convert form data to a dictionary.
 
         Args:
@@ -96,7 +96,7 @@ class BaseObjRenderer:
         """
         return form.cleaned_data
 
-    def form_from_dict(self, form_class, param: Optional[Dict] = None):
+    def form_from_dict(self, form_class, param: dict | None = None):
         """Create a form instance from a dictionary of initial values.
 
         Args:
@@ -110,7 +110,7 @@ class BaseObjRenderer:
             return form_class(initial=param)
         return form_class()
 
-    def gen_context(self, param: Any, lines: List[str], output_format: str, parent_processor: Any) -> Dict[str, Any]:
+    def gen_context(self, param: Any, lines: list[str], output_format: str, parent_processor: Any) -> dict[str, Any]:
         """Generate template context for rendering.
 
         Args:
@@ -124,7 +124,7 @@ class BaseObjRenderer:
         """
         return {}
 
-    def get_renderer_template_name(self) -> Optional[str]:
+    def get_renderer_template_name(self) -> str | None:
         """Return the Django template name for rendering, or None."""
         return None
 
@@ -162,7 +162,7 @@ class BaseObjRenderer:
             {{% endif %}}
         """
 
-    def render(self, param: Any, lines: List[str], output_format: str, parent_processor: Any) -> str:
+    def render(self, param: Any, lines: list[str], output_format: str, parent_processor: Any) -> str:
         """Render this object to HTML using its template.
 
         Args:
@@ -226,7 +226,7 @@ def get_indent(s: str) -> int:
     return len(s) - len(s.lstrip())
 
 
-def unindent(lines: List[str]) -> List[str]:
+def unindent(lines: list[str]) -> list[str]:
     """Remove common leading whitespace from a list of lines.
 
     Args:
@@ -290,7 +290,7 @@ class IndentMarkdownProcessor:
         self,
         output_format: str = "html",
         parent_processor: Optional["IndentMarkdownProcessor"] = None,
-        uri: Optional[str] = None,
+        uri: str | None = None,
         line_number: int = 0,
     ) -> None:
         """Initialize the processor.
@@ -303,9 +303,9 @@ class IndentMarkdownProcessor:
         """
         self.output_format = output_format
         self.parent_processor = parent_processor
-        self.named_renderers: Dict[str, str] = {}
+        self.named_renderers: dict[str, str] = {}
         self.uri = uri
-        self.lines: Optional[List[str]] = None
+        self.lines: list[str] | None = None
         self.line_number = line_number
 
     def get_root(self) -> "IndentMarkdownProcessor":
@@ -344,7 +344,7 @@ class IndentMarkdownProcessor:
             return json.loads(s.replace("\\n", "\n"))
         return s
 
-    def _render_obj(self, config: str, lines: Optional[List[str]]) -> str:
+    def _render_obj(self, config: str, lines: list[str] | None) -> str:
         """Render an embedded object from its configuration string.
 
         Args:
@@ -375,7 +375,7 @@ class IndentMarkdownProcessor:
 
         return self.render_obj(obj_name, param, lines)
 
-    def render_obj(self, obj_name: str, param: Any, lines: Optional[List[str]] = None) -> str:
+    def render_obj(self, obj_name: str, param: Any, lines: list[str] | None = None) -> str:
         """Render a named object using its registered renderer.
 
         Args:
@@ -413,9 +413,9 @@ class IndentMarkdownProcessor:
         Returns:
             Rendered HTML string.
         """
-        registrations: List[List] = []  # [config, rendered_result]
-        line_buffer: List[str] = []
-        func_buffer: List[str] = []
+        registrations: list[list] = []  # [config, rendered_result]
+        line_buffer: list[str] = []
+        func_buffer: list[str] = []
         in_func = False
         in_func_indent = 0
         self.lines = indent_wiki_source.replace("\r", "").split("\n")

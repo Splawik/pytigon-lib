@@ -9,7 +9,7 @@ system and optional django-rules object-level access control.
 import logging
 import threading
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -20,7 +20,7 @@ from pytigon_lib.schviews.viewtools import render_to_response
 
 logger = logging.getLogger(__name__)
 
-_ANONYMOUS: Optional[Any] = None
+_ANONYMOUS: Any | None = None
 _ANONYMOUS_LOCK = threading.Lock()
 
 

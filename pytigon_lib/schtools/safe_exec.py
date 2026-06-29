@@ -17,16 +17,15 @@ Security design
 - Exception handling is the caller's responsibility.
 """
 
-import builtins
-from typing import Any, Dict, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 
 class EvalResult(NamedTuple):
     value: Any
-    error: Optional[Exception]
+    error: Exception | None
 
 
-RESTRICTED_BUILTINS: Dict[str, Any] = {
+RESTRICTED_BUILTINS: dict[str, Any] = {
     "True": True,
     "False": False,
     "None": None,
@@ -75,11 +74,14 @@ RESTRICTED_BUILTINS: Dict[str, Any] = {
     "tuple": tuple,
     "type": type,
     "zip": zip,
-    "len": len,
 }
 
 
-def safe_eval(expression: str, extra_globals: Optional[Dict[str, Any]] = None, local_ns: Optional[Dict[str, Any]] = None) -> Any:
+def safe_eval(
+    expression: str,
+    extra_globals: dict[str, Any] | None = None,
+    local_ns: dict[str, Any] | None = None,
+) -> Any:
     """Evaluate a Python *expression* with restricted builtins.
 
     Only arithmetic, comparisons, builtin constructors, and names
@@ -103,7 +105,11 @@ def safe_eval(expression: str, extra_globals: Optional[Dict[str, Any]] = None, l
     return eval(expression, glob, local_ns)
 
 
-def safe_exec(source: str, extra_globals: Optional[Dict[str, Any]] = None, local_ns: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def safe_exec(
+    source: str,
+    extra_globals: dict[str, Any] | None = None,
+    local_ns: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Execute Python *source code* with restricted builtins.
 
     Similar restrictions as :func:`safe_eval` — no I/O, no imports,

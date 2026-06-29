@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import environ
 
@@ -7,7 +6,7 @@ import environ
 _ENV = None
 
 
-def get_environ(path: Optional[str] = None) -> environ.Env:
+def get_environ(path: str | None = None) -> environ.Env:
     """Initialize and return the environment configuration singleton.
 
     On first call, creates an environ.Env instance with default settings.

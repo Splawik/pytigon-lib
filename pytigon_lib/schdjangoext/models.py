@@ -1,7 +1,7 @@
 """Module contains many additional db models."""
 
 import sys
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from django import forms
 from django.conf import settings
@@ -69,7 +69,7 @@ class JSONModel(models.Model):
             return
         super().__setattr__(name, value)
 
-    def get_json_data(self) -> Dict[str, Any]:
+    def get_json_data(self) -> dict[str, Any]:
         """Return the JSON data associated with the model."""
         return self.jsondata if self.jsondata else {}
 
@@ -77,7 +77,7 @@ class JSONModel(models.Model):
         self,
         view: Any,
         request: Any,
-        form_class: Type[forms.Form],
+        form_class: type[forms.Form],
         adding: bool = False,
     ) -> forms.Form:
         """Generate a form based on JSON data."""
@@ -111,7 +111,7 @@ class JSONModel(models.Model):
 
     def set_field_value(
         self, field_name: str, attr_name: str, value: Any
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Set a field's attribute value."""
         for f in self._meta.fields:
             if f.name == field_name:
@@ -127,7 +127,7 @@ class TreeModel(JSONModel):
         abstract = True
 
 
-ASSOCIATED_MODEL_CACHE: Dict[str, Any] = {}
+ASSOCIATED_MODEL_CACHE: dict[str, Any] = {}
 
 
 class AssociatedModel(models.Model):
@@ -170,7 +170,7 @@ class AssociatedModel(models.Model):
         db_index=True,
     )
 
-    def get_associated_model(self) -> Optional[Type[models.Model]]:
+    def get_associated_model(self) -> type[models.Model] | None:
         """Retrieve the associated model class."""
         global ASSOCIATED_MODEL_CACHE
         if ContentType is None:
@@ -187,12 +187,12 @@ class AssociatedModel(models.Model):
             return model_class
         return None
 
-    def get_associated_obj(self) -> Optional[models.Model]:
+    def get_associated_obj(self) -> models.Model | None:
         """Retrieve the associated object."""
         model = self.get_associated_model()
         return model.objects.filter(pk=self.parent_id).first() if model else None
 
-    def get_associated_obj_to_parent(self) -> Optional[models.Model]:
+    def get_associated_obj_to_parent(self) -> models.Model | None:
         """Retrieve the associated object's parent."""
         model = self.get_associated_model()
         if model:
@@ -202,8 +202,8 @@ class AssociatedModel(models.Model):
         return None
 
     def init_new(
-        self, request: Any, view: Any, value: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, request: Any, view: Any, value: str | None = None
+    ) -> dict[str, Any]:
         """Initialize a new associated model instance."""
         if value:
             x = value.split("__")
@@ -223,7 +223,7 @@ class AssociatedModel(models.Model):
 
     @classmethod
     def filter(
-        cls, value: Optional[str], view: Any = None, request: Any = None
+        cls, value: str | None, view: Any = None, request: Any = None
     ) -> models.QuerySet:
         """Filter the associated model instances."""
         if value:
@@ -248,12 +248,12 @@ class AssociatedJSONModel(AssociatedModel, JSONModel):
 
 
 def standard_table_action(
-    cls: Type[models.Model],
+    cls: type[models.Model],
     list_view: Any,
     request: Any,
-    data: Dict[str, Any],
-    operations: Dict[str, Any],
-) -> Optional[Dict[str, Any]]:
+    data: dict[str, Any],
+    operations: dict[str, Any],
+) -> dict[str, Any] | None:
     """Handle standard table actions: copy, paste, and delete.
 
     Supports three action types:
@@ -322,9 +322,9 @@ def standard_table_action(
 
 def get_form(
     obj: models.Model,
-    fields_list: Optional[List[str]] = None,
-    widgets_dict: Optional[Dict[str, Any]] = None,
-) -> Type[forms.ModelForm]:
+    fields_list: list[str] | None = None,
+    widgets_dict: dict[str, Any] | None = None,
+) -> type[forms.ModelForm]:
     """Generate a ModelForm for the given object."""
 
     class _Form(forms.ModelForm):
@@ -336,7 +336,7 @@ def get_form(
     return _Form
 
 
-def extend_class(main: Type[Any], base: Type[Any]) -> None:
+def extend_class(main: type[Any], base: type[Any]) -> None:
     """Extend a class with a base class."""
     if not any(
         cmd in sys.argv

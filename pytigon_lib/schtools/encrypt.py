@@ -1,6 +1,5 @@
 import base64
 import secrets
-from typing import Union
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -47,7 +46,7 @@ def _generate_key(password: str, salt: bytes) -> bytes:
     return kdf.derive(password.encode("utf-8"))
 
 
-def encrypt(plaintext: bytes, password: str, b64: bool = False) -> Union[bytes, str]:
+def encrypt(plaintext: bytes, password: str, b64: bool = False) -> bytes | str:
     """Encrypt plaintext using AES-GCM with a random nonce.
 
     The nonce (12 bytes) is prepended to the ciphertext. AES-GCM provides
@@ -75,7 +74,7 @@ def encrypt(plaintext: bytes, password: str, b64: bool = False) -> Union[bytes, 
         raise ValueError(f"Encryption failed: {e}") from e
 
 
-def decrypt(ciphertext: Union[bytes, str], password: str, b64: bool = False) -> str:
+def decrypt(ciphertext: bytes | str, password: str, b64: bool = False) -> str:
     """Decrypt ciphertext that was encrypted with AES-GCM.
 
     Extracts the 12-byte nonce from the beginning of the ciphertext and

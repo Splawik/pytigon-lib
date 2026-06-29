@@ -15,6 +15,8 @@ from pytigon_lib.schhtml.render_helpers import (
     get_size,
 )
 
+from .atom_tags import Atag
+
 LI_INDENT = 20
 
 
@@ -191,7 +193,9 @@ class AtomContainer(InlineElements):
         self.draw_txt = ""
         self.in_draw = False
 
-        if type(self.parent).__name__ in ("BodyTag",):
+        from .block_tags import BodyTag
+
+        if isinstance(self.parent, BodyTag):
             self.subdiv = False
         else:
             self.subdiv = True
@@ -275,7 +279,7 @@ class Par(InlineElements):
         if (
             issubclass(type(self.parent), Par)
             or issubclass(type(self.parent), AtomContainer)
-            or type(self.parent).__name__ == "Atag"
+            or isinstance(self.parent, Atag)
         ):
             if self.atom_list:
                 self.parent.append_atom_list(self.atom_list)
@@ -436,13 +440,13 @@ class Ul(ParArray):
             if "type" in self.attrs:
                 t = self.attrs["type"]
             if t == "1":
-                return "%3d. " % child.lp
+                return f"{child.lp:3d}. "
             elif t == "a":
                 return "  " + chr(ord("a") + child.lp - 1) + ". "
             elif t == "A":
                 return "  " + chr(ord("A") + child.lp - 1) + ". "
             else:
-                return "%3d. " % child.lp
+                return f"{child.lp:3d}. "
         else:
             t = "disc"
             if "type" in self.attrs:

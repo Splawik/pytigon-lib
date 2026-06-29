@@ -4,6 +4,7 @@ import docx.enum.text
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 
+from pytigon_lib.schhtml.atom import BrAtom
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
 
 IMAGE = None
@@ -232,7 +233,7 @@ class DocxDc(BaseDc):
                     ) = style.split(";")
                 else:
                     style = None
-                if type(atom).__name__ == "BrAtom":
+                if isinstance(atom, BrAtom):
                     dest_element.add_run("\n")
                 elif isinstance(atom.data, str):
                     s = atom.data.replace("»", " ")
@@ -242,7 +243,7 @@ class DocxDc(BaseDc):
                         x.font.italic = int(font_style) == 1
                         x.font.size = Pt(int(int(font_size) * 10 / 100))
                         x.font.color.rgb = RGBColor(*self.rgbfromhex(color))
-                elif type(atom.data).__name__ == "ImgDraw":
+                if hasattr(atom.data, "image"):
                     width, height = self._handle_width_and_height(atom.data.img_tag)
                     self._add_image(
                         atom.data.image, dest_element.add_run(), width, height
