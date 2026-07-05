@@ -60,7 +60,7 @@ dev = ["ruff>=0.3", "pytest>=7.0", "pytest-django>=4.5"]
 
 [project.urls]
 Documentation = "https://pytigon.github.io/pytigon-lib"
-Repository = "https://github.com/pytigon/pytigon-lib"
+Repository = "https://github.com/Splawik/pytigon-lib"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -96,3 +96,4 @@ line-ending = "lf"
 [tool.pytest.ini_options]
 norecursedirs = ["tests/schindent/assets"]
 filterwarnings = ["ignore::DeprecationWarning"]
+addopts = ["--ignore-glob=**/android_client.py"]

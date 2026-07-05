@@ -1,6 +1,6 @@
 # Pytigon Library
 
-**Version:** 0.260511 · **License:** LGPL 3.0 · **Author:** Sławomir Chołaj
+**Version:** 0.260705 · **License:** LGPL 3.0 · **Author:** Sławomir Chołaj
 
 ---
 

@@ -46,7 +46,7 @@ GenericTable(MyModel).register()
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.12+
 - Django >= 6
 
 ## License
