@@ -23,9 +23,7 @@ class ModelSelect2WidgetExt(ModelSelect2Widget):
 
     input_type = "select2"
 
-    def __init__(
-        self, href1=None, href2=None, label="", minimum_input_length=0, **argv
-    ):
+    def __init__(self, href1=None, href2=None, label="", minimum_input_length=0, **argv):
         """Initialize the widget with optional href attributes for related actions.
 
         Args:
@@ -224,6 +222,11 @@ class ManyToManyField(models.ManyToManyField):
         else:
             self.app_template = ""
 
+        if "null" in kwargs:
+            del kwargs["null"]
+        if "blank" in kwargs:
+            del kwargs["blank"]
+
         super().__init__(*args, **kwargs)
 
         if len(args) > 0:
@@ -263,9 +266,7 @@ class ManyToManyField(models.ManyToManyField):
                         widget.attrs["style"] = "width:100%;"
                         argv["widget"] = widget
 
-                    forms.ModelMultipleChoiceField.__init__(
-                        self, queryset, *argi, **argv
-                    )
+                    forms.ModelMultipleChoiceField.__init__(self, queryset, *argi, **argv)
 
             defaults = {
                 "form_class": _Field,
