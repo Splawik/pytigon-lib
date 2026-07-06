@@ -7,12 +7,12 @@ import mimetypes
 import re
 import uuid
 
-import fs.path
 from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.http import HttpResponse
 from django_q.tasks import async_task
 
+from pytigon_lib.schfs.adapters import _fsspec_join as fs_path_join
 from pytigon_lib.schfs.vfstools import automount, convert_file, norm_path
 from pytigon_lib.schtable.table import Table
 from pytigon_lib.schtools import schjson
@@ -111,7 +111,7 @@ class VfsTable(Table):
             f = [".."] + f
 
         for p in f:
-            pos = fs.path.join(self.folder, p)
+            pos = fs_path_join(self.folder, p)
             if default_storage.fs.isdir(pos) or p.lower().endswith(".zip"):
                 if not cmp or cmp.match(p):
                     try:
@@ -172,11 +172,7 @@ class VfsTable(Table):
             ts = []
             for pos in s:
                 if pos:
-                    id = (
-                        self.col_names.index(pos[1:])
-                        if pos[0] == "-"
-                        else self.col_names.index(pos)
-                    )
+                    id = self.col_names.index(pos[1:]) if pos[0] == "-" else self.col_names.index(pos)
                     znak = -1 if pos[0] == "-" else 1
                     ts.append((id, znak))
 
@@ -214,18 +210,12 @@ class VfsTable(Table):
         thread_commands = ("COPY", "MOVE", "DELETE")
         if value[0] in thread_commands:
             parm = {"cmd": value[0]}
-            parm["files"] = (
-                [bdecode(v) for v in value[1][1]]
-                if value[1][1]
-                else [bdecode(value[1][0])]
-            )
+            parm["files"] = [bdecode(v) for v in value[1][1]] if value[1][1] else [bdecode(value[1][0])]
             if len(value[2]) > 1:
                 parm["dest"] = bdecode(value[2][1])
 
             publish_id = uuid.uuid4().hex
-            task_id = async_task(
-                "schcommander.tasks.vfs_action", task_publish_id=publish_id, param=parm
-            )
+            task_id = async_task("schcommander.tasks.vfs_action", task_publish_id=publish_id, param=parm)
             c = {"task_id": task_id, "process_id": f"vfs_action__{publish_id}"}
         elif value[0] == "MKDIR":
             path = bdecode(value[2][0])
@@ -252,11 +242,7 @@ class VfsTable(Table):
 def vfstable_view(request, folder, value=None):
     """Handle requests for the VFS table view."""
     if request.POST:
-        d = {
-            key: schjson.loads(val)
-            for key, val in request.POST.items()
-            if key != "csrfmiddlewaretoken"
-        }
+        d = {key: schjson.loads(val) for key, val in request.POST.items() if key != "csrfmiddlewaretoken"}
     else:
         d = {}
 

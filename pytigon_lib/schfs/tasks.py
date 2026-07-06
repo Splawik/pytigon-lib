@@ -64,9 +64,7 @@ def filesystemcmd(cproxy: Any | None = None, **kwargs: Any) -> None:
                     if default_storage.fs.isfile(f):
                         default_storage.fs.copy(f, dest + name, overwrite=True)
                     else:
-                        default_storage.fs.copydir(
-                            f, dest + name, overwrite=True, ignore_errors=True
-                        )
+                        default_storage.fs.copydir(f, dest + name, overwrite=True, ignore_errors=True)
                 except Exception:
                     logger.exception("Error copying '%s'", f)
 
@@ -77,9 +75,7 @@ def filesystemcmd(cproxy: Any | None = None, **kwargs: Any) -> None:
                     if default_storage.fs.isfile(f):
                         default_storage.fs.move(f, dest + name, overwrite=True)
                     else:
-                        default_storage.fs.movedir(
-                            f, dest + name, overwrite=True, ignore_errors=True
-                        )
+                        default_storage.fs.movedir(f, dest + name, overwrite=True, ignore_errors=True)
                 except Exception:
                     logger.exception("Error moving '%s'", f)
 

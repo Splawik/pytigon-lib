@@ -15,10 +15,12 @@ from django.core.files.storage import default_storage
 logger = logging.getLogger(__name__)
 
 try:
-    from fs.osfs import OSFS
+    from pytigon_lib.schfs.adapters import _AutoCreateLocalFs
+
+    OSFS = _AutoCreateLocalFs
 except ImportError:
     OSFS = None
-    logger.warning("PyFilesystem (fs) not installed — OSFS is unavailable")
+    logger.warning("fsspec not installed — OSFS is unavailable")
 
 
 def norm_path(url: str | None) -> str:
@@ -234,9 +236,7 @@ def extractall(
                 continue
 
             out_name = os.path.join(path, zipinfo_name)
-            if backup_zip is not None and (
-                not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts
-            ):
+            if backup_zip is not None and (not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts):
                 if os.path.exists(out_name):
                     new_data = zip_file.read(zipinfo_name, pwd)
                     with open(out_name, "rb") as f:
@@ -364,7 +364,7 @@ def automount(path: str) -> str:
 
     When *path* references a ``.zip`` archive (e.g.
     ``/data/archive.zip/some/file.txt``), the function looks up the
-    real filesystem path of the zip, mounts it via :class:`fs.osfs.OSFS`,
+    real filesystem path of the zip, mounts it via ``_AutoCreateLocalFs``,
     and returns the unchanged *path* so subsequent VFS operations resolve
     transparently.
 
@@ -536,8 +536,7 @@ def convert_file(
             dc = XlsxDc(output_stream=fout)
         else:
             raise ValueError(
-                f"Unsupported output format: '{output_format}'. "
-                f"Supported formats: html, pdf, xpdf, spdf, docx, xlsx."
+                f"Unsupported output format: '{output_format}'. Supported formats: html, pdf, xpdf, spdf, docx, xlsx."
             )
 
         # ---- render ----
