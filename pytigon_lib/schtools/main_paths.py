@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 from os import environ
+import importlib.util
 
 from pytigon_lib.schtools.platform_info import platform_name
 
@@ -77,6 +78,19 @@ def get_main_paths(prj_name=None):
     except ImportError:
         pytigon_schserw = None
 
+    spec = importlib.util.find_spec("pytigon_standard_prj")
+    if spec:
+        pytigon_standard_prj_path = os.path.abspath(
+            os.path.join(spec.origin, "..", "prj")
+        )
+    else:
+        pytigon_standard_prj_path = None
+
+    pytigon_prj_path = if_not_in_env("PYTIGON_PRJ_PATH", "")
+
+    if pytigon_prj_path:
+        pytigon_standard_prj_path = pytigon_prj_path
+
     pytigon_path = None
     if pytigon_schserw:
         serw_path = os.path.dirname(os.path.abspath(pytigon_schserw.__file__))
@@ -87,8 +101,9 @@ def get_main_paths(prj_name=None):
     if "PYTIGON_ROOT_PATH" in environ:
         root_path = environ["PYTIGON_ROOT_PATH"]
     else:
-        root_path = os.path.abspath(os.path.join(serw_path, "..")) if serw_path else None
-
+        root_path = (
+            os.path.abspath(os.path.join(serw_path, "..")) if serw_path else None
+        )
     home_path = environ.get("SNAP_REAL_HOME", os.path.expanduser("~"))
 
     ret["SERW_PATH"] = if_not_in_env("SERW_PATH", serw_path)
@@ -119,7 +134,10 @@ def get_main_paths(prj_name=None):
         else:
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", data_path)
         ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
-        ret["PRJ_PATH_ALT"] = if_not_in_env("PRJ_PATH_ALT", os.path.join(root_path, "prj") if root_path else "")
+        ret["PRJ_PATH_ALT"] = if_not_in_env(
+            "PRJ_PATH_ALT",
+            pytigon_standard_prj_path if pytigon_standard_prj_path else "",
+        )
     else:
         if platform_type == "android":
             p1 = p2 = None
@@ -138,31 +156,38 @@ def get_main_paths(prj_name=None):
             )
             ret["PRJ_PATH_ALT"] = if_not_in_env(
                 "PRJ_PATH_ALT",
-                os.path.join(root_path, "prj") if root_path else "",
+                pytigon_standard_prj_path if pytigon_standard_prj_path else "",
             )
 
         elif platform_type == "webserver":
-            ret["DATA_PATH"] = data_path = if_not_in_env("DATA_PATH", os.path.join(home_path, "pytigon_data"))
+            ret["DATA_PATH"] = data_path = if_not_in_env(
+                "DATA_PATH", os.path.join(home_path, "pytigon_data")
+            )
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", "/var/log")
             ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
             ret["PRJ_PATH_ALT"] = if_not_in_env(
                 "PRJ_PATH_ALT",
-                os.path.join(pytigon_path, "prj") if pytigon_path else "",
+                pytigon_standard_prj_path if pytigon_standard_prj_path else "",
             )
         else:
-            ret["DATA_PATH"] = data_path = if_not_in_env("DATA_PATH", os.path.join(home_path, "pytigon_data"))
+            ret["DATA_PATH"] = data_path = if_not_in_env(
+                "DATA_PATH", os.path.join(home_path, "pytigon_data")
+            )
             ret["LOG_PATH"] = if_not_in_env("LOG_PATH", data_path)
             ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.join(data_path, "prj"))
             ret["PRJ_PATH_ALT"] = if_not_in_env(
                 "PRJ_PATH_ALT",
-                os.path.join(root_path, "prj") if root_path else "",
+                pytigon_standard_prj_path if pytigon_standard_prj_path else "",
             )
+
             if platform_name() == "Emscripten":
                 ret["PRJ_PATH"] = if_not_in_env(
                     "PRJ_PATH",
                     os.path.abspath(os.path.join(pytigon_path, "..")),
                 )
-                ret["PRJ_PATH_ALT"] = if_not_in_env("PRJ_PATH_ALT", os.path.join(pytigon_path, "prj"))
+                ret["PRJ_PATH_ALT"] = if_not_in_env(
+                    "PRJ_PATH_ALT", pytigon_standard_prj_path
+                )
 
     if "STATIC_PATH" in environ:
         static_path = environ["STATIC_PATH"]
@@ -173,9 +198,13 @@ def get_main_paths(prj_name=None):
 
     if platform_type == "webserver":
         if PRJ_NAME:
-            ret["STATIC_PATH"] = if_not_in_env("STATIC_PATH", os.path.join(data_path, "static", PRJ_NAME))
+            ret["STATIC_PATH"] = if_not_in_env(
+                "STATIC_PATH", os.path.join(data_path, "static", PRJ_NAME)
+            )
         else:
-            ret["STATIC_PATH"] = if_not_in_env("STATIC_PATH", os.path.join(data_path, "static"))
+            ret["STATIC_PATH"] = if_not_in_env(
+                "STATIC_PATH", os.path.join(data_path, "static")
+            )
         ret["STATICFILES_DIRS"] = [
             os.path.join(pytigon_path, "static"),
         ]
@@ -198,21 +227,32 @@ def get_main_paths(prj_name=None):
             "MEDIA_PATH_PROTECTED",
             os.path.join(data_path_val, PRJ_NAME, "protected_media"),
         )
-        ret["UPLOAD_PATH"] = if_not_in_env("UPLOAD_PATH", os.path.join(ret["MEDIA_PATH"], "upload"))
+        ret["UPLOAD_PATH"] = if_not_in_env(
+            "UPLOAD_PATH", os.path.join(ret["MEDIA_PATH"], "upload")
+        )
         ret["UPLOAD_PATH_PROTECTED"] = if_not_in_env(
             "UPLOAD_PROTECTED_PATH",
             os.path.join(ret["MEDIA_PATH"], "protected_upload"),
         )
-        if not os.path.exists(os.path.join(ret["PRJ_PATH"], PRJ_NAME, "settings_app.py")):
-            if os.path.exists(os.path.join(ret["PRJ_PATH_ALT"], PRJ_NAME, "settings_app.py")):
+        if not os.path.exists(
+            os.path.join(ret["PRJ_PATH"], PRJ_NAME, "settings_app.py")
+        ):
+            if os.path.exists(
+                os.path.join(ret["PRJ_PATH_ALT"], PRJ_NAME, "settings_app.py")
+            ):
                 tmp = ret["PRJ_PATH"]
                 ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", ret["PRJ_PATH_ALT"])
                 ret["PRJ_PATH_ALT"] = if_not_in_env("PRJ_PATH_ALT", tmp)
             elif pytigon_path:
-                ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.abspath(os.path.join(pytigon_path, "..")))
+                ret["PRJ_PATH"] = if_not_in_env(
+                    "PRJ_PATH", os.path.abspath(os.path.join(pytigon_path, ".."))
+                )
 
         prj_static_path = os.path.join(ret["PRJ_PATH"], PRJ_NAME, "static")
-        if prj_static_path not in ret["STATICFILES_DIRS"] and prj_static_path != ret["STATIC_PATH"]:
+        if (
+            prj_static_path not in ret["STATICFILES_DIRS"]
+            and prj_static_path != ret["STATIC_PATH"]
+        ):
             ret["STATICFILES_DIRS"].append(prj_static_path)
 
     return ret
