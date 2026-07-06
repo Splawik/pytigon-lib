@@ -52,6 +52,7 @@ def get_environ(path: str | None = None) -> environ.Env:
             MAILER=(bool, True),
             LOG_VIEWER=(bool, False),
             SCRIPT_MODE=(bool, False),
+            CORS_ORIGIN_WHITELIST=(str, ""),
         )
 
     if path:

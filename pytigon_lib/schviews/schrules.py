@@ -9,6 +9,8 @@ class to provide efficient queryset-level filtering instead of the
 default per-object check used here.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from django.conf import settings
