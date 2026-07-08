@@ -9,6 +9,7 @@ from pytigon_lib.schdjangoext.django_manage import cmd
 from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
 from pytigon_lib.schtools.process import py_run
+from pytigon_lib.schtools.env import get_environ
 
 
 def install():
@@ -87,9 +88,11 @@ def install():
             cmd(["loaddata", "--database", "default", json_path, "--traceback"])
             from django.contrib.auth.models import User
 
-            User.objects.db_manager("default").create_superuser(
-                "auto", "auto@pytigon.cloud", "anawa"
-            )
+            env = get_environ()
+            username = env("USERNAME")
+            password = env("PASSWORD")
+
+            User.objects.db_manager("default").create_superuser(username, "auto@pytigon.cloud", password)
     if "after_install" in get_commands():
         try:
             cmd(
@@ -178,12 +181,7 @@ def export_to_db(withoutapp=None, to_local_db=True):
 
     if to_local_db:
         if os.path.exists(db_path):
-            backup_name = (
-                db_path
-                + "."
-                + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                + ".bak"
-            )
+            backup_name = db_path + "." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".bak"
             os.rename(db_path, backup_name)
         cmd(["migrate", "--database", "local"])
     else:
@@ -197,9 +195,11 @@ def export_to_db(withoutapp=None, to_local_db=True):
     if to_local_db:
         from django.contrib.auth.models import User
 
-        User.objects.db_manager("local").create_superuser(
-            "auto", "auto@pytigon.cloud", "anawa"
-        )
+        env = get_environ()
+        username = env("USERNAME")
+        password = env("PASSWORD")
+
+        User.objects.db_manager("local").create_superuser(username, "auto@pytigon.cloud", password)
 
 
 def export_to_local_db(withoutapp=None):
@@ -347,12 +347,7 @@ class Ptig:
 
         self.extract_to = extract_to
 
-        zipname = (
-            datetime.datetime.now()
-            .isoformat("_")[:19]
-            .replace(":", "")
-            .replace("-", "")
-        )
+        zipname = datetime.datetime.now().isoformat("_")[:19].replace(":", "").replace("-", "")
         zipname2 = os.path.join(extract_to, zipname + ".zip")
         if test_update:
             backup_zip = zipfile.ZipFile(zipname2, "a")
@@ -396,9 +391,7 @@ class Ptig:
                 with open(dest_db, "wb") as f:
                     f.write(src_db)
 
-            (ret_code, output, err) = py_run(
-                [os.path.join(extract_to, "manage.py"), "postinstallation"]
-            )
+            (ret_code, output, err) = py_run([os.path.join(extract_to, "manage.py"), "postinstallation"])
 
             if output:
                 for pos in output:
