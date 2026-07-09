@@ -1,3 +1,5 @@
+from functools import cmp_to_key
+
 from pytigon_lib.schtools import schjson
 
 # Command constants
@@ -172,7 +174,7 @@ class TablePy(Table):
                     id = self.col_names.index(pos[1:] if pos[0] == "-" else pos)
                     ss = -1 if pos[0] == "-" else 1
                     ts.append((id, ss))
-            tab.sort(key=lambda x: str_cmp(x, x, ts))
+            tab.sort(key=cmp_to_key(lambda x, y: str_cmp(x, y, ts)))
 
         return tab
 

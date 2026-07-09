@@ -55,10 +55,12 @@ def get_scope_and_content_http_get(
 
     for key, value in headers:
         key_bytes = key.encode("utf-8") if isinstance(key, str) else key
+        key_bytes = key_bytes.lower()
+        value_bytes = value.encode("utf-8") if isinstance(value, str) else value
         scope["headers"] = [
-            (k, v) for k, v in scope["headers"] if k.lower() != key_bytes.lower()
+            (k, v) for k, v in scope["headers"] if k.lower() != key_bytes
         ]
-        scope["headers"].append((key_bytes, value))
+        scope["headers"].append((key_bytes, value_bytes))
 
     return scope, ""
 

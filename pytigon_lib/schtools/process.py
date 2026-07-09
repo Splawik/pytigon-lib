@@ -117,18 +117,21 @@ def _manage(path: str, cmd: list[str]):
         path: Working directory for the command.
         cmd: Management command arguments.
     """
+    original_cwd = os.getcwd()
     frozen_modules = FrozenModules()
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    os.chdir(path)
 
     try:
+        os.chdir(path)
+
         m = __import__("pytigon_lib.schdjangoext.django_manage")
         sys.path.insert(0, path)
         m.schdjangoext.django_manage.cmd(cmd, from_main=False)
     finally:
         sys.path.pop(0)
+        os.chdir(original_cwd)
         frozen_modules.restore()
 
 

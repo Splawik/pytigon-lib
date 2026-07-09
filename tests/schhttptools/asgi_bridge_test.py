@@ -1,21 +1,18 @@
 from unittest.mock import AsyncMock, MagicMock
 
-# Pytest tests
 import pytest
 
 from pytigon_lib.schhttptools.asgi_bridge import *
 
 
-@pytest.mark.asyncio
-async def test_get_scope_and_content_http_get():
+def test_get_scope_and_content_http_get():
     headers = [("X-Test-Header", "test-value")]
     scope, content = get_scope_and_content_http_get("/test", headers)
     assert scope["path"] == "/test"
     assert (b"x-test-header", b"test-value") in scope["headers"]
 
 
-@pytest.mark.asyncio
-async def test_get_scope_and_content_http_post():
+def test_get_scope_and_content_http_post():
     headers = [("X-Test-Header", "test-value")]
     params = {"key": "value"}
     scope, content = get_scope_and_content_http_post("/test", headers, params)

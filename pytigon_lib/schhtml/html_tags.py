@@ -39,10 +39,12 @@ class HtmlTag(BaseHtmlElemParser):
 
     def set_dc(self, dc):
         """Set the drawing context and update width and height."""
+        if not hasattr(dc, "get_size"):
+            raise ValueError("Invalid drawing context provided.")
         try:
             self.width, self.height = dc.get_size()
             self.dc = dc
-        except AttributeError as e:
+        except (AttributeError, TypeError, ValueError) as e:
             raise ValueError("Invalid drawing context provided.") from e
 
 

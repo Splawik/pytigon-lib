@@ -538,6 +538,9 @@ class BaseDc:
             self.store = []
         self.last_style = "None"
 
+    def new_path(self):
+        self.record("new_path", ())
+
     def fill(self, *args):
         """
         Fills a shape or area with the current fill settings.

@@ -293,7 +293,13 @@ class NormParser(Parser):
         Returns:
             Formatted attribute string using ,,, as separator.
         """
-        return ",,,".join(f"{k}={v}" if v else k for k, v in attr)
+
+        def _fmt(k, v):
+            if isinstance(v, str):
+                return f"{k}={v}" if v else k
+            return str(v) if v else k
+
+        return ",,,".join(_fmt(k, v) for k, v in attr.items())
 
     def handle_starttag(self, tag: str, attrs: dict) -> None:
         """Process an opening HTML tag.

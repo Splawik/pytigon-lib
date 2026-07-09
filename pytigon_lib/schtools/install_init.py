@@ -42,8 +42,8 @@ def upgrade_test(zip_path, out_path):
     if not os.path.exists(zip_path):
         return False
 
-    archive = zipfile.ZipFile(zip_path, "r")
-    cfg_txt = archive.read("install.ini").decode("utf-8")
+    with zipfile.ZipFile(zip_path, "r") as archive:
+        cfg_txt = archive.read("install.ini").decode("utf-8")
     cfg = configparser.ConfigParser()
     cfg.read_string(cfg_txt)
     t1 = cfg["DEFAULT"]["GEN_TIME"]

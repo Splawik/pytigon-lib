@@ -341,7 +341,7 @@ class IndentMarkdownProcessor:
             Parsed object, or the original string if not JSON.
         """
         if s and s[0] == "{":
-            return json.loads(s.replace("\\n", "\n"))
+            return json.loads(s.replace("\\n", "\\n"))
         return s
 
     def _render_obj(self, config: str, lines: list[str] | None) -> str:

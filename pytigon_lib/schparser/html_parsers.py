@@ -30,8 +30,10 @@ class ExtList(list):
         class_attr: CSS class(es) from the ``class`` attribute.
     """
 
-    row_id: int = 0
-    class_attr: str = ""
+    def __init__(self, iterable=None, row_id=0, class_attr=""):
+        super().__init__(iterable or [])
+        self.row_id = row_id
+        self.class_attr = class_attr
 
 
 class SimpleTabParserBase(Parser):

@@ -95,4 +95,26 @@ line-ending = "lf"
 [tool.pytest.ini_options]
 norecursedirs = ["tests/schindent/assets"]
 filterwarnings = ["ignore::DeprecationWarning"]
-addopts = ["--ignore-glob=**/android_client.py"]
+addopts = [
+    "--ignore-glob=**/android_client.py",
+    "-m", "not django",
+    "--ignore=tests/schdjangoext",
+    "--ignore=tests/schviews",
+    "--ignore=tests/schhttptools/test.py",
+    "--ignore=tests/schhttptools/test2.py",
+    "--ignore=tests/schindent/test.py",
+    "--ignore=tests/schindent/test2.py",
+    "--ignore=tests/schindent/ihtml2html_test.py",
+    "--ignore=tests/schhtml/gen_pdf_test.py",
+    "--ignore=tests/schspreadsheet/gen_doc_test.py",
+    "--ignore=tests/schfs/schfs__init___test.py",
+    "--ignore=tests/schfs/vfstools_test.py",
+    "--ignore=tests/schtools/encrypt_test.py",
+    "--ignore=tests/schtools/schhtmlgen_test.py",
+    "--ignore=tests/schtools/wiki_test.py",
+    "--ignore=tests/__init___test.py",
+    "--ignore=tests/schhtml/pdfdc_test.py",
+]
+markers = [
+    "django: tests requiring Django setup (run from pytigon parent project)",
+]

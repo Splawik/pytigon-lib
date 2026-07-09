@@ -194,6 +194,24 @@ def _cmp_txt_str_content(data1: bytes, data2: bytes) -> bool:
     return _clear_content(data1) == _clear_content(data2)
 
 
+def _is_safe_zip_path(member_name: str, target_path: str) -> bool:
+    """Check that a zip member path does not escape *target_path*.
+
+    Prevents Zip Slip attacks by ensuring the resolved extraction path
+    stays inside the intended destination directory.
+
+    Args:
+        member_name: The entry name inside the zip archive.
+        target_path: The absolute extraction directory.
+
+    Returns:
+        *True* if the path is safe, *False* otherwise.
+    """
+    resolved = os.path.realpath(os.path.join(target_path, member_name))
+    target_real = os.path.realpath(target_path)
+    return os.path.commonpath([resolved, target_real]) == target_real
+
+
 def extractall(
     zip_file: zipfile.ZipFile,
     path: str | None = None,
@@ -205,6 +223,9 @@ def extractall(
     only_path: str | None = None,
 ) -> None:
     """Extract files from a zip archive, with optional backup of overwritten files.
+
+    Path traversal is prevented — entries whose resolved path would fall
+    outside *path* are silently skipped.
 
     Args:
         zip_file: An open :class:`zipfile.ZipFile` instance.
@@ -236,6 +257,10 @@ def extractall(
                 continue
 
             out_name = os.path.join(path, zipinfo_name)
+            if not _is_safe_zip_path(zipinfo_name, path):
+                logger.warning("Skipping unsafe zip entry: %s", zipinfo_name)
+                continue
+
             if backup_zip is not None and (not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts):
                 if os.path.exists(out_name):
                     new_data = zip_file.read(zipinfo_name, pwd)
@@ -454,7 +479,7 @@ def convert_file(
         if isinstance(filename_or_stream_in, str):
             fin: Any = open_file(
                 automount(filename_or_stream_in),
-                "rt" if for_vfs_input else "rb",
+                "rt",
                 for_vfs_input,
             )
             input_format = input_format or filename_or_stream_in.rsplit(".", 1)[-1].lower()

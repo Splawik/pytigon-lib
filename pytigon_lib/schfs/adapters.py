@@ -139,17 +139,21 @@ class FsspecMountFS:
                 return None, ""
         return fs, rest
 
-    def _resolve_mount_name(self, path: str) -> tuple[str, str | None]:
+    def _resolve_mount_name(self, path: str) -> tuple[str, str]:
         path = str(path)
         if path.startswith("/"):
             path = path[1:]
         if not path:
-            return self._order[0] if self._order else ("", "/")
+            if self._order:
+                return (self._order[0], "")
+            return ("", "/")
         parts = path.split("/", 1)
         prefix = parts[0]
         rest = parts[1] if len(parts) > 1 else ""
         if prefix not in self._mounts:
-            return (self._order[0] if self._order else "", path)
+            if self._order:
+                return (self._order[0], path)
+            return ("", path)
         return prefix, rest
 
     def open(self, path: str, mode: str = "rb", **kwargs: Any) -> Any:
@@ -194,8 +198,11 @@ class FsspecMountFS:
             return []
         if hasattr(fs, "scandir"):
             return fs.scandir(rest)
-        raw = fs.ls(rest or "", detail=True)
-        return [_FsspecInfoExt(d) for d in raw if d.get("name")]
+        try:
+            raw = fs.ls(rest or "", detail=True)
+            return [_FsspecInfoExt(d) for d in raw if d.get("name")]
+        except (FileNotFoundError, OSError):
+            return []
 
     def listdir(self, path: str) -> list[str]:
         fs, rest = self._resolve(path)
@@ -203,7 +210,10 @@ class FsspecMountFS:
             return []
         if hasattr(fs, "listdir"):
             return fs.listdir(rest)
-        return fs.ls(rest or "", detail=False)
+        try:
+            return fs.ls(rest or "", detail=False)
+        except (FileNotFoundError, OSError):
+            return []
 
     def getinfo(self, path: str, namespaces: Any = None) -> _FsspecInfo:
         fs, rest = self._resolve(path)
@@ -223,7 +233,7 @@ class FsspecMountFS:
         info = fs.info(rest or "/")
         if path.endswith(".zip"):
             info = dict(info)
-            info.setdefault("type", "directory")
+            info["type"] = "directory"
         return _FsspecInfoExt(info)
 
     def getsize(self, path: str) -> int:
@@ -262,7 +272,10 @@ class FsspecMountFS:
         if fs is None:
             return
         if hasattr(fs, "makedirs"):
-            fs.makedirs(rest, recreate=recreate)
+            try:
+                fs.makedirs(rest, recreate=recreate)
+            except TypeError:
+                fs.makedirs(rest, exist_ok=recreate)
         else:
             fs.mkdirs(rest, exist_ok=recreate)
 
@@ -335,14 +348,20 @@ class FsspecMountFS:
 
     @staticmethod
     def _copy_file(fs_src: Any, src: str, fs_dst: Any, dst: str, overwrite: bool) -> None:
-        if hasattr(fs_src, "get") and hasattr(fs_dst, "put"):
-            fs_src.get(src, dst)
-            return
         if overwrite and hasattr(fs_dst, "exists") and fs_dst.exists(dst):
             if hasattr(fs_dst, "remove"):
-                fs_dst.remove(dst)
+                try:
+                    fs_dst.remove(dst)
+                except (FileNotFoundError, AttributeError, NotImplementedError):
+                    try:
+                        fs_dst.rm_file(dst)
+                    except (FileNotFoundError, AttributeError):
+                        pass
             else:
-                fs_dst.rm_file(dst)
+                try:
+                    fs_dst.rm_file(dst)
+                except (FileNotFoundError, AttributeError):
+                    pass
         with fs_src.open(src, "rb") as fsrc:
             data = fsrc.read()
         with fs_dst.open(dst, "wb") as fdst:
@@ -357,7 +376,10 @@ class FsspecMountFS:
                 return
             raise
         if hasattr(fs_dst, "makedirs"):
-            fs_dst.makedirs(dst, recreate=True)
+            try:
+                fs_dst.makedirs(dst, recreate=True)
+            except TypeError:
+                fs_dst.makedirs(dst, exist_ok=True)
         elif hasattr(fs_dst, "mkdirs"):
             fs_dst.mkdirs(dst, exist_ok=True)
         else:
@@ -436,6 +458,8 @@ class FsspecMultiFS:
                 p = os.path.join(fs._root, path)
                 if os.path.exists(p):
                     return p
+            elif path and (hasattr(fs, "exists") and fs.exists(path)):
+                return f"memory://{path}"
         if allow_none:
             return None
         raise FileNotFoundError(path)

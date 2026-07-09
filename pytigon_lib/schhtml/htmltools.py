@@ -1,7 +1,42 @@
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from pytigon_lib.schparser.parser import Parser
+
+_SAFE_URL_SCHEMES = frozenset({"https", "http"})
+_SSRF_BLOCKED_HOSTS = frozenset(
+    {
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "::1",
+        "[::1]",
+        "0:0:0:0:0:0:0:1",
+    }
+)
+
+
+def _is_safe_url(url: str) -> bool:
+    """Return *True* if *url* uses an allowed scheme and does not target
+    a reserved internal host (SSRF prevention)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in _SAFE_URL_SCHEMES:
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return False
+    if hostname in _SSRF_BLOCKED_HOSTS:
+        return False
+    if hostname.startswith("169.254."):
+        return False
+    if hostname.startswith("10.") or hostname.startswith("192.168."):
+        return False
+    if hostname.startswith("172."):
+        parts = hostname.split(".")
+        if len(parts) >= 2 and 16 <= int(parts[1]) <= 31:
+            return False
+    return True
 
 
 def superstrip(s):
@@ -23,11 +58,13 @@ class HtmlModParser(Parser):
     def __init__(self, url=None):
         super().__init__()
         if url:
+            if not _is_safe_url(url):
+                raise ValueError(f"URL not allowed for security reasons: {url}")
             try:
                 req = urlopen(url)
                 self.feed(req.read().decode("utf-8"))
             except URLError as e:
-                raise ValueError(f"Failed to fetch URL: {e}")
+                raise ValueError(f"Failed to fetch URL: {e}") from e
 
 
 class HtmlProxyParser(Parser):

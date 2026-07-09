@@ -6,6 +6,80 @@ import tarfile
 import tempfile
 import urllib.request
 import zipfile
+from urllib.parse import urlparse
+
+_SAFE_URL_PREFIXES = frozenset({"https", "http"})
+
+
+def _is_safe_url(url: str) -> bool:
+    """Validate that *url* uses an allowed scheme and does not target internal
+    or loopback hosts (SSRF prevention).
+
+    Returns *True* if the URL is considered safe.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in _SAFE_URL_PREFIXES:
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return False
+    if hostname in (
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "::1",
+        "[::1]",
+        "0:0:0:0:0:0:0:1",
+    ):
+        return False
+    if hostname.startswith("169.254.") or hostname.startswith("10."):
+        return False
+    if hostname.startswith("172."):
+        parts = hostname.split(".")
+        if len(parts) >= 2 and 16 <= int(parts[1]) <= 31:
+            return False
+    if hostname.startswith("192.168."):
+        return False
+    if hostname == "0.0.0.0" or hostname == "255.255.255.255":
+        return False
+    return True
+
+
+def _is_safe_tar_member(member: tarfile.TarInfo, target_path: str) -> bool:
+    """Prevent path traversal in tar extraction."""
+    resolved = os.path.realpath(os.path.join(target_path, member.name))
+    target_real = os.path.realpath(target_path)
+    return os.path.commonpath([resolved, target_real]) == target_real
+
+
+def _is_safe_zip_member(member_name: str, target_path: str) -> bool:
+    """Prevent path traversal in zip extraction."""
+    resolved = os.path.realpath(os.path.join(target_path, member_name))
+    target_real = os.path.realpath(target_path)
+    return os.path.commonpath([resolved, target_real]) == target_real
+
+
+def _safe_zip_extractall(zip_ref: zipfile.ZipFile, target_path: str) -> None:
+    """Extract a zip file with path traversal protection."""
+    for member in zip_ref.infolist():
+        if member.filename.endswith(("/", "\\")):
+            os.makedirs(os.path.join(target_path, member.filename), exist_ok=True)
+        else:
+            if _is_safe_zip_member(member.filename, target_path):
+                zip_ref.extract(member, target_path)
+            else:
+                print(f"   WARNING: Skipping unsafe zip entry: {member.filename}")
+
+
+def _safe_tar_extractall(tar_ref: tarfile.TarFile, target_path: str) -> None:
+    """Extract a tar file with path traversal protection."""
+    for member in tar_ref.getmembers():
+        if member.isdir():
+            os.makedirs(os.path.join(target_path, member.name), exist_ok=True)
+        elif _is_safe_tar_member(member, target_path):
+            tar_ref.extract(member, target_path)
+        else:
+            print(f"   WARNING: Skipping unsafe tar entry: {member.name}")
 
 
 def download_and_process_file(file_list):
@@ -34,6 +108,10 @@ def download_and_process_file(file_list):
     url = matched_item.get("url")
     target_path = matched_item.get("path")
     should_unpack = matched_item.get("unpack", False)
+
+    if not _is_safe_url(url):
+        print(f"Error: URL is not allowed for security reasons: {url}")
+        return
 
     # Determine final file name for download
     # If unpacking, we extract the filename from URL to save it in temp first
@@ -110,7 +188,7 @@ def download_and_process_file(file_list):
 
             if download_destination.endswith(".zip") or should_unpack == "zip":
                 with zipfile.ZipFile(download_destination, "r") as zip_ref:
-                    zip_ref.extractall(target_path)
+                    _safe_zip_extractall(zip_ref, target_path)
                 print("   Status: Extraction completed successfully (.zip)")
 
             elif (
@@ -119,7 +197,7 @@ def download_and_process_file(file_list):
                 or should_unpack == "tgz"
             ):
                 with tarfile.open(download_destination, "r:gz") as tar_ref:
-                    tar_ref.extractall(target_path)
+                    _safe_tar_extractall(tar_ref, target_path)
                 print("   Status: Extraction completed successfully (.tar.gz)")
 
             else:

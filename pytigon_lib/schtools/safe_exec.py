@@ -74,6 +74,7 @@ RESTRICTED_BUILTINS: dict[str, Any] = {
     "tuple": tuple,
     "type": type,
     "zip": zip,
+    "__build_class__": __build_class__,
 }
 
 
@@ -126,7 +127,7 @@ def safe_exec(
         The local namespace dict after execution (useful for
         extracting functions / classes the code defined).
     """
-    glob = {"__builtins__": RESTRICTED_BUILTINS}
+    glob = {"__builtins__": RESTRICTED_BUILTINS, "__name__": "safe_exec"}
     if extra_globals:
         glob.update(extra_globals)
     if local_ns is None:

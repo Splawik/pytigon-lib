@@ -16,6 +16,20 @@ import httpx
 
 from pytigon_lib.schtools.process import run
 
+
+def _is_safe_tar_member(member: tarfile.TarInfo, target_path: str) -> bool:
+    """Prevent path traversal in tar extraction."""
+    resolved = os.path.realpath(os.path.join(target_path, member.name))
+    target_real = os.path.realpath(target_path)
+    return os.path.commonpath([resolved, target_real]) == target_real
+
+
+def _is_safe_zip_member(member_name: str, target_path: str) -> bool:
+    """Prevent path traversal in zip extraction."""
+    resolved = os.path.realpath(os.path.join(target_path, member_name))
+    target_real = os.path.realpath(target_path)
+    return os.path.commonpath([resolved, target_real]) == target_real
+
 # C source for the zigcc wrapper: forwards all arguments to 'ptig zig cc'
 ZIG_CC_C = """
 #include <string.h>
@@ -69,7 +83,11 @@ def install_nim(data_path: str) -> None:
             f.write(r.content)
 
         with zipfile.ZipFile(nim_zip) as f:
-            f.extractall(prg_path)
+            for member in f.infolist():
+                if _is_safe_zip_member(member.filename, prg_path):
+                    f.extract(member, prg_path)
+                else:
+                    print(f"WARNING: Skipping unsafe zip entry: {member.filename}")
     else:
         nim_tar_xz = os.path.join(temp_dir, "nim.tar.xz")
         nim_tar = os.path.join(temp_dir, "nim.tar")
@@ -82,7 +100,13 @@ def install_nim(data_path: str) -> None:
             f.write(buf)
 
         with tarfile.open(nim_tar, "r") as tar:
-            tar.extractall(prg_path)
+            for member in tar.getmembers():
+                if member.isdir():
+                    os.makedirs(os.path.join(prg_path, member.name), exist_ok=True)
+                elif _is_safe_tar_member(member, prg_path):
+                    tar.extract(member, prg_path)
+                else:
+                    print(f"WARNING: Skipping unsafe tar entry: {member.name}")
 
     nim_path = get_nim_path(data_path)
     if not nim_path:
