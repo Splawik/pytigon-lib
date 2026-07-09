@@ -4,7 +4,7 @@ site_author: Slawomir Cholaj
 site_url: ""
 repo_name: pytigon
 repo_url: ""
-copyright: "&copy; 2025 Slawomir Cholaj &middot; LGPL 3.0"
+copyright: "&copy; 2025-2026 Slawomir Cholaj &middot; LGPL 3.0"
 
 theme:
   name: material
@@ -46,7 +46,7 @@ plugins:
       handlers:
         python:
           paths: [.]
-          import:
+          inventories:
             - https://docs.python.org/3/objects.inv
             - https://docs.djangoproject.com/en/stable/_objects/
           options:

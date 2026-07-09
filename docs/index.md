@@ -1,6 +1,6 @@
 # Pytigon Library
 
-**Version:** 0.260705 · **License:** LGPL 3.0 · **Author:** Sławomir Chołaj
+**Version:** 0.260706 · **License:** LGPL 3.0 · **Author:** Sławomir Chołaj
 
 ---
 
@@ -37,7 +37,9 @@ init_paths('myproject')
 
 from pytigon_lib.schtools.main_paths import get_main_paths
 from pytigon_lib.schdjangoext.models import JSONModel, TreeModel
-from pytigon_lib.schhtml.basedc import PdfDc, DocxDc, XlsxDc
+from pytigon_lib.schhtml.pdfdc import PdfDc
+from pytigon_lib.schhtml.docxdc import DocxDc
+from pytigon_lib.schhtml.xlsxdc import XlsxDc
 from pytigon_lib.schhttptools.httpclient import HttpClient
 from pytigon_lib.schtable.table import Table
 from pytigon_lib.schviews.viewtools import render_to_response_ext
@@ -45,7 +47,26 @@ from pytigon_lib.schviews.viewtools import render_to_response_ext
 
 ## Key Design Patterns
 
-- **Device Context (DC)** – abstract rendering backend (PDF, DOCX, XLSX, Cairo)
+- **Device Context (DC)** – abstract rendering backend (PDF, DOCX, XLSX)
 - **Table Interface** – uniform client-server data exchange through abstract `Table`
-- **Generic Views** – `GenericTable`/`GenericRows` for automatic CRUD URL patterns
+- **Generic Views** – `GenericTable`/`GenericRows` for automatic CRUD view generation via `VIEWS_REGISTER`
 - **Platform Abstraction** – isolated platform code in `schtools.platform_info`
+
+## Quick Examples
+
+### Render HTML to PDF
+
+```python
+from pytigon_lib.schhtml.htmlviewer import stream_from_html
+
+html_content = "<html><body><h1>Hello World</h1></body></html>"
+pdf_bytes = stream_from_html(html_content).getvalue()
+```
+
+### Auto-generate Django CRUD views
+
+```python
+from pytigon_lib.schviews import GenericTable
+
+GenericTable(MyModel).table('mytable').gen()
+```

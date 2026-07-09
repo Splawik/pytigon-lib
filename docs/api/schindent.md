@@ -1,6 +1,6 @@
 # schindent – Code Indentation
 
-Code formatting, indentation normalization, HTML-to-iHTML conversion, Python-to-JS transpilation.
+Indentation-based iHTML preprocessor, markup processing, and markdown integration.
 
 ::: pytigon_lib.schindent
     options:

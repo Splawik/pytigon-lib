@@ -2,9 +2,8 @@
 
 ## What is Pytigon?
 
-Pytigon is a Python application framework that combines **wxPython** desktop GUI
-capabilities with **Django** web framework patterns. The `pytigon_lib` package
-provides the core library with 13 specialized modules.
+Pytigon is a full-stack Python/Django application framework. The `pytigon_lib`
+package provides the core library with 13 specialized modules.
 
 ## Supported Platforms
 
@@ -21,16 +20,16 @@ provides the core library with 13 specialized modules.
 pytigon_lib/
 ├── schtools/         # Core utilities, paths, platform detection
 ├── schdjangoext/     # Django models, forms, GraphQL, REST
-├── schhtml/          # HTML → PDF/DOCX/XLSX rendering engine
+├── schhtml/          # HTML -> PDF/DOCX/XLSX rendering engine
 ├── schhttptools/     # HTTP client, WebSocket, ASGI bridge
 ├── schtable/         # Abstract table/data exchange interface
-├── schparser/        # HTML/XML parsing (lxml)
+├── schparser/        # HTML and text parsing
 ├── schspreadsheet/   # OOXML/ODF processing
-├── schfs/            # Virtual file system, ZIP, file ops
-├── schtasks/         # Twisted-based task scheduler
+├── schfs/            # Virtual file system, file ops
+├── schtasks/         # Background task scheduler
 ├── schandroid/       # Android/Kivy integration
 ├── schtest/          # Testing utilities
-├── schindent/        # Code formatting, Py→JS conversion
+├── schindent/        # iHTML preprocessor + markdown integration
 └── schviews/         # Generic Django CRUD views
 ```
 
@@ -41,13 +40,13 @@ pytigon_lib/
 All document rendering uses an abstract "device context" that decouples layout
 from output format:
 
-| DC Class | Output Format |
-|----------|---------------|
-| `PdfDc` | PDF documents |
-| `DocxDc` | DOCX documents |
-| `XlsxDc` | XLSX spreadsheets |
-| `CairoDc` | Cairo graphics |
-| `NullDc` | Dimension calculation only |
+| DC Class | Module | Output Format |
+|----------|--------|---------------|
+| `PdfDc` | `schhtml.pdfdc` | PDF documents |
+| `DocxDc` | `schhtml.docxdc` | DOCX documents |
+| `XlsxDc` | `schhtml.xlsxdc` | XLSX spreadsheets |
+| `BaseDc` | `schhtml.basedc` | Abstract base class |
+| `NullDc` | `schhtml.basedc` | Dimension calculation only |
 
 ### Table Interface
 
@@ -58,13 +57,14 @@ server-side data access with 7 standard commands (`CMD_INFO`, `CMD_PAGE`,
 ### Generic Views
 
 [`GenericTable`](../api/schviews.md) and [`GenericRows`](../api/schviews.md) auto-generate
-Django URL patterns for full CRUD operations on any model.
+Django views for full CRUD operations on any model. Views are registered in the
+`VIEWS_REGISTER` dictionary.
 
 ## Dependencies
 
-- **Core:** Python 3.10+, lxml
-- **Django extensions:** Django 4.x+
-- **HTTP:** httpx, Django Channels
-- **PDF:** reportlab, cairo
-- **Task scheduling:** Twisted
-- **Android:** Kivy, android.permissions
+- **Core:** Python 3.12+, lxml
+- **Django extensions:** Django >= 6.0
+- **HTTP:** httpx
+- **PDF:** fpdf2
+- **Task scheduling:** autobahn
+- **Android:** Kivy

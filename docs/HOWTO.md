@@ -9,8 +9,8 @@ and **mkdocstrings** for automatic Python docstring extraction.
 ## Quick Start (TL;DR)
 
 ```bash
-# 1. Enter the pytigon_lib directory
-cd pytigon_lib
+# 1. Enter the project root
+cd pytigon-lib
 
 # 2. Install dependencies (one-time)
 ./gen_docs.sh install
@@ -22,7 +22,7 @@ cd pytigon_lib
 
 # 5. When ready, build static HTML
 ./gen_docs.sh build
-# Output is in: pytigon_lib/site/
+# Output is in: site/
 ```
 
 ---
@@ -30,7 +30,7 @@ cd pytigon_lib
 ## File Structure
 
 ```
-pytigon_lib/
+pytigon-lib/                       # Project root
 ├── mkdocs.yml                    # MkDocs configuration (theme, plugins, nav)
 ├── gen_docs.sh                   # Bash script for all operations
 ├── docs/                         # Documentation source (Markdown)
@@ -111,7 +111,7 @@ To add documentation for a new module (e.g., `schnew`):
 **Step 1:** Create the API reference file:
 
 ```bash
-cat > pytigon_lib/docs/api/schnew.md << 'EOF'
+cat > docs/api/schnew.md << 'EOF'
 # schnew – Description of the new module
 
 ::: pytigon_lib.schnew
@@ -216,10 +216,10 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install mkdocs mkdocs-material mkdocstrings[python]
-      - run: cd pytigon_lib && mkdocs build
+      - run: mkdocs build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: pytigon_lib/site/
+          path: site/
 ```
 
 ---
@@ -229,7 +229,7 @@ jobs:
 | Problem | Solution |
 |---------|----------|
 | `mkdocs: command not found` | Run `./gen_docs.sh install` |
-| `ModuleNotFoundError: pytigon_lib` | Run mkdocs from `pytigon_lib/` directory (the script does this automatically) |
+| `ModuleNotFoundError: pytigon_lib` | Run mkdocs from project root (the script does this automatically) |
 | Import errors in mkdocstrings | Ensure the module's dependencies are installed in the same Python environment |
 | Build is very slow | Add `--no-directory-urls` or use `--dirty` for incremental builds during development |
 | Material theme features missing | Make sure `mkdocs-material` and `pymdown-extensions` are installed |

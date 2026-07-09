@@ -29,11 +29,10 @@ pip install pytigon-lib[spreadsheet,llvm,plotting,svg]
 ### Render HTML to PDF
 
 ```python
-from pytigon_lib.schhtml.main import html_to_pdf
+from pytigon_lib.schhtml.htmlviewer import stream_from_html
 
 html_content = "<html><body><h1>Hello World</h1></body></html>"
-with open("output.pdf", "wb") as f:
-    f.write(html_to_pdf(html_content))
+pdf_bytes = stream_from_html(html_content).getvalue()
 ```
 
 ### Auto-generate Django CRUD views
@@ -41,13 +40,13 @@ with open("output.pdf", "wb") as f:
 ```python
 from pytigon_lib.schviews import GenericTable
 
-GenericTable(MyModel).register()
+views = GenericTable(MyModel).table('mytable').gen()
 ```
 
 ## Requirements
 
 - Python 3.12+
-- Django >= 6
+- Django >= 6.0
 
 ## License
 

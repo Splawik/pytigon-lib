@@ -1,6 +1,6 @@
 # schtasks – Task Scheduling
 
-Background task scheduling (Twisted-based), remote screen sharing, terminal tools.
+Background task scheduling with cron-like patterns, autobahn-based.
 
 ::: pytigon_lib.schtasks
     options:

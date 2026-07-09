@@ -20,23 +20,26 @@ from pytigon_lib.schtools.tools import bencode, bdecode, norm_indent
 ```python
 from pytigon_lib.schdjangoext.models import JSONModel, TreeModel, AssociatedModel
 from pytigon_lib.schdjangoext.fields import (
-    SchTextField, SchCharField, SchIntegerField
+    ManyToManyField, ManyToManyFieldWithIcon, NullBooleanField
 )
-from pytigon_lib.schdjangoext.fastform import FastForm
+from pytigon_lib.schdjangoext.fastform import form_from_str
 ```
 
 ## Document Rendering
 
 ```python
-from pytigon_lib.schhtml.basedc import BaseDc, PdfDc, DocxDc, XlsxDc, NullDc
-from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
+from pytigon_lib.schhtml.basedc import BaseDc, NullDc, SubDc
+from pytigon_lib.schhtml.pdfdc import PdfDc, PdfDcInfo
+from pytigon_lib.schhtml.docxdc import DocxDc, DocxDcinfo
+from pytigon_lib.schhtml.xlsxdc import XlsxDc, XlsxDcinfo
+from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser, stream_from_html
 ```
 
 ## HTTP Client
 
 ```python
 from pytigon_lib.schhttptools.httpclient import HttpClient, RetHttp, AppHttp
-from pytigon_lib.schhttptools.rest_client import RestClient
+from pytigon_lib.schhttptools.rest_client import get_rest_client
 ```
 
 ## Table Interface
@@ -79,8 +82,14 @@ from pytigon_lib.schtasks.schschedule import SChScheduler
 ## Generic Views
 
 ```python
-from pytigon_lib.schviews.viewtools import (
-    render_to_response_ext, ExtTemplateResponse, GenericTable
+from pytigon_lib.schviews import (
+    GenericTable, GenericRows, make_path, gen_tab_action, gen_row_action,
+    VIEWS_REGISTER, extend_generic_view
 )
-from pytigon_lib.schviews.actions import make_path, gen_tab_action, gen_row_action
+from pytigon_lib.schviews.viewtools import (
+    ExtTemplateResponse, render_to_response_ext
+)
+from pytigon_lib.schviews.actions import (
+    ok_response, cancel_response, error_response
+)
 ```
