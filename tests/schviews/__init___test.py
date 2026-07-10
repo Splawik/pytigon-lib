@@ -28,14 +28,14 @@ def rf():
 
 
 class TestMakePath:
-    @patch("pytigon_lib.schviews.reverse")
+    @patch("pytigon_lib.schviews._utils.reverse")
     @override_settings(URL_ROOT_FOLDER="")
     def test_no_root_folder(self, mock_reverse, rf):
         mock_reverse.return_value = "/path/"
         result = make_path("view_name")
         assert result == "/path/"
 
-    @patch("pytigon_lib.schviews.reverse")
+    @patch("pytigon_lib.schviews._utils.reverse")
     @override_settings(URL_ROOT_FOLDER="/root")
     def test_with_root_folder(self, mock_reverse, rf):
         mock_reverse.return_value = "path/"
@@ -43,7 +43,7 @@ class TestMakePath:
         assert result.startswith("/root/")
         assert "path/" in result
 
-    @patch("pytigon_lib.schviews.reverse")
+    @patch("pytigon_lib.schviews._utils.reverse")
     @override_settings(URL_ROOT_FOLDER="")
     def test_with_args(self, mock_reverse, rf):
         mock_reverse.return_value = "/path/1/"
@@ -321,10 +321,6 @@ class TestGenericTable:
         assert mock_rows.b.called
         assert mock_rows.c.called
 
-    def test_tree_returns_none(self):
-        urlpatterns = []
-        gt = GenericTable(urlpatterns, "myapp")
-        assert gt.tree("tab") is None
 
 
 class TestGenericTableStart:

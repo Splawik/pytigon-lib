@@ -53,8 +53,8 @@ def get_environ(path: str | None = None) -> environ.Env:
             LOG_VIEWER=(bool, False),
             SCRIPT_MODE=(bool, False),
             CORS_ORIGIN_WHITELIST=(str, ""),
-            USERNAME=(str, "auto"),
-            PASSWORD=(str, "anawa"),
+            AUTOUSERNAME=(str, "auto"),
+            AUTOPASSWORD=(str, "anawa"),
         )
 
     if path:

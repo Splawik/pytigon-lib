@@ -674,8 +674,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                 exc_info=True,
             )
 
-        # Fall back to RequestContext (adds context processors).
-        return template.render(RequestContext(self._request, context), self._request)
+        return template.render(dict(context), self._request)
 
 
 # ------------------------------------------------------------------

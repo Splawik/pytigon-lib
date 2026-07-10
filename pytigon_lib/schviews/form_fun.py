@@ -82,7 +82,7 @@ def form(
 
                 if hasattr(form_instance, "render_to_response"):
                     return form_instance.render_to_response(
-                        request, template_name, RequestContext(request, result)
+                        request, template_name, RequestContext(request, result).flatten()
                     )
                 else:
                     doc_type = result.get("doc_type", "html")

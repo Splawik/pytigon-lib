@@ -9,12 +9,14 @@ import pytest
 
 from pytigon_lib.schhtml.basedc import (
     BaseDc,
-    BaseDcInfo,
     NullDc,
-    NullDcinfo,
     SubDc,
-    _BaseDcInfoCommon,
     convert_fun_arg,
+)
+from pytigon_lib.schhtml.dc_info import (
+    BaseDcInfo,
+    BaseDcInfoCommon,
+    NullDcinfo,
 )
 
 

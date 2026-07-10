@@ -43,33 +43,37 @@ Functions:
         Monkey-patch a method on a registered generic view class.
 """
 
-import datetime
 import logging
-import uuid
 from collections.abc import Callable
 from typing import Any, Optional
 
-import django
 from django.apps import apps
-from django.conf import settings
-from django.db.models import Q
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
-from django.urls import get_script_prefix, path, re_path, reverse
-from django.utils.functional import lazy
+from django.urls import get_script_prefix, path, re_path
 from django.utils.translation import gettext_lazy as _
-from django.views import generic
 
 from pytigon_lib.schtools.schjson import json_loads
-from pytigon_lib.schviews.actions import delete_row_ok, new_row_ok, update_row_ok
 from pytigon_lib.schviews.schrules import (
-    filter_queryset_by_rules,
     is_rules_active,
     user_can,
 )
 from pytigon_lib.schviews.viewtools import render_to_response
 
-from .perms import default_block, filter_by_permissions, make_perms_test_fun
-from .viewtools import DOC_TYPES, ExtTemplateResponse, LocalizationTemplateResponse
+from ._utils import (
+    convert_str_to_model_field,
+    make_path,
+    make_path_lazy,
+    save,
+    transform_extra_context,
+)
+from .perms import default_block, make_perms_test_fun
+from .views import (
+    _create_create_view,
+    _create_delete_view,
+    _create_detail_view,
+    _create_list_view,
+    _create_update_view,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,72 +91,11 @@ VIEWS_REGISTER: dict[str, dict[Any, Any]] = {
 }
 
 
-# ==========================================================================
-# URL / path helpers
-# ==========================================================================
-
-
-def make_path(view_name: str, args: list[Any] | None = None) -> str:
-    """Generate a URL path for a given view name and optional arguments.
-
-    If ``settings.URL_ROOT_FOLDER`` is set, the path is prefixed with it.
-
-    Args:
-        view_name: The Django URL name to reverse.
-        args: Optional positional arguments for the URL pattern.
-
-    Returns:
-        The generated URL path string.
-    """
-    if settings.URL_ROOT_FOLDER:
-        return f"{settings.URL_ROOT_FOLDER}/{reverse(view_name, args=args)}"
-    return reverse(view_name, args=args)
-
-
-make_path_lazy = lazy(make_path, str)
-
-
-# ==========================================================================
-# Value conversion
-# ==========================================================================
-
-
-def _isinstance(field: Any, instances: list[type]) -> bool:
-    """Return ``True`` if *field* is an instance of any type in *instances*."""
-    return any(isinstance(field, instance) for instance in instances)
-
-
-def convert_str_to_model_field(s: str, field: Any) -> Any:
-    """Convert a string *s* to the Python type expected by a Django model field.
-
-    Args:
-        s: The string value to convert.
-        field: A Django model field instance.
-
-    Returns:
-        The converted value (``str``, ``int``, ``float``, ``bool``,
-        ``datetime``, or ``date``).
-    """
-    if _isinstance(field, (django.db.models.CharField, django.db.models.TextField)):
-        return s
-    if _isinstance(field, (django.db.models.DateTimeField,)):
-        return datetime.datetime.fromisoformat(s[:19])
-    if _isinstance(field, (django.db.models.DateField,)):
-        return datetime.date.fromisoformat(s)
-    if _isinstance(field, (django.db.models.FloatField,)):
-        return float(s)
-    if _isinstance(
-        field, (django.db.models.IntegerField, django.db.models.BigAutoField)
-    ):
-        return int(s)
-    if _isinstance(field, (django.db.models.BooleanField,)):
-        return s and s != "0" and s != "False"
-    return s
-
-
-# ==========================================================================
+# --------------------------------------------------------------------------
 # URL-pattern generators (actions)
-# ==========================================================================
+# --------------------------------------------------------------------------
+# Inline field editor
+# --------------------------------------------------------------------------
 
 
 def gen_tab_action(
@@ -223,37 +166,6 @@ def gen_row_action(
         extra_context,
         name=f"row_action_{table.lower()}_{action}",
     )
-
-
-def transform_extra_context(context1: dict, context2: dict | None) -> dict:
-    """Merge *context2* into *context1*, calling any callable values.
-
-    Args:
-        context1: Base context dictionary (mutated in place).
-        context2: Dictionary whose values may be callables or plain data.
-
-    Returns:
-        The mutated *context1* dictionary.
-    """
-    if context2:
-        for key, value in context2.items():
-            context1[key] = value() if callable(value) else value
-    return context1
-
-
-def save(obj: Any, request: Any, view_type: str, param: dict | None = None) -> None:
-    """Persist an object, using ``save_from_request`` if the model provides it.
-
-    Args:
-        obj: The Django model instance to save.
-        request: The current HTTP request.
-        view_type: View type identifier passed to ``save_from_request``.
-        param: Optional extra parameters.
-    """
-    if hasattr(obj, "save_from_request"):
-        obj.save_from_request(request, view_type, param)
-    else:
-        obj.save()
 
 
 # ==========================================================================
@@ -562,18 +474,6 @@ class GenericTable:
         self.append_from_schema(rows, schema)
         return rows.gen()
 
-    def tree(
-        self,
-        tab: str,
-        title: str = "",
-        title_plural: str = "",
-        template_name: str | None = None,
-        extra_context: dict | None = None,
-        queryset: Any | None = None,
-        prefix: str | None = None,
-    ) -> None:
-        """Create tree views for a table."""
-        return None
 
 
 class GenericRows:
@@ -663,382 +563,12 @@ class GenericRows:
         return self
 
     def list(self) -> "GenericRows":
-        """
-        Generate URL patterns for the list view.
-
-        This function generates URL patterns for the list view with the following
-        format:
-            <base_path>/<filter>/<target>/<vtype>/
-        where:
-            <base_path> is the value of the base_path attribute of the GenericRows
-                object;
-            <filter> is the value of the filter attribute of the GenericRows object
-                or the value of the base_filter keyword argument if it is provided;
-            <target> is the value of the target keyword argument;
-            <vtype> is the value of the vtype keyword argument.
-
-        The function also registers the view in the VIEWS_REGISTER dictionary.
-
-        Returns:
-            self
-        """
-        url = r"((?P<base_filter>[\w=_,;-]*)/|)(?P<filter>[\w=_,;-]*)/(?P<target>[\w_-]*)/[_]?(?P<vtype>list|sublist|tree|get|gettree|treelist|table_action)/$"  # noqa: E501
-        parent_class = self
-
-        class ListView(generic.ListView):
-            model = self.base_model
-            queryset = self.queryset
-            paginate_by = 64
-            allow_empty = True
-            template_name = self.template_name
-            response_class = ExtTemplateResponse
-            base_class = self
-            form = None
-            form_valid = None
-
-            title = self.title_plural
-
-            if self.extra_context:
-                extra_context = self.extra_context
-            else:
-                extra_context = {}
-            if self.field:
-                rel_field = self.field
-            else:
-                rel_field = None
-
-            sort = None
-            order = None
-            search = None
-
-            def _context_for_tree(self) -> dict:
-                try:
-                    parent_pk = int(self.kwargs["filter"])
-                    parent = (
-                        self.model.objects.get(pk=parent_pk) if parent_pk > 0 else None
-                    )
-                except (ValueError, self.model.DoesNotExist):
-                    parent_pk = None
-                    parent = None
-                try:
-                    base_parent_pk = int(self.kwargs["base_filter"])
-                    base_parent = (
-                        self.model.objects.get(pk=base_parent_pk)
-                        if base_parent_pk > 0
-                        else None
-                    )
-                except (ValueError, KeyError, self.model.DoesNotExist):
-                    base_parent_pk = None
-                    base_parent = None
-                if not parent_pk and base_parent_pk:
-                    parent_pk = base_parent_pk
-                    parent = base_parent
-                return {
-                    "parent_pk": parent_pk,
-                    "parent": parent,
-                    "base_parent_pk": base_parent_pk,
-                    "base_parent": base_parent,
-                }
-
-            def doc_type(self) -> str:
-                for doc_type in DOC_TYPES:
-                    if self.kwargs["target"].startswith(doc_type):
-                        return doc_type
-                if "json" in self.request.GET and self.request.GET["json"] == "1":
-                    return "json"
-                return "html"
-
-            def get_template_names(self) -> list[str]:
-                names = super().get_template_names()
-                if "target" in self.kwargs and "__" in self.kwargs["target"]:
-                    target2 = self.kwargs["target"].split("__", 1)[1]
-                    if "__" in target2:
-                        app, t = target2.split("__")
-                        names.insert(
-                            0,
-                            f"{app}/{self.template_name.split('/')[-1].replace('.html', t + '.html')}",
-                        )
-                    else:
-                        names.insert(
-                            0, self.template_name.replace(".html", target2 + ".html")
-                        )
-                if "version" in self.request.GET:
-                    v = self.request.GET["version"]
-                    if "__" in v:
-                        x = v.split("__", 1)
-                        y = self.template_name.split("/")
-                        template2 = f"{x[0]}/{y[-1].replace('.html', x[1] + '.html')}"
-                    else:
-                        template2 = self.template_name.replace(".html", v + ".html")
-                    names.insert(0, template2)
-                return names
-
-            def get_paginate_by(self, queryset: Any) -> int | None:
-                if self.doc_type() in DOC_TYPES and self.doc_type() != "json":
-                    return None
-                return self.paginate_by
-
-            def get(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
-                if "init" in kwargs:
-                    kwargs["init"](self)
-
-                if self.kwargs["vtype"] == "table_action":
-                    parent = None
-                    try:
-                        try:
-                            parent_id = int(self.kwargs["filter"])
-                        except ValueError:
-                            parent_id = 0
-                        if parent_id > 0:
-                            parent = self.model.objects.get(id=parent_id)
-                        else:
-                            if self.kwargs.get("base_filter"):
-                                parent_id = int(self.kwargs["base_filter"])
-                                parent = self.model.objects.get(id=parent_id)
-                            elif self.kwargs.get("parent_pk"):
-                                parent = self.model.objects.get(
-                                    id=int(self.kwargs["parent_pk"])
-                                )
-                    except self.model.DoesNotExist:
-                        parent = None
-
-                    model = self.get_queryset().model
-                    if parent and hasattr(model, "get_derived_object"):
-                        obj2 = model(parent=parent).get_derived_object({"view": self})
-                        model = type(obj2)
-
-                    if hasattr(model, "table_action"):
-                        data = request.POST
-                        if request.content_type == "application/json":
-                            try:
-                                if isinstance(request.body, str):
-                                    data = json_loads(request.body.strip())
-                                else:
-                                    data = json_loads(
-                                        request.body.decode("utf-8").strip()
-                                    )
-                            except ValueError:
-                                raise Http404("Invalid data format")
-
-                        ret = getattr(model, "table_action")(self, request, data)
-                        if ret is None:
-                            raise Http404("Action doesn't exists")
-                        if isinstance(ret, str):
-                            return HttpResponse(ret, content_type="application/json")
-                        if isinstance(ret, HttpResponse):
-                            return ret
-                        return JsonResponse(ret, safe=False)
-                    raise Http404("Action doesn't exists")
-
-                if "tree" in self.kwargs["vtype"]:
-                    c = self._context_for_tree()
-                    if c["parent_pk"] is not None and c["parent_pk"] < 0:
-                        parent_old = c["parent_pk"]
-                        try:
-                            parent = self.model.objects.get(
-                                id=-1 * parent_old
-                            ).parent.id
-                        except (self.model.DoesNotExist, AttributeError):
-                            parent = 0
-
-                        path2 = ("/" + str(parent) + "/").join(
-                            request.get_full_path().rsplit(
-                                "/" + str(parent_old) + "/", 1
-                            )
-                        )
-                        return HttpResponseRedirect(path2)
-
-                offset = request.GET.get("offset")
-                self.sort = request.GET.get("sort")
-                self.order = request.GET.get("order")
-                self.search = request.GET.get("search")
-
-                if offset:
-                    self.kwargs["page"] = int(int(offset) / 64) + 1
-
-                views_module = self.base_class.table.views_module
-
-                form_name = None
-                if "target" in self.kwargs and "__" in self.kwargs["target"]:
-                    template_name = self.kwargs["target"].split("__")[-1]
-                    form_name = (
-                        f"_FilterForm{self.model._meta.object_name}_{template_name}"
-                    )
-                    if not hasattr(views_module, form_name):
-                        form_name = None
-                if not form_name:
-                    form_name = f"_FilterForm{self.model._meta.object_name}"
-
-                if hasattr(views_module, form_name):
-                    if request.method == "POST":
-                        self.form = getattr(views_module, form_name)(request.POST)
-                        self.form_valid = self.form.is_valid()
-                    else:
-                        self.form = getattr(views_module, form_name)()
-                        self.form_valid = None
-
-                return super().get(request, *args, **kwargs)
-
-            def post(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
-                return self.get(request, *args, **kwargs)
-
-            def get_context_data(self, **kwargs: Any) -> dict:
-                nonlocal parent_class
-                context = super().get_context_data(**kwargs)
-                context["view"] = self
-                context["title"] = self.title
-                context["rel_field"] = self.rel_field
-                context["filter"] = self.kwargs["filter"]
-                context["model"] = self.model
-                if "__" in self.kwargs["target"]:
-                    x = self.kwargs["target"].split("__", 1)
-                    context["target"] = x[0]
-                    context["version"] = x[1]
-                else:
-                    context["target"] = self.kwargs["target"]
-                    context["version"] = ""
-                if "version" in self.request.GET:
-                    context["version"] = self.request.GET["version"]
-                context["sort"] = self.sort
-                context["order"] = self.order
-                parent_class.table_paths_to_context(self, context)
-
-                if self.kwargs.get("base_filter"):
-                    context["base_filter"] = self.kwargs["base_filter"]
-                else:
-                    context["base_filter"] = ""
-
-                context["app_name"] = parent_class.table.app
-                context["table_name"] = parent_class.tab
-
-                if self.form:
-                    context["form"] = self.form
-
-                context["doc_type"] = self.doc_type()
-                context["uuid"] = uuid.uuid4()
-                context["vtype"] = self.kwargs["vtype"]
-                context["parent_id"] = None
-
-                if "tree" in self.kwargs["vtype"]:
-                    c = self._context_for_tree()
-                    context.update(c)
-
-                context["kwargs"] = self.kwargs
-                context["GET"] = self.request.GET
-                context["POST"] = self.request.POST
-                ret = transform_extra_context(context, self.extra_context)
-                return ret
-
-            def get_queryset(self) -> Any:
-                ret = None
-                if "tree" in self.kwargs["vtype"]:
-                    filter = self.kwargs["filter"]
-                    c = self._context_for_tree()
-                    if hasattr(self.model, "filter") and not (
-                        isinstance(filter, str) and filter.isdigit()
-                    ):
-                        ret = self.model.filter(filter, self, self.request)
-                    else:
-                        if self.queryset:
-                            ret = self.queryset
-                        else:
-                            if is_rules_active():
-                                ret = filter_queryset_by_rules(
-                                    self.request.user, "view", self.model
-                                )
-                            else:
-                                ret = self.model.objects.all()
-                        if "pk" not in self.request.GET:
-                            if c["parent_pk"]:
-                                if c["parent_pk"] > 0:
-                                    ret = ret.filter(parent=c["parent_pk"])
-                                else:
-                                    ret = ret.filter(parent=None)
-                            else:
-                                ret = ret.filter(parent=None)
-
-                    if "pk" not in self.request.GET:
-                        if (
-                            (not filter or filter == "-")
-                            and c["base_parent_pk"]
-                            and c["base_parent_pk"] > 0
-                        ):
-                            ret = ret.filter(parent=c["base_parent_pk"])
-                    ret = filter_by_permissions(self, self.model, ret, self.request)
-                else:
-                    if self.queryset:
-                        ret = self.queryset
-                    else:
-                        if self.rel_field:
-                            ppk = int(self.kwargs["parent_pk"])
-                            parent = self.model.objects.get(id=ppk)
-                            self.extra_context["parent"] = parent
-                            f = getattr(parent, self.rel_field)
-                            ret = f.all()
-                        else:
-                            filter = self.kwargs["filter"]
-                            if filter and filter != "-":
-                                if hasattr(self.model, "filter"):
-                                    ret = self.model.filter(filter, self, self.request)
-                                else:
-                                    if is_rules_active():
-                                        ret = filter_queryset_by_rules(
-                                            self.request.user, "view", self.model
-                                        )
-                                    else:
-                                        ret = self.model.objects.all()
-                            else:
-                                if is_rules_active():
-                                    ret = filter_queryset_by_rules(
-                                        self.request.user, "view", self.model
-                                    )
-                                else:
-                                    ret = self.model.objects.all()
-                    ret = filter_by_permissions(self, self.model, ret, self.request)
-                    if self.kwargs.get("base_filter"):
-                        try:
-                            parent = int(self.kwargs["base_filter"])
-                            ret = ret.filter(parent=parent)
-                        except ValueError:
-                            pass
-                if self.search:
-                    fields = [
-                        f
-                        for f in self.model._meta.fields
-                        if isinstance(f, django.db.models.CharField)
-                    ]
-                    queries = [
-                        Q(**{f.name + "__icontains": self.search}) for f in fields
-                    ]
-                    qs = Q()
-                    for query in queries:
-                        qs = qs | query
-                    ret = ret.filter(qs)
-
-                if hasattr(self.model, "sort"):
-                    ret = self.model.sort(ret, self.sort, self.order)
-                else:
-                    if self.sort == "cid":
-                        if self.order == "asc":
-                            ret = ret.order_by("id")
-                        else:
-                            ret = ret.order_by("-id")
-
-                if "pk" in self.request.GET:
-                    ret = ret.filter(pk=self.request.GET["pk"])
-                    return ret
-                if self.form and not self.rel_field:
-                    if self.form_valid:
-                        return self.form.process(self.request, ret)
-                    if hasattr(self.form, "process_empty_or_invalid"):
-                        return self.form.process_empty_or_invalid(self.request, ret)
-                    return ret
-                return ret
+        url, ListView = _create_list_view(self)
 
         VIEWS_REGISTER["list"][self.base_model] = ListView
 
         fun = make_perms_test_fun(
-            parent_class.table.app,
+            self.table.app,
             self.base_model,
             self.base_perm % "list",
             ListView.as_view(),
@@ -1048,111 +578,12 @@ class GenericRows:
         return self
 
     def detail(self) -> "GenericRows":
-        """
-        Generate a detail view for a specific element.
-
-        The detail view allows the user to view detailed information about an element
-        of the table. It is accessible to users with the "view" permission on the table.
-
-        :return: The detail view as a class.
-        :rtype: generic.DetailView
-        """
-
-        url = r"(?P<pk>\d+)/(?P<target>[\w_]*)/(?P<vtype>view|row_action)/$"
-        parent_class = self
-
-        class DetailView(generic.DetailView):
-            queryset = self.queryset
-
-            if self.field:
-                try:
-                    f = getattr(self.base_model, self.field).related
-                except AttributeError:
-                    f = getattr(self.base_model, self.field).rel
-                model = f.related_model
-            else:
-                model = self.base_model
-
-            template_name = self.template_name
-            title = self.title
-            response_class = ExtTemplateResponse
-
-            def get_object(self, queryset: Any | None = None) -> Any:
-                obj = super().get_object(queryset)
-                if hasattr(obj, "get_derived_object"):
-                    obj2 = obj.get_derived_object({"view": self})
-                    self.model = type(obj2)
-                    return obj2
-                return obj
-
-            def doc_type(self) -> str:
-                for doc_type in DOC_TYPES:
-                    if self.kwargs["target"].startswith(doc_type):
-                        return doc_type
-                if "json" in self.request.GET and self.request.GET["json"] == "1":
-                    return "json"
-                return "html"
-
-            def get_template_names(self) -> list[str]:
-                names = super().get_template_names()
-                if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
-                    names.insert(
-                        0,
-                        self.template_name.replace(
-                            ".html", self.kwargs["target"][3:] + ".html"
-                        ),
-                    )
-                if "version" in self.request.GET:
-                    v = self.request.GET["version"]
-                    if "__" in v:
-                        x = v.split("__", 1)
-                        y = self.template_name.split("/")
-                        template2 = f"{x[0]}/{y[-1].replace('.html', x[1] + '.html')}"
-                    else:
-                        template2 = self.template_name.replace(".html", v + ".html")
-                    names.insert(0, template2)
-                return names
-
-            def get_context_data(self, **kwargs: Any) -> dict:
-                nonlocal parent_class
-                context = super().get_context_data(**kwargs)
-                context["view"] = self
-                context["title"] = f"{self.title} - {_('element information')!s}"
-                if "version" in self.request.GET:
-                    context["version"] = self.request.GET["version"]
-
-                parent_class.table_paths_to_context(self, context)
-
-                return context
-
-            def get(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
-                self.object = self.get_object()
-
-                if self.object and is_rules_active():
-                    if not user_can(
-                        request.user, "detail", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                if self.kwargs["vtype"] == "row_action":
-                    if hasattr(self.object, "row_action"):
-                        ret = getattr(self.model, "row_action")(
-                            self.model, request, args, kwargs
-                        )
-                        if ret is None:
-                            raise Http404("Action doesn't exists")
-                        return JsonResponse(ret)
-                    raise Http404("Action doesn't exists")
-
-                return super().get(request, *args, **kwargs)
-
-            def post(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
-                return self.get(request, *args, **kwargs)
+        url, DetailView = _create_detail_view(self)
 
         VIEWS_REGISTER["detail"][self.base_model] = DetailView
 
         fun = make_perms_test_fun(
-            parent_class.table.app,
+            self.table.app,
             self.base_model,
             self.base_perm % "view",
             DetailView.as_view(),
@@ -1160,185 +591,12 @@ class GenericRows:
         return self._append(url, fun)
 
     def edit(self) -> "GenericRows":
-        """
-        Generate an edit view.
-
-        The edit view allows the user to modify an existing element of the
-        table. The view is accessible to users with the "change" permission on
-        the table.
-
-        :return: The edit view as a class.
-        :rtype: generic.UpdateView
-        """
-        url = r"(?P<pk>\d+)/edit/$"
-        parent_class = self
-
-        class UpdateView(generic.UpdateView):
-            response_class = ExtTemplateResponse
-
-            if self.field:
-                try:
-                    f = getattr(self.base_model, self.field).related
-                except AttributeError:
-                    f = getattr(self.base_model, self.field).rel
-                model = f.related_model
-            else:
-                model = self.base_model
-            success_url = make_path_lazy("ok")
-
-            template_name = self.template_name
-            title = self.title
-            fields = "__all__"
-
-            def get_object(self, queryset=None):
-                obj = super().get_object(queryset)
-                if hasattr(obj, "get_derived_object"):
-                    obj2 = obj.get_derived_object(
-                        {
-                            "view": self,
-                        }
-                    )
-                    self.model = type(obj2)
-                    return obj2
-                else:
-                    return obj
-
-            def doc_type(self):
-                return "html"
-
-            def get_template_names(self):
-                names = super().get_template_names()
-                if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
-                    names.insert(
-                        0,
-                        self.template_name.replace(
-                            ".html", self.kwargs["target"][3:] + ".html"
-                        ),
-                    )
-                if "version" in self.request.GET:
-                    v = self.request.GET["version"]
-                    if "__" in v:
-                        x = v.split("__", 1)
-                        y = self.template_name.split("/")
-                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
-                    else:
-                        template2 = self.template_name.replace(".html", v + ".html")
-                    names.insert(0, template2)
-                return names
-
-            def get_context_data(self, **kwargs):
-                nonlocal parent_class
-                context = super(UpdateView, self).get_context_data(**kwargs)
-                context["view"] = self
-                context["title"] = self.title + " - " + str(_("update element"))
-                if "version" in self.request.GET:
-                    context["version"] = self.request.GET["version"]
-
-                parent_class.table_paths_to_context(self, context)
-
-                return context
-
-            def get(self, request, *args, **kwargs):
-                self.object = self.get_object()
-
-                if self.object and is_rules_active():
-                    if not user_can(
-                        self.request.user, "change", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                if self.object and hasattr(self.object, "redirect_href"):
-                    href = self.object.redirect_href(self, request)
-                    if href:
-                        return HttpResponseRedirect(href)
-
-                if "init" in kwargs:
-                    kwargs["init"](self)
-
-                if self.object and hasattr(self.object, "get_form_class"):
-                    self.form_class = self.object.get_form_class(self, request, False)
-                else:
-                    self.form_class = self.get_form_class()
-
-                form = None
-                if self.object and hasattr(self.object, "get_form"):
-                    form = self.object.get_form(self, request, self.form_class, False)
-                if not form:
-                    form = self.get_form(self.form_class)
-                if form:
-                    for field in form.fields:
-                        if hasattr(form.fields[field].widget, "py_client"):
-                            if request.META["HTTP_USER_AGENT"].startswith("Py"):
-                                form.fields[field].widget.set_py_client(True)
-                return self.render_to_response(self.get_context_data(form=form))
-
-            def post(self, request, *args, **kwargs):
-                self.object = self.get_object()
-
-                if self.object and is_rules_active():
-                    if not user_can(
-                        self.request.user, "change", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                if "init" in kwargs:
-                    kwargs["init"](self)
-
-                if self.object and hasattr(self.object, "get_form_class"):
-                    self.form_class = self.object.get_form_class(self, request, False)
-                else:
-                    self.form_class = self.get_form_class()
-
-                form = None
-                if self.object and hasattr(self.object, "get_form"):
-                    form = self.object.get_form(self, request, self.form_class, False)
-                if not form:
-                    form = self.get_form(self.form_class)
-                if self.model and hasattr(self.model, "is_form_valid"):
-
-                    def vfun():
-                        return self.model.is_form_valid(form)
-
-                else:
-                    vfun = form.is_valid
-
-                if vfun():
-                    return self.form_valid(form, request)
-                else:
-                    logger.warning("Edit form invalid: %s", form.errors)
-                    return self.form_invalid(form)
-
-            def form_valid(self, form, request=None):
-                """Handle successful edit form submission.
-
-                Extracts ``json_*`` prefixed fields, saves the object,
-                and returns an ``update_row_ok`` response.
-                """
-                jsondata = {}
-                for key, value in form.data.items():
-                    if key.startswith("json_"):
-                        jsondata[key[5:]] = value
-
-                self.object = form.save(commit=False)
-                if jsondata:
-                    self.object.jsondata = jsondata
-
-                if hasattr(self.object, "post_form"):
-                    if self.object.post_form(self, form, request):
-                        save(self.object, request, "edit")
-                else:
-                    save(self.object, request, "edit")
-                form.save_m2m()
-
-                if self.object:
-                    return update_row_ok(request, int(self.object.id), self.object)
-                else:
-                    return super(generic.edit.ModelFormMixin, self).form_valid(form)
+        url, UpdateView = _create_update_view(self)
 
         VIEWS_REGISTER["edit"][self.base_model] = UpdateView
 
         fun = make_perms_test_fun(
-            parent_class.table.app,
+            self.table.app,
             self.base_model,
             self.base_perm % "change",
             UpdateView.as_view(),
@@ -1346,258 +604,12 @@ class GenericRows:
         return self._append(url, fun)
 
     def add(self):
-        """
-        Add a new element to the table.
-
-        URL: /table/<app>/<model>/add/<add_param>/
-        URL parameters:
-            - add_param: optional parameter used to initialize the form
-        """
-        url = r"(?P<add_param>[\w=_-]*)/add/$"
-        parent_class = self
-
-        class CreateView(generic.CreateView):
-            response_class = ExtTemplateResponse
-            if self.field and self.field != "this":
-                try:
-                    f = getattr(self.base_model, self.field).related
-                except AttributeError:
-                    f = getattr(self.base_model, self.field).rel
-                model = f.related_model
-                pmodel = self.base_model
-            else:
-                model = self.base_model
-                pmodel = model
-            template_name = self.template_name
-            title = self.title
-            field = self.field
-            init_form = None
-            fields = "__all__"
-
-            def get_object(self, queryset=None):
-                obj = self.model()
-                if hasattr(obj, "get_derived_object"):
-                    obj2 = obj.get_derived_object(
-                        {
-                            "view": self,
-                        }
-                    )
-                    self.model = type(obj2)
-                    return obj2
-                else:
-                    return obj
-
-            def doc_type(self):
-                return "html"
-
-            def get_template_names(self):
-                names = super().get_template_names()
-                if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
-                    names.insert(
-                        0,
-                        self.template_name.replace(
-                            ".html", self.kwargs["target"][3:] + ".html"
-                        ),
-                    )
-                if "version" in self.request.GET:
-                    v = self.request.GET["version"]
-                    if "__" in v:
-                        x = v.split("__", 1)
-                        y = self.template_name.split("/")
-                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
-                    else:
-                        template2 = self.template_name.replace(".html", v + ".html")
-                    names.insert(0, template2)
-
-                return names
-
-            def get_success_url(self):
-                return make_path_lazy("ok")
-
-            def _get_form(self, request, *args, **kwargs):
-                self.object = self.get_object()
-                if self.field:
-                    ppk = int(kwargs["parent_pk"])
-                    if ppk > 0:
-                        m = self.pmodel
-                        while m:
-                            try:
-                                self.object.parent = m.objects.get(id=ppk)
-                                m = None
-                            except self.pmodel.DoesNotExist:
-                                m = m.__bases__[0]
-
-                if hasattr(self.model, "init_new"):
-                    if kwargs["add_param"] and kwargs["add_param"] != "-":
-                        self.init_form = self.object.init_new(
-                            request, self, kwargs["add_param"]
-                        )
-                    else:
-                        self.init_form = self.object.init_new(request, self)
-                    if self.init_form:
-                        for pos in self.init_form:
-                            if hasattr(self.object, pos):
-                                try:
-                                    setattr(self.object, pos, self.init_form[pos])
-                                except self.pmodel.DoesNotExist:
-                                    pass
-                else:
-                    self.init_form = None
-
-                if self.object and hasattr(self.object, "get_form_class"):
-                    self.form_class = self.object.get_form_class(self, request, True)
-                else:
-                    self.form_class = self.get_form_class()
-                form = None
-                if self.object and hasattr(self.object, "get_form"):
-                    form = self.object.get_form(self, request, self.form_class, False)
-                if not form:
-                    form = self.get_form(self.form_class)
-
-                return form
-
-            def get(self, request, *args, **kwargs):
-                form = self._get_form(request, *args, **kwargs)
-
-                if self.object and is_rules_active():
-                    if not user_can(
-                        self.request.user, "add", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                if form:
-                    for field in form.fields:
-                        if hasattr(form.fields[field].widget, "py_client"):
-                            if request.META["HTTP_USER_AGENT"].startswith("Py"):
-                                form.fields[field].widget.set_py_client(True)
-
-                if self.object and hasattr(self.object, "redirect_href"):
-                    href = self.object.redirect_href(self, request)
-                    if href:
-                        return HttpResponseRedirect(href)
-                return self.render_to_response(context=self.get_context_data(form=form))
-
-            def post(self, request, *args, **kwargs):
-                form = self._get_form(request, *args, **kwargs)
-
-                if self.object and is_rules_active():
-                    if not user_can(
-                        self.request.user, "add", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                if self.model and hasattr(self.model, "is_form_valid"):
-
-                    def vfun():
-                        return self.model.is_form_valid(form)
-
-                else:
-                    vfun = form.is_valid
-                if vfun():
-                    return self.form_valid(form, request)
-                else:
-                    logger.warning("Add form invalid: %s", form.errors)
-                    return self.form_invalid(form)
-
-            def get_initial(self):
-                d = super(CreateView, self).get_initial()
-
-                for field in self.model._meta.fields:
-                    if field.name in self.request.GET:
-                        value = convert_str_to_model_field(
-                            self.request.GET[field.name], field
-                        )
-                        d[field.name] = value
-
-                if self.field:
-                    if int(self.kwargs["parent_pk"]) > 0:
-                        d["parent"] = self.kwargs["parent_pk"]
-                    else:
-                        d["parent"] = None
-                if self.init_form:
-                    transform_extra_context(d, self.init_form)
-                return d
-
-            def get_form_kwargs(self):
-                ret = super(CreateView, self).get_form_kwargs()
-                if self.init_form:
-                    if "data" in ret:
-                        data = ret["data"].copy()
-                        for key, value in self.init_form.items():
-                            if data.get(key):
-                                continue
-                            data[key] = value
-
-                        ret.update({"data": data})
-
-                return ret
-
-            def form_valid(self, form, request=None):
-                """
-                If the form is valid, save the associated model.
-                """
-                nonlocal parent_class
-                jsondata = {}
-                for key, value in form.data.items():
-                    if key.startswith("json_"):
-                        jsondata[key[5:]] = value
-
-                self.object = form.save(commit=False)
-
-                if jsondata:
-                    self.object.jsondata = jsondata
-
-                if "parent_pk" in self.kwargs and hasattr(self.object, "parent_id"):
-                    if int(self.kwargs["parent_pk"]) != 0:
-                        self.object.parent_id = int(self.kwargs["parent_pk"])
-
-                if request and request.POST:
-                    p = request.POST
-                else:
-                    p = {}
-                if self.init_form:
-                    for pos in self.init_form:
-                        if hasattr(self.object, pos) and pos not in p:
-                            try:
-                                setattr(self.object, pos, self.init_form[pos])
-                            except self.pmodel.DoesNotExist:
-                                pass
-
-                if hasattr(self.object, "post_form"):
-                    if self.object.post_form(self, form, request):
-                        save(self.object, request, "add")
-                else:
-                    save(self.object, request, "add")
-                form.save_m2m()
-
-                if self.object:
-                    if self.request.GET.get("redirect"):
-                        ctx = self.get_context_data(form=form)
-                        tp = ctx["table_path"]
-                        return HttpResponseRedirect(tp + f"{self.object.pk}/edit/")
-                    else:
-                        return new_row_ok(request, int(self.object.id), self.object)
-                else:
-                    return super(generic.edit.ModelFormMixin, self).form_valid(form)
-
-            def get_context_data(self, **kwargs):
-                nonlocal parent_class
-                context = super(CreateView, self).get_context_data(**kwargs)
-                context["view"] = self
-                context["title"] = self.title + " - " + str(_("new element"))
-                context["object"] = self.object
-                context["add_param"] = self.kwargs["add_param"]
-                if "version" in self.request.GET:
-                    context["version"] = self.request.GET["version"]
-
-                parent_class.table_paths_to_context(self, context)
-
-                return context
+        url, CreateView = _create_create_view(self)
 
         VIEWS_REGISTER["create"][self.base_model] = CreateView
 
         fun = make_perms_test_fun(
-            parent_class.table.app,
+            self.table.app,
             self.base_model,
             self.base_perm % "add",
             CreateView.as_view(),
@@ -1605,118 +617,12 @@ class GenericRows:
         return self._append(url, fun)
 
     def delete(self):
-        """
-        Generate a delete view.
-
-        This method sets up a delete view that allows users with the appropriate
-        permissions to delete an element from the table. The view is registered
-        with the appropriate URL pattern and permissions are checked before allowing
-        the delete operation.
-
-        The DeleteView class provides methods to handle GET and POST requests,
-        ensuring that the user has the necessary permissions and performing any
-        additional actions needed during the delete operation.
-
-        The view is accessible via the URL pattern: /<pk>/delete/
-
-        :return: The delete view as a class.
-        :rtype: generic.DeleteView
-        """
-
-        url = r"(?P<pk>\d+)/delete/$"
-        parent_class = self
-
-        class DeleteView(generic.DeleteView):
-            response_class = LocalizationTemplateResponse
-            if self.field:
-                try:
-                    f = getattr(self.base_model, self.field).related
-                except AttributeError:
-                    f = getattr(self.base_model, self.field).rel
-                model = f.related_model
-            else:
-                model = self.base_model
-            success_url = make_path_lazy("ok")
-            template_name = self.template_name
-            title = self.title
-
-            def get_object(self, queryset=None):
-                obj = super().get_object(queryset)
-                if hasattr(obj, "get_derived_object"):
-                    obj2 = obj.get_derived_object(
-                        {
-                            "view": self,
-                        }
-                    )
-                    self.model = type(obj2)
-                    return obj2
-                else:
-                    return obj
-
-            def get_context_data(self, **kwargs):
-                nonlocal parent_class
-                context = super(DeleteView, self).get_context_data(**kwargs)
-                context["view"] = self
-                context["title"] = self.title + " - " + str(_("delete element"))
-                if "version" in self.request.GET:
-                    context["version"] = self.request.GET["version"]
-
-                parent_class.table_paths_to_context(self, context)
-
-                return context
-
-            def get_template_names(self):
-                names = super().get_template_names()
-                if "target" in self.kwargs and self.kwargs["target"].startswith("ver"):
-                    names.insert(
-                        0,
-                        self.template_name.replace(
-                            ".html", self.kwargs["target"][3:] + ".html"
-                        ),
-                    )
-                if "version" in self.request.GET:
-                    v = self.request.GET["version"]
-                    if "__" in v:
-                        x = v.split("__", 1)
-                        y = self.template_name.split("/")
-                        template2 = x[0] + "/" + y[-1].replace(".html", x[1] + ".html")
-                    else:
-                        template2 = self.template_name.replace(".html", v + ".html")
-                    names.insert(0, template2)
-                return names
-
-            def get(self, request, *args, **kwargs):
-                self.object = self.get_object(self.queryset)
-                if self.object and is_rules_active():
-                    if not user_can(
-                        self.request.user, "delete", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                return super().get(request, *args, **kwargs)
-
-            def post(self, request, *args, **kwargs):
-                self.object = self.get_object(self.queryset)
-                if self.object and is_rules_active():
-                    if not user_can(
-                        self.request.user, "delete", type(self.object), self.object
-                    ):
-                        return default_block(request)
-
-                if hasattr(self.object, "on_delete"):
-                    self.object.on_delete(request, self)
-
-                pk = int(self.object.id)
-
-                super().post(request, *args, **kwargs)
-
-                return delete_row_ok(request, pk, self.object)
-                # return super().post(request, *args, **kwargs)
+        url, DeleteView = _create_delete_view(self)
 
         VIEWS_REGISTER["delete"][self.base_model] = DeleteView
 
         fun = make_perms_test_fun(
-            parent_class.table.app,
+            self.table.app,
             self.base_model,
             self.base_perm % "delete",
             DeleteView.as_view(),

@@ -89,10 +89,12 @@ def install():
             from django.contrib.auth.models import User
 
             env = get_environ()
-            username = env("USERNAME")
-            password = env("PASSWORD")
+            username = env("AUTOUSERNAME")
+            password = env("AUTOPASSWORD")
 
-            User.objects.db_manager("default").create_superuser(username, "auto@pytigon.cloud", password)
+            User.objects.db_manager("default").create_superuser(
+                username, "auto@pytigon.cloud", password
+            )
     if "after_install" in get_commands():
         try:
             cmd(
@@ -196,8 +198,8 @@ def export_to_db(withoutapp=None, to_local_db=True):
         from django.contrib.auth.models import User
 
         env = get_environ()
-        username = env("USERNAME")
-        password = env("PASSWORD")
+        username = env("AUTOUSERNAME")
+        password = env("AUTOPASSWORD")
 
         User.objects.db_manager("local").create_superuser(username, "auto@pytigon.cloud", password)
 
@@ -391,7 +393,9 @@ class Ptig:
                 with open(dest_db, "wb") as f:
                     f.write(src_db)
 
-            (ret_code, output, err) = py_run([os.path.join(extract_to, "manage.py"), "postinstallation"])
+            (ret_code, output, err) = py_run(
+                [os.path.join(extract_to, "manage.py"), "postinstallation"]
+            )
 
             if output:
                 for pos in output:

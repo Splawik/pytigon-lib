@@ -13,6 +13,8 @@ import shutil
 from xml.sax.saxutils import escape
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from .common import transform_str
+
 from lxml import etree, html
 
 from pytigon_lib.schfs.vfstools import delete_from_zip
@@ -30,11 +32,6 @@ def attr_get(attrs, key):
         if k.endswith(key):
             return attrs[k]
     return None
-
-
-def transform_str(s):
-    """Transform string by replacing special characters."""
-    return s.replace("***", '"').replace("**", "'")
 
 
 def inner_html(elem):

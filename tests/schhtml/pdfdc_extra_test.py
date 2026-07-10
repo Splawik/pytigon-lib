@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+from pytigon_lib.schhtml.basedc import BaseDc
+from pytigon_lib.schhtml.dc_info import BaseDcInfo
 from pytigon_lib.schhtml.pdfdc import PdfDc, PdfDcInfo, PDFSurface
 
 

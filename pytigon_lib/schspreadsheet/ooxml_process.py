@@ -19,6 +19,8 @@ from django.template import Context
 from pytigon_lib.schfs.vfstools import delete_from_zip
 from pytigon_lib.schspreadsheet.odf_process import OdfDocTransform
 
+from .common import transform_str
+
 logger = logging.getLogger(__name__)
 
 # lxml.etree is imported lazily in OOXmlDocTransform.__init__
@@ -26,14 +28,6 @@ logger = logging.getLogger(__name__)
 etree = None
 
 SECTION_WIDTH = ord("Z") - ord("A") + 1
-
-
-def transform_str(s):
-    """Replace special character sequences in template strings.
-
-    '***' -> double quote, '**' -> single quote.
-    """
-    return s.replace("***", '"').replace("**", "'")
 
 
 def filter_attr(tab, attr, value):
