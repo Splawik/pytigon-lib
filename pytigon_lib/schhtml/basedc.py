@@ -928,22 +928,13 @@ class SubDc:
         """
         return [self.dx, self.dy]
 
-    def __getattribute__(self, attr):
-        """
-        Overrides the standard __getattribute__ method to allow for chaining of device contexts.
+    def __getattr__(self, attr):
+        """Delegate unknown attributes to the parent device context.
 
-        If the attribute is not found in the current device context, it will be searched in the parent device context.
-
-        :param attr: The name of the attribute to be retrieved.
-        :type attr: str
-        :return: The requested attribute
-        :rtype: object
+        Only called when normal attribute lookup fails, avoiding overhead
+        on every attribute access.
         """
-        try:
-            ret = object.__getattribute__(self, attr)
-        except AttributeError:
-            ret = getattr(self._parent, attr)
-        return ret
+        return getattr(self._parent, attr)
 
     def play_str(self, str):
         """
@@ -1184,25 +1175,13 @@ class NullDc:
         self._maxwidth = 0
         self._maxheight = 0
 
-    def __getattribute__(self, attr):
-        """
-        Overrides the standard __getattribute__ method to allow for chaining of device contexts.
+    def __getattr__(self, attr):
+        """Delegate unknown attributes to the referenced device context.
 
-        If the attribute is not found in the current device context, it will be searched in the parent device context.
-
-        :param attr: The name of the attribute to be retrieved.
-        :type attr: str
-        :return: The requested attribute
-        :rtype: object
+        Only called when normal attribute lookup fails, avoiding overhead
+        on every attribute access.
         """
-        if attr.startswith("_"):
-            ret = object.__getattribute__(self, attr)
-        else:
-            try:
-                ret = object.__getattribute__(self, attr)
-            except AttributeError:
-                ret = getattr(self._ref_dc, attr)
-        return ret
+        return getattr(self._ref_dc, attr)
 
     def get_dc_info(self):
         """

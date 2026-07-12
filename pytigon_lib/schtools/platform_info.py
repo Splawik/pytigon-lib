@@ -1,5 +1,8 @@
+import logging
 import platform
 from os import environ
+
+_logger = logging.getLogger(__name__)
 
 
 def platform_name():
@@ -14,5 +17,5 @@ def platform_name():
             return "Android"
         return system_name
     except Exception as e:
-        print(f"Error determining platform: {e}")
+        _logger.warning("Error determining platform: %s", e)
         return "Unknown"

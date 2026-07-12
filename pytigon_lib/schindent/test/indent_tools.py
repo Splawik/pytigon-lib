@@ -1,5 +1,8 @@
 import io
+import logging
 from html.parser import HTMLParser
+
+_logger = logging.getLogger(__name__)
 
 
 def _convert_strings(lines):
@@ -173,7 +176,7 @@ class NormParser(HTMLParser):
         try:
             self.feed(data)
         except Exception as e:
-            print(f"Error processing HTML: {e}")
+            _logger.error("Error processing HTML: %s", e)
             return data
         return self.txt.getvalue()[1:] + "\n"
 
@@ -200,7 +203,7 @@ def norm_html(txt):
         n = NormParser()
         return n.process(txt)
     except Exception as e:
-        print(f"Error normalizing HTML: {e}")
+        _logger.error("Error normalizing HTML: %s", e)
         return txt
 
 
@@ -211,5 +214,5 @@ def indent_html(txt):
         ret = n.process(txt)
         return "\n".join(line for line in ret.split("\n") if line.strip())
     except Exception as e:
-        print(f"Error indenting HTML: {e}")
+        _logger.error("Error indenting HTML: %s", e)
         return txt

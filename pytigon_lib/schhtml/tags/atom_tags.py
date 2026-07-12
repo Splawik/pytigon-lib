@@ -1,4 +1,5 @@
 import io
+import logging
 
 from pytigon_lib.schhtml.atom import Atom, BrAtom, NullAtom
 from pytigon_lib.schhtml.basehtmltags import (
@@ -12,6 +13,8 @@ from pytigon_lib.schhtml.render_helpers import (
     get_size,
 )
 from pytigon_lib.schtools.images import svg_to_png
+
+_logger = logging.getLogger(__name__)
 
 IMAGE = None
 
@@ -116,8 +119,7 @@ class ImgDraw:
         if self.image:
             dc.draw_image(x, y, self.width, self.height, 3, self.image)
         else:
-            print("null_img")
-
+            _logger.debug("null_img")
 
 class ImgTag(AtomTag):
     """Class for handling <img> tags."""
@@ -145,7 +147,7 @@ class ImgTag(AtomTag):
                     img = img.encode("utf-8")
             except (OSError, ValueError, AttributeError) as e:
                 img = None
-                print(f"Image {self.src} not loaded! Error: {e}")
+                _logger.warning("Image %s not loaded! Error: %s", self.src, e)
 
             if img:
                 img_name = self.src.lower()
@@ -165,7 +167,7 @@ class ImgTag(AtomTag):
                         image.save(output, "PNG")
                         self.img = output.getvalue()
                     except Exception as e:
-                        print(f"Failed to process image {self.src}: {e}")
+                        _logger.warning("Failed to process image %s: %s", self.src, e)
 
         if self.img:
             if self.width > 0 and self.height > 0:

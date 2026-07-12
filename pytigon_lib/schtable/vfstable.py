@@ -7,6 +7,8 @@ import mimetypes
 import re
 import uuid
 
+import logging
+
 from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.http import HttpResponse
@@ -19,6 +21,8 @@ from pytigon_lib.schtools import schjson
 from pytigon_lib.schtools.tools import bdecode, bencode, is_null
 
 _ = gettext.gettext
+
+_logger = logging.getLogger(__name__)
 
 
 def str_cmp(x, y, ts):
@@ -42,7 +46,7 @@ def str_cmp(x, y, ts):
         else:
             return 0
     except Exception as e:
-        print(f"Error comparing {x[id]} and {y[id]}: {e}")
+        _logger.error("Error comparing %s and %s: %s", x[id], y[id], e)
         return 0
 
 
@@ -100,7 +104,7 @@ class VfsTable(Table):
         try:
             f = default_storage.fs.listdir(automount(self.folder))
         except Exception as e:
-            print(f"Error listing directory: {e}")
+            _logger.error("Error listing directory: %s", e)
             return []
 
         elements = []
@@ -134,7 +138,7 @@ class VfsTable(Table):
                             ]
                         )
                     except Exception as e:
-                        print(f"Error processing directory {p}: {e}")
+                        _logger.error("Error processing directory %s: %s", p, e)
             else:
                 files.append((p, pos))
 
@@ -156,7 +160,7 @@ class VfsTable(Table):
                         ]
                     )
                 except Exception as e:
-                    print(f"Error processing file {p}: {e}")
+                    _logger.error("Error processing file %s: %s", p, e)
 
         return elements
 
@@ -261,7 +265,7 @@ def vfsopen(request, file):
         with default_storage.fs.open(automount(file2), "rb") as plik:
             buf = plik.read()
     except Exception as e:
-        print(f"Error opening file {file}: {e}")
+        _logger.error("Error opening file %s: %s", file, e)
         buf = b""
 
     headers = {}
@@ -306,7 +310,7 @@ def vfsopen_page(request, file, page):
             plik.seek(page2 * 4096)
             buf = binascii.hexlify(plik.read(4096))
     except Exception as e:
-        print(f"Error opening page {page} of file {file}: {e}")
+        _logger.error("Error opening page %s of file %s: %s", page, file, e)
         buf = b""
     return HttpResponse(buf)
 

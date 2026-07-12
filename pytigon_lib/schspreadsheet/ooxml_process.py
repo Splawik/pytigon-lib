@@ -65,30 +65,26 @@ def filter_attr(tab, attr, value):
 
 
 def col_row(excel_addr):
-    """Convert Excel address (e.g. 'A1', 'AB12') to column, row, and column index.
+    """Convert Excel address (e.g. 'A1', 'AB12', 'AAA1') to column, row, and column index.
 
     Args:
         excel_addr: Excel cell address string.
 
     Returns:
         Tuple of (column_letter, row_number, column_index) where column_index is
-        1-based (A=1, B=2, ..., Z=26, AA=27, etc.).
+        1-based (A=1, B=2, ..., Z=26, AA=27, AAA=703, etc.).
     """
-    if len(excel_addr) < 2:
+    i = 0
+    while i < len(excel_addr) and excel_addr[i].isalpha():
+        i += 1
+    if i == 0 or i == len(excel_addr):
         raise ValueError(f"Invalid Excel address: {excel_addr!r}")
+    col = excel_addr[:i].upper()
+    row = int(excel_addr[i:])
 
-    if excel_addr[1] >= "0" and excel_addr[1] <= "9":
-        col = excel_addr[0].upper()
-        row = int(excel_addr[1:])
-    else:
-        col = excel_addr[:2].upper()
-        row = int(excel_addr[2:])
-
-    col_as_int = (
-        (ord(col[0]) - ord("A") + 1) * SECTION_WIDTH + (ord(col[1]) - ord("A")) + 1
-        if len(col) > 1
-        else ord(col[0]) - ord("A") + 1
-    )
+    col_as_int = 0
+    for ch in col:
+        col_as_int = col_as_int * 26 + (ord(ch) - ord("A") + 1)
     return col, row, col_as_int
 
 
@@ -96,23 +92,24 @@ def make_col_row(col, row):
     """Convert column index and row number to Excel address string.
 
     Args:
-        col: 1-based column index (1 = A, 2 = B, ..., 27 = AA).
+        col: 1-based column index (1 = A, 2 = B, ..., 27 = AA, 703 = AAA).
         row: 1-based row number.
 
     Returns:
-        Excel address string like 'A1', 'AB12'.
+        Excel address string like 'A1', 'AB12', 'AAA1'.
     """
-    _col, _row, col_as_int = col_row("Z1")
-    if col > col_as_int:
-        x1 = (col - 1) // col_as_int
-        x2 = (col - 1) % col_as_int
-        return chr(ord("A") + x1 - 1) + chr(ord("A") + x2) + str(row)
-    else:
-        return chr(ord("A") + col - 1) + str(row)
+    if col < 1:
+        raise ValueError(f"Invalid column index: {col}")
+    letters = ""
+    n = col
+    while n > 0:
+        n, rem = divmod(n - 1, 26)
+        letters = chr(ord("A") + rem) + letters
+    return letters + str(row)
 
 
 def key_for_addr(excel_addr):
-    """Generate a numeric sort key for an Excel address.
+    """Generate a sort key for an Excel address.
 
     Produces a key that orders cells row-major (top-to-bottom, left-to-right).
 
@@ -120,10 +117,10 @@ def key_for_addr(excel_addr):
         excel_addr: Excel cell address string.
 
     Returns:
-        Integer sort key: row * 1000 + column_index.
+        Tuple sort key: (row, column_index).
     """
     col, row, col_as_int = col_row(excel_addr)
-    return row * 1000 + col_as_int
+    return (row, col_as_int)
 
 
 def date_to_float(d):
@@ -209,24 +206,20 @@ class OOXmlDocTransform(OdfDocTransform):
                     labels.append(pos.attrib["r"])
             labels.sort(key=key_for_addr)
 
+            import bisect
+
             for key, value in self.comments.items():
                 value2 = value.strip()
                 if key in labels:
                     label = key
                 else:
-                    labels2 = labels + [
-                        key,
-                    ]
-                    labels2.sort(key=key_for_addr)
-                    old = None
-                    for label_item in labels2:
-                        if label_item == key:
-                            break
-                        old = label_item
-                    if old:
-                        label = old
-                    else:
+                    pos = bisect.bisect_left(labels, key, key=key_for_addr)
+                    if pos > 0:
+                        label = labels[pos - 1]
+                    elif labels:
                         label = labels[0]
+                    else:
+                        continue
 
                 d = filter_attr(
                     sheet.findall(".//c", namespaces=sheet.nsmap), "r", label

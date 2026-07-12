@@ -49,15 +49,24 @@ class JSONModel(models.Model):
         editable=False,
     )
 
-    def __getattribute__(self, name: str) -> Any:
-        """Override to handle JSON data access."""
+    def __getattr__(self, name: str) -> Any:
+        """Handle JSON data access for json_ prefixed attributes.
+
+        Only called when normal attribute lookup fails, avoiding overhead
+        on regular attribute access. Returns None for missing json_ attributes
+        to preserve existing behavior.
+        """
         if name.startswith("json_"):
-            if self.jsondata and name[5:] in self.jsondata:
-                return self.jsondata[name[5:]]
+            try:
+                jsondata = object.__getattribute__(self, "jsondata")
+            except AttributeError:
+                jsondata = None
+            if jsondata and name[5:] in jsondata:
+                return jsondata[name[5:]]
             return None
         elif name.startswith("call__"):
             return CallProxy(self, name[6:])
-        return super().__getattribute__(name)
+        raise AttributeError(name)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Override to handle JSON data assignment."""
@@ -207,6 +216,7 @@ class AssociatedModel(models.Model):
         """Initialize a new associated model instance."""
         if value:
             x = value.split("__")
+            app = None
             if len(x) == 4:
                 app, tbl, id, grp = x
             elif len(x) == 3:
@@ -228,6 +238,7 @@ class AssociatedModel(models.Model):
         """Filter the associated model instances."""
         if value:
             x = value.split("__")
+            app = None
             if len(x) == 4:
                 app, tbl, id, grp = x
             elif len(x) == 3:
@@ -292,11 +303,16 @@ def standard_table_action(
 
     if action == "paste":
         data2 = data.get("data", [])
+        allowed_fields = {
+            f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")
+        }
         for obj in data2:
             obj2 = cls()
             parent_pk = list_view.kwargs.get("parent_pk")
             for key, value in obj.get("fields", {}).items():
                 if key in ("id", "pk"):
+                    continue
+                if key not in allowed_fields:
                     continue
                 if key == "parent" and parent_pk is not None:
                     setattr(obj2, "parent_id", parent_pk)
@@ -337,14 +353,22 @@ def get_form(
 
 
 def extend_class(main: type[Any], base: type[Any]) -> None:
-    """Extend a class with a base class."""
+    """Extend a class with a base class.
+
+    During migration commands (makemigrations, migrate, exporttolocaldb),
+    the class hierarchy is left unchanged to ensure migration autodetection
+    works correctly.
+    """
     if not any(
         cmd in sys.argv
         for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb"]
     ):
-        main.__bases__ = (base,) + main.__bases__
+        if base not in main.__bases__:
+            main.__bases__ = (base,) + main.__bases__
 
 
+# During migration commands, OverwritableCallable must be a simple no-op
+# wrapper to avoid interfering with Django's migration autodetector.
 if any(
     cmd in sys.argv
     for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb", "migrate"]

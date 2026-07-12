@@ -1,5 +1,9 @@
 
+import logging
+
 from pytigon_lib.schhtml.basehtmltags import BaseHtmlElemParser, register_tag_map
+
+_logger = logging.getLogger(__name__)
 
 
 class Css(BaseHtmlElemParser):
@@ -36,9 +40,9 @@ class CssLink(BaseHtmlElemParser):
                 if response.ret_code == 200:
                     self.parser.css.parse_str(response.str())
             except Exception as e:
-                print(f"Failed to load CSS from {href}: {e}")
+                _logger.warning("Failed to load CSS from %s: %s", href, e)
         else:
-            print(f"Failed to load CSS from {href}: file not found")
+            _logger.warning("Failed to load CSS from %s: file not found", href)
 
 
 register_tag_map("link", CssLink)

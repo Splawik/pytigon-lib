@@ -10,7 +10,7 @@ This function sets up the necessary system paths for the project by:
 
 
 Raises:
-    Exception: If there is an error during the initialization of paths, it prints the error
+    Exception: If there is an error during the initialization of paths, it logs the error
         message and raises the exception.
 
 author: Sławomir Chołaj (slawomir.cholaj@gmail.com)
@@ -20,12 +20,30 @@ license: LGPL 3.0
 __version__ = "0.260706"
 
 import importlib.util
+import logging
 import os
 import sys
 from pathlib import Path
 
 from pytigon_lib.schtools.env import get_environ
 from pytigon_lib.schtools.main_paths import get_main_paths
+
+_logger = logging.getLogger(__name__)
+
+
+def _add_sys_path(path, *, priority=False):
+    """Add *path* to ``sys.path`` unless it is already present.
+
+    Args:
+        path: Absolute path to add.
+        priority: If True, the path is inserted at the front of ``sys.path``
+            (higher precedence); otherwise it is appended.
+    """
+    if path and path not in sys.path:
+        if priority:
+            sys.path.insert(0, path)
+        else:
+            sys.path.append(path)
 
 
 def init_paths(prj_name=None, env_path=None):
@@ -50,20 +68,22 @@ def init_paths(prj_name=None, env_path=None):
         pname = platform_name()
 
         pytigon_base_path = importlib.util.find_spec("pytigon")
-        p2 = None
+        ext_lib_path = None
+        if pytigon_base_path:
+            ext_lib_path = os.path.abspath(
+                os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib")
+            )
+
         # Platform-specific path adjustments
         if pname == "Android":
-            p = os.path.abspath(os.path.join(base_path, "..", "_android"))
-            if pytigon_base_path:
-                p2 = os.path.abspath(os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib"))
-            for path in [p, p2]:
-                if path and path not in sys.path:
-                    sys.path.insert(0, path) if path == p else sys.path.append(path)
+            bundled_path = os.path.abspath(os.path.join(base_path, "..", "_android"))
         else:
             if pname == "Windows":
-                p = os.path.abspath(os.path.join(base_path, "..", "python", "lib", "site-packages"))
+                bundled_path = os.path.abspath(
+                    os.path.join(base_path, "..", "python", "lib", "site-packages")
+                )
             else:
-                p = os.path.abspath(
+                bundled_path = os.path.abspath(
                     os.path.join(
                         base_path,
                         "..",
@@ -72,16 +92,12 @@ def init_paths(prj_name=None, env_path=None):
                         f"python{sys.version_info[0]}.{sys.version_info[1]}/site-packages",
                     )
                 )
-            if pytigon_base_path:
-                p2 = os.path.abspath(os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib"))
-            for path in [p, p2]:
-                if path and path not in sys.path:
-                    sys.path.insert(0, path) if path == p else sys.path.append(path)
+        _add_sys_path(bundled_path, priority=True)
+        _add_sys_path(ext_lib_path)
 
         # Add project-specific paths
         for path_key in ["SERW_PATH", "ROOT_PATH", "PRJ_PATH_ALT"]:
-            if cfg[path_key] not in sys.path:
-                sys.path.append(cfg[path_key])
+            _add_sys_path(cfg[path_key])
 
         # Add additional paths
         additional_paths = [
@@ -99,9 +115,9 @@ def init_paths(prj_name=None, env_path=None):
             )
 
         for path in additional_paths:
-            if path not in sys.path and os.path.exists(path):
-                sys.path.append(path)
+            if os.path.exists(path):
+                _add_sys_path(path)
 
     except Exception as e:
-        print(f"Error initializing paths: {e}")
+        _logger.error("Error initializing paths: %s", e)
         raise

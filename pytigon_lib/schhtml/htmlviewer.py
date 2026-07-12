@@ -113,7 +113,14 @@ class HtmlViewerParser(HtmlModParser):
         self.css = Css()
         if init_css_str:
             if init_css_str.startswith("@"):
-                with open(os.path.join(os.path.dirname(__file__), "icss", init_css_str[1:])) as f:
+                icss_path = os.path.normpath(
+                    os.path.join(os.path.dirname(__file__), "icss", init_css_str[1:])
+                )
+                if not icss_path.startswith(
+                    os.path.normpath(os.path.join(os.path.dirname(__file__), "icss"))
+                ):
+                    raise ValueError(f"Path traversal detected: {init_css_str}")
+                with open(icss_path) as f:
                     init_css_str = f.read()
                     css_type = "icss"
             if css_type == self.CSS_TYPE_STANDARD:

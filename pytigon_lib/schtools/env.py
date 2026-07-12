@@ -1,6 +1,9 @@
+import logging
 import os
 
 import environ
+
+_logger = logging.getLogger(__name__)
 
 # Global environment variable instance (singleton)
 _ENV = None
@@ -64,6 +67,6 @@ def get_environ(path: str | None = None) -> environ.Env:
                 try:
                     _ENV.read_env(env_path)
                 except Exception as e:
-                    print(f"Error reading environment file {env_path}: {e}")
+                    _logger.warning("Error reading environment file %s: %s", env_path, e)
 
     return _ENV

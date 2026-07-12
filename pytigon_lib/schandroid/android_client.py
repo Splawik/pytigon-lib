@@ -1,9 +1,12 @@
 import fcntl
+import logging
 import os
 import socket
 import struct
 import sys
 from os.path import expanduser
+
+_logger = logging.getLogger(__name__)
 
 from kivy.animation import Animation
 from kivy.app import App
@@ -161,7 +164,7 @@ class InterfaceManager(BoxLayout):
                     if hasattr(x.apps, "PUBLIC") and x.apps.PUBLIC:
                         apps.append(prj)
                 except ImportError:
-                    print(f"Error importing module: {prj}.apps")
+                    _logger.warning("Error importing module: %s.apps", prj)
         return apps
 
     def display_app_buttons(self, apps):

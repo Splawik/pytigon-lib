@@ -6,6 +6,7 @@ zigcc helper binary.
 """
 
 import lzma
+import logging
 import os
 import stat
 import tarfile
@@ -13,6 +14,8 @@ import tempfile
 import zipfile
 
 import httpx
+
+_logger = logging.getLogger(__name__)
 
 from pytigon_lib.schtools.process import run
 
@@ -71,7 +74,7 @@ def install_nim(data_path: str) -> None:
         r = httpx.get(NIM_DOWNLOAD_PATH, follow_redirects=True)
         r.raise_for_status()
     except httpx.HTTPError as e:
-        print(f"Failed to download Nim: {e}")
+        _logger.warning("Failed to download Nim: %s", e)
         return
 
     prg_path = os.path.join(data_path, "prg")
@@ -87,7 +90,7 @@ def install_nim(data_path: str) -> None:
                 if _is_safe_zip_member(member.filename, prg_path):
                     f.extract(member, prg_path)
                 else:
-                    print(f"WARNING: Skipping unsafe zip entry: {member.filename}")
+                    _logger.warning("Skipping unsafe zip entry: %s", member.filename)
     else:
         nim_tar_xz = os.path.join(temp_dir, "nim.tar.xz")
         nim_tar = os.path.join(temp_dir, "nim.tar")
@@ -106,11 +109,11 @@ def install_nim(data_path: str) -> None:
                 elif _is_safe_tar_member(member, prg_path):
                     tar.extract(member, prg_path)
                 else:
-                    print(f"WARNING: Skipping unsafe tar entry: {member.name}")
+                    _logger.warning("Skipping unsafe tar entry: %s", member.name)
 
     nim_path = get_nim_path(data_path)
     if not nim_path:
-        print("Nim installation path not found after extraction.")
+        _logger.error("Nim installation path not found after extraction.")
         return
 
     # Patch nim.cfg to use zigcc as the C compiler
@@ -125,7 +128,7 @@ def install_nim(data_path: str) -> None:
         with open(nim_cfg_path, "w") as f:
             f.write(buf)
     except OSError as e:
-        print(f"Failed to update nim.cfg: {e}")
+        _logger.error("Failed to update nim.cfg: %s", e)
         return
 
     # Compile the zigcc wrapper
@@ -137,14 +140,14 @@ def install_nim(data_path: str) -> None:
         with open(zigcc_c, "w") as f:
             f.write(ZIG_CC_C)
     except OSError as e:
-        print(f"Failed to write zigcc.c: {e}")
+        _logger.error("Failed to write zigcc.c: %s", e)
         return
 
     exit_code, output_tab, err_tab = run(
         ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c], env=os.environ
     )
     if err_tab:
-        print(err_tab)
+        _logger.error("zigcc build output: %s", err_tab)
 
     # Ensure the wrapper is executable on Unix
     if os.name != "nt":
@@ -152,7 +155,7 @@ def install_nim(data_path: str) -> None:
             st = os.stat(zigcc_bin)
             os.chmod(zigcc_bin, st.st_mode | stat.S_IEXEC)
         except OSError as e:
-            print(f"Failed to set executable permissions on zigcc: {e}")
+            _logger.error("Failed to set executable permissions on zigcc: %s", e)
 
 
 def get_nim_path(data_path: str) -> str | None:

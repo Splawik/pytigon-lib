@@ -5,6 +5,7 @@ import logging
 import mimetypes
 import os
 import threading
+from collections import OrderedDict
 from contextlib import ExitStack
 from threading import Thread
 
@@ -25,6 +26,7 @@ LOGGER = logging.getLogger("httpclient")
 ASGI_APPLICATION = None
 FORCE_WSGI = False
 BLOCK = False
+BLOCK_EVENT = threading.Event()
 COOKIES_EMBEDED = {}
 COOKIES = {}
 HTTP_LOCK = threading.Lock()
@@ -116,7 +118,7 @@ class RetHttp:
 CLIENT = None
 
 
-def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False, ret=None, user_agent="Pytigon"):
+def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False, ret=None, user_agent="Pytigon", redirect_count=0):
     """Handle GET or POST request for Emscripten or WSGI."""
     if params is None:
         params = {}
@@ -144,7 +146,7 @@ def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False,
         "body": response.getvalue(),
         "more_body": False,
     }
-    if response.status_code in (301, 302):
+    if response.status_code in (301, 302) and redirect_count < 10:
         return asgi_or_wsgi_get_or_post(
             application,
             response.headers["Location"],
@@ -153,6 +155,7 @@ def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False,
             post,
             ret,
             user_agent,
+            redirect_count + 1,
         )
     ret.append(result)
 
@@ -161,8 +164,11 @@ def requests_request(method, url, argv, ret=None):
     """Perform HTTP request using httpx."""
     if ret is None:
         ret = []
-    ret2 = httpx.request(method, url, **argv)
-    ret.append(ret2)
+    try:
+        ret2 = httpx.request(method, url, **argv)
+        ret.append(ret2)
+    except Exception as e:
+        ret.append(e)
 
 
 def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
@@ -208,7 +214,9 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                     t.join()
             else:
                 t.join()
-        return RetHttp(url, ret[0])
+        if ret and isinstance(ret[0], Exception):
+            raise ret[0]
+        return RetHttp(url, ret[0] if ret else None)
     else:
         if app:
             if platform_name() == "Emscripten" or FORCE_WSGI:
@@ -223,7 +231,9 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                     t.join()
         else:
             requests_request(method, url, argv, ret)
-        return ret[0]
+        if ret and isinstance(ret[0], Exception):
+            raise ret[0]
+        return ret[0] if ret else None
 
 
 class HttpResponse:
@@ -278,6 +288,8 @@ class HttpResponse:
             and (b"Cache-control" in self.content or "/plugins" in self.url)
         ):
             http_client.http_cache[self.url] = (self.ret_content_type, self.content)
+            if len(http_client.http_cache) > 128:
+                http_client.http_cache.popitem(last=False)
         self.new_url = self.response.url if isinstance(self.response.url, str) else self.response.url.path
 
     def ptr(self):
@@ -304,8 +316,10 @@ class HttpClient:
     def __init__(self, address=""):
         """Initialize HTTP client."""
         self.base_address = address if address else "http://127.0.0.2"
-        self.http_cache = {}
+        self.http_cache = OrderedDict()
         self.app = None
+        self.cookies = None
+        self.cookies_embeded = None
 
     def close(self):
         """Close HTTP client."""
@@ -362,20 +376,22 @@ class HttpClient:
         global COOKIES, COOKIES_EMBEDED, BLOCK
         if BLOCK:
             while BLOCK:
-                try:
-                    if HTTP_IDLE_FUNC:
+                if HTTP_IDLE_FUNC:
+                    try:
                         HTTP_IDLE_FUNC()
-                except Exception:
-                    return HttpResponse(address_str, 500)
+                    except Exception:
+                        return HttpResponse(address_str, 500)
+                else:
+                    BLOCK_EVENT.wait(timeout=0.1)
         self.content = ""
         address = "http://127.0.0.2/plugins/" + address_str[1:] if address_str[0] == "^" else address_str
         adr = schurljoin(self.base_address, address) if address[0] in ("/", ".") else address
         adr = norm_path(adr)
         if adr.startswith("http://127.0.0.2") or self.base_address.startswith("http://127.0.0.2"):
-            cookies = COOKIES_EMBEDED
+            cookies = self.cookies_embeded if self.cookies_embeded is not None else COOKIES_EMBEDED
             direct_access = True
         else:
-            cookies = COOKIES
+            cookies = self.cookies if self.cookies is not None else COOKIES
             direct_access = False
         LOGGER.info(adr)
         if not post_request and "?" not in adr and adr in self.http_cache:
@@ -408,8 +424,8 @@ class HttpClient:
 
                     return HttpResponse(adr, content=content, response=ret_http, ret_content_type=mt)
             except (OSError, FileNotFoundError):
-                print(
-                    "Static file load error: ",
+                LOGGER.error(
+                    "Static file load error: %s",
                     get_vfs().getsyspath(path) if for_vfs else path,
                 )
                 return HttpResponse(adr, 400, content=b"", ret_content_type="text/html")

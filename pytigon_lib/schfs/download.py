@@ -1,4 +1,5 @@
 import os
+import logging
 import platform
 import shutil
 import sys
@@ -7,6 +8,8 @@ import tempfile
 import urllib.request
 import zipfile
 from urllib.parse import urlparse
+
+_logger = logging.getLogger(__name__)
 
 _SAFE_URL_PREFIXES = frozenset({"https", "http"})
 
@@ -68,7 +71,7 @@ def _safe_zip_extractall(zip_ref: zipfile.ZipFile, target_path: str) -> None:
             if _is_safe_zip_member(member.filename, target_path):
                 zip_ref.extract(member, target_path)
             else:
-                print(f"   WARNING: Skipping unsafe zip entry: {member.filename}")
+                _logger.warning("Skipping unsafe zip entry: %s", member.filename)
 
 
 def _safe_tar_extractall(tar_ref: tarfile.TarFile, target_path: str) -> None:
@@ -79,7 +82,7 @@ def _safe_tar_extractall(tar_ref: tarfile.TarFile, target_path: str) -> None:
         elif _is_safe_tar_member(member, target_path):
             tar_ref.extract(member, target_path)
         else:
-            print(f"   WARNING: Skipping unsafe tar entry: {member.name}")
+            _logger.warning("Skipping unsafe tar entry: %s", member.name)
 
 
 def download_and_process_file(file_list):
@@ -89,7 +92,7 @@ def download_and_process_file(file_list):
     """
     # 1. Detect the current operating system
     current_os = platform.system()
-    print(f"Detected Operating System: {current_os}")
+    _logger.info("Detected Operating System: %s", current_os)
 
     # 2. Find the matching row in the provided list
     matched_item = None
@@ -99,8 +102,9 @@ def download_and_process_file(file_list):
             break
 
     if not matched_item:
-        print(
-            f"Error: No configuration found for the current OS ({current_os}) in the provided list."
+        _logger.error(
+            "No configuration found for the current OS (%s) in the provided list.",
+            current_os,
         )
         return
 
@@ -110,7 +114,7 @@ def download_and_process_file(file_list):
     should_unpack = matched_item.get("unpack", False)
 
     if not _is_safe_url(url):
-        print(f"Error: URL is not allowed for security reasons: {url}")
+        _logger.error("URL is not allowed for security reasons: %s", url)
         return
 
     # Determine final file name for download
@@ -121,15 +125,15 @@ def download_and_process_file(file_list):
         # Create a secure temporary directory that is automatically cleaned up
         temp_dir = tempfile.mkdtemp()
         download_destination = os.path.join(temp_dir, url_filename[:64])
-        print("Matching configuration found (Archive Mode)!")
-        print(f" -> URL: {url}")
-        print(f" -> Temporary Download Path: {download_destination}")
-        print(f" -> Final Extraction Directory: {target_path}")
+        _logger.info("Matching configuration found (Archive Mode)!")
+        _logger.info(" -> URL: %s", url)
+        _logger.info(" -> Temporary Download Path: %s", download_destination)
+        _logger.info(" -> Final Extraction Directory: %s", target_path)
     else:
         download_destination = target_path
-        print("Matching configuration found (Direct Download Mode)!")
-        print(f" -> URL: {url}")
-        print(f" -> Target Path: {download_destination}")
+        _logger.info("Matching configuration found (Direct Download Mode)!")
+        _logger.info(" -> URL: %s", url)
+        _logger.info(" -> Target Path: %s", download_destination)
 
     # 4. Create required directories
     folder_to_create = target_path if should_unpack else os.path.dirname(target_path)
@@ -183,36 +187,37 @@ def download_and_process_file(file_list):
             sys.stdout.write("\n   Status: Download successful!\n")
 
         # 6. Unpack logic (executed only if unpack is True)
-        if should_unpack:
-            print(f" -> Extracting archive to: {target_path}")
+            if should_unpack:
+                _logger.info(" -> Extracting archive to: %s", target_path)
 
-            if download_destination.endswith(".zip") or should_unpack == "zip":
-                with zipfile.ZipFile(download_destination, "r") as zip_ref:
-                    _safe_zip_extractall(zip_ref, target_path)
-                print("   Status: Extraction completed successfully (.zip)")
+                if download_destination.endswith(".zip") or should_unpack == "zip":
+                    with zipfile.ZipFile(download_destination, "r") as zip_ref:
+                        _safe_zip_extractall(zip_ref, target_path)
+                    _logger.info("   Status: Extraction completed successfully (.zip)")
 
-            elif (
-                download_destination.endswith(".tar.gz")
-                or download_destination.endswith(".tgz")
-                or should_unpack == "tgz"
-            ):
-                with tarfile.open(download_destination, "r:gz") as tar_ref:
-                    _safe_tar_extractall(tar_ref, target_path)
-                print("   Status: Extraction completed successfully (.tar.gz)")
+                elif (
+                    download_destination.endswith(".tar.gz")
+                    or download_destination.endswith(".tgz")
+                    or should_unpack == "tgz"
+                ):
+                    with tarfile.open(download_destination, "r:gz") as tar_ref:
+                        _safe_tar_extractall(tar_ref, target_path)
+                    _logger.info("   Status: Extraction completed successfully (.tar.gz)")
 
-            else:
-                print(
-                    f"   Status: WARNING - Unknown archive extension for file '{url_filename}'. File left in temp."
-                )
+                else:
+                    _logger.warning(
+                        "Unknown archive extension for file '%s'. File left in temp.",
+                        url_filename,
+                    )
 
             # Clean up the temporary directory and downloaded file
             try:
                 shutil.rmtree(temp_dir)
-            except Exception:
-                pass
+            except Exception as e:
+                _logger.debug("Failed to remove temporary directory %s: %s", temp_dir, e)
 
     except Exception as e:
-        sys.stdout.write(f"\n   Status: ERROR occurred: {e}\n")
+        _logger.error("Error during download/extraction: %s", e)
 
 
 # --- EXAMPLE USAGE ---

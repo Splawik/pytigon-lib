@@ -15,10 +15,8 @@ from pytigon_lib.schtools.safe_exec import safe_eval as _safe_eval
 _STANDARD_TYPES = frozenset(
     {
         "list",
-        "unicode",
         "str",
         "int",
-        "long",
         "float",
         "bool",
         "NoneType",

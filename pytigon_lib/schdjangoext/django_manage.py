@@ -1,7 +1,10 @@
+import logging
 import os
 import sys
 
 from django.core.management import execute_from_command_line
+
+_logger = logging.getLogger(__name__)
 
 
 def cmd(arg, from_main=False):
@@ -24,7 +27,7 @@ def cmd(arg, from_main=False):
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
         execute_from_command_line(argv)
     except Exception as e:
-        print(f"Error executing command: {e}", file=sys.stderr)
+        _logger.error("Error executing command: %s", e)
         sys.exit(1)
 
 

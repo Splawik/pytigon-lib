@@ -1,6 +1,7 @@
 """Subprocess and Django management command execution utilities."""
 
 import asyncio
+import logging
 import os
 import sys
 from subprocess import PIPE, Popen
@@ -8,6 +9,8 @@ from threading import Thread
 
 from pytigon_lib.schtools.platform_info import platform_name
 from pytigon_lib.schtools.tools import get_executable
+
+_logger = logging.getLogger(__name__)
 
 
 class FrozenModules:
@@ -89,7 +92,7 @@ def run(
 
         return exit_code, output_tab, err_tab
     except Exception as e:
-        print(f"Error running command {cmd}: {e}", file=sys.stderr)
+        _logger.error("Error running command %s: %s", cmd, e)
         return -1, None, None
 
 

@@ -1,8 +1,11 @@
 import io
+import logging
 
 import wx
 
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+
+_logger = logging.getLogger(__name__)
 
 
 class GraphicsContextDc(BaseDc):
@@ -213,7 +216,7 @@ class GraphicsContextDc(BaseDc):
                         delta_x += w
                     delta_y += h
         except Exception as e:
-            print(f"Error drawing image: {e}")
+            _logger.error("Error drawing image: %s", e)
         super().draw_image(x, y, dx, dy, scale, png_data)
 
 
@@ -252,5 +255,6 @@ class GraphicsContextDcinfo(BaseDcInfo):
             png_stream = io.BytesIO(png_data)
             image = wx.ImageFromStream(png_stream)
             return image.GetWidth(), image.GetHeight()
-        except Exception:
+        except Exception as e:
+            _logger.debug("Failed to get image size: %s", e)
             return 0, 0

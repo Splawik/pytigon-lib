@@ -81,10 +81,9 @@ class SimpleTabParserBase(Parser):
                     tr.class_attr = class_attr
 
                 # Process header cells first, then data cells
-                for th_elem in tr_elem.iterfind(".//th"):
-                    tr.append(self._preprocess(th_elem))
-                for td_elem in tr_elem.iterfind(".//td"):
-                    tr.append(self._preprocess(td_elem))
+                for cell in tr_elem:
+                    if cell.tag in ("th", "td"):
+                        tr.append(self._preprocess(cell))
 
                 table.append(tr)
             self.tables.append(table)

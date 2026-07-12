@@ -1,6 +1,9 @@
 import io
+import logging
 
 from pytigon_lib.schtools.images import svg_to_png
+
+_logger = logging.getLogger(__name__)
 
 IMAGE = None
 
@@ -281,7 +284,7 @@ def sizes_from_attr(attr_value, parent):
         elif len(sizes) == 4:
             return [norm_sizes[3], norm_sizes[1], norm_sizes[0], norm_sizes[2]]
         else:
-            print(f"size_from_attr error: {{{attr_value}}}", len(sizes), sizes)
+            _logger.error("size_from_attr error: %s %s %s", attr_value, len(sizes), sizes)
             return [10, 10, 10, 10]
     return attr_value
 

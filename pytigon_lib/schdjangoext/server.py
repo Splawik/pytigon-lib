@@ -5,12 +5,15 @@ server (via Daphne) or a WSGI server (via Waitress) in a subprocess.
 """
 
 import datetime
+import logging
 import multiprocessing
 import socket
 import sys
 import time
 
 import django
+
+_logger = logging.getLogger(__name__)
 
 
 def log_action(protocol, action, details):
@@ -121,7 +124,7 @@ def run_server(address, port, prod=True, params=None):
     Returns:
         ServProc: Handle for managing the server process.
     """
-    print(f"Starting server: {address}:{port}")
+    _logger.info("Starting server: %s:%s", address, port)
 
     proc = multiprocessing.Process(target=_run, args=(address, port, prod, params))
     proc.start()
@@ -135,5 +138,5 @@ def run_server(address, port, prod=True, params=None):
         except (OSError, ConnectionRefusedError):
             time.sleep(0.1)
 
-    print("Server started")
+    _logger.info("Server started")
     return ServProc(proc)

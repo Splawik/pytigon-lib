@@ -44,6 +44,7 @@ Functions:
 """
 
 import logging
+import threading
 from collections.abc import Callable
 from typing import Any, Optional
 
@@ -89,6 +90,8 @@ VIEWS_REGISTER: dict[str, dict[Any, Any]] = {
     "create": {},
     "delete": {},
 }
+
+_VIEWS_REGISTER_LOCK = threading.Lock()
 
 
 # --------------------------------------------------------------------------
