@@ -1,6 +1,0 @@
-{
-  "$schema": "https://app.kilo.ai/config.json",
-  "instructions": ["AGENTS.md"],
-  "small_model": "deepseek/deepseek-chat",
-  "snapshot": false
-}

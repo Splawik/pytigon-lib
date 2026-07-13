@@ -30,6 +30,12 @@ site/
 # Test artifacts
 .pytest_cache/
 
+# Python
+*.pyc
+*.pyo
+*.pyd
+
 # OS
 .DS_Store
 Thumbs.db
+.*/
