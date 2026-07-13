@@ -17,7 +17,7 @@ author: Sławomir Chołaj (slawomir.cholaj@gmail.com)
 license: LGPL 3.0
 """
 
-__version__ = "0.260706"
+__version__ = "0.260713"
 
 import importlib.util
 import logging
@@ -70,18 +70,14 @@ def init_paths(prj_name=None, env_path=None):
         pytigon_base_path = importlib.util.find_spec("pytigon")
         ext_lib_path = None
         if pytigon_base_path:
-            ext_lib_path = os.path.abspath(
-                os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib")
-            )
+            ext_lib_path = os.path.abspath(os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib"))
 
         # Platform-specific path adjustments
         if pname == "Android":
             bundled_path = os.path.abspath(os.path.join(base_path, "..", "_android"))
         else:
             if pname == "Windows":
-                bundled_path = os.path.abspath(
-                    os.path.join(base_path, "..", "python", "lib", "site-packages")
-                )
+                bundled_path = os.path.abspath(os.path.join(base_path, "..", "python", "lib", "site-packages"))
             else:
                 bundled_path = os.path.abspath(
                     os.path.join(

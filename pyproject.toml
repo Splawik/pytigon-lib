@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytigon-lib"
-version = "0.260706"
+version = "0.260713"
 description = "Pytigon library — Python/Django application framework with multi-format rendering and indentation-based HTML preprocessor"
 authors = [{name = "Slawomir Cholaj", email = "slawomir.cholaj@gmail.com"}]
 license = "LGPL-3.0-only"
