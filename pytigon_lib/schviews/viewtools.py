@@ -525,6 +525,8 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
                     LOGGER.warning("Failed to remove temporary file: %s", file_out)
             file_in_name = os.path.basename(file_in)
             self["Content-Disposition"] = f"attachment; filename={file_in_name}"
+        else:
+            self.content = b""
         return self
 
     def _render_ooxml(self):
@@ -533,15 +535,20 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         context = self.resolve_context(self.context_data)
-        stream_out = render_ooxml(self.template_name, Context(context))
-        if isinstance(stream_out, tuple):
-            with open(stream_out[0], "rb") as f:
-                self.content = f.read()
-            file_in_name = os.path.basename(stream_out[1])
+        file_out, file_in = render_ooxml(self.template_name, Context(context))
+        if file_out:
+            try:
+                with open(file_out, "rb") as f:
+                    self.content = f.read()
+            finally:
+                try:
+                    os.remove(file_out)
+                except OSError:
+                    LOGGER.warning("Failed to remove temporary file: %s", file_out)
+            file_in_name = os.path.basename(file_in)
+            self["Content-Disposition"] = f"attachment; filename={file_in_name}"
         else:
-            self.content = stream_out.getvalue()
-            file_in_name = os.path.basename(self.template_name[0])
-        self["Content-Disposition"] = f"attachment; filename={file_in_name}"
+            self.content = b""
         return self
 
     def _render_hdoc(self, doc_type):

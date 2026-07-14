@@ -213,7 +213,7 @@ class OOXmlDocTransform(OdfDocTransform):
                 if key in labels:
                     label = key
                 else:
-                    pos = bisect.bisect_left(labels, key, key=key_for_addr)
+                    pos = bisect.bisect_left(labels, key_for_addr(key), key=key_for_addr)
                     if pos > 0:
                         label = labels[pos - 1]
                     elif labels:
@@ -221,15 +221,9 @@ class OOXmlDocTransform(OdfDocTransform):
                     else:
                         continue
 
-                d = filter_attr(
-                    sheet.findall(".//c", namespaces=sheet.nsmap), "r", label
-                )
+                d = filter_attr(sheet.findall(".//c", namespaces=sheet.nsmap), "r", label)
                 if len(d) > 0:
-                    if value2 and (
-                        value2.startswith("^")
-                        or value2.startswith("$")
-                        or value2.startswith(".")
-                    ):
+                    if value2 and (value2.startswith("^") or value2.startswith("$") or value2.startswith(".")):
                         self._handle_annotation(d[0], value2)
 
     def shared_strings_to_inline(self, sheet):
@@ -335,11 +329,7 @@ class OOXmlDocTransform(OdfDocTransform):
             txt = pos.text
             parent.remove(pos)
             if txt is not None and txt != "":
-                if (
-                    (len(txt) == 10 or len(txt) == 19)
-                    and txt[4] == "-"
-                    and txt[7] == "-"
-                ):
+                if (len(txt) == 10 or len(txt) == 19) and txt[4] == "-" and txt[7] == "-":
                     try:
                         d = dateutil.parser.parse(txt)
                         x = date_to_float(d)
@@ -408,11 +398,7 @@ class OOXmlDocTransform(OdfDocTransform):
                 shared_strings_str = self.zip_file.read("xl/sharedStrings.xml")
                 root = etree.XML(shared_strings_str)
                 self.shared_strings = [
-                    transform_str(
-                        etree.tostring(pos, method="text", encoding="utf-8").decode(
-                            "utf-8"
-                        )
-                    )
+                    transform_str(etree.tostring(pos, method="text", encoding="utf-8").decode("utf-8"))
                     for pos in root.findall(".//si", namespaces=root.nsmap)
                 ]
             except KeyError:
@@ -420,10 +406,7 @@ class OOXmlDocTransform(OdfDocTransform):
 
             id = 1
             while True:
-                if (
-                    "no_process_sheets" in context
-                    and id in context["no_process_sheets"]
-                ):
+                if "no_process_sheets" in context and id in context["no_process_sheets"]:
                     id += 1
                     continue
                 try:
@@ -442,18 +425,14 @@ class OOXmlDocTransform(OdfDocTransform):
                             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
                         )
                         if d2:
-                            comments_name = os.path.normpath(
-                                f"xl/worksheets/{d2[0].attrib['Target']}"
-                            ).replace("\\", "/")
+                            comments_name = os.path.normpath(f"xl/worksheets/{d2[0].attrib['Target']}").replace(
+                                "\\", "/"
+                            )
                             comments_str = self.zip_file.read(comments_name)
                             root = etree.XML(comments_str)
-                            for pos in root.findall(
-                                ".//{*}comment", namespaces=root.nsmap
-                            ):
+                            for pos in root.findall(".//{*}comment", namespaces=root.nsmap):
                                 ref = pos.attrib["ref"]
-                                for pos2 in pos.findall(
-                                    ".//{*}text/{*}r/{*}t", namespaces=root.nsmap
-                                ):
+                                for pos2 in pos.findall(".//{*}text/{*}r/{*}t", namespaces=root.nsmap):
                                     if (
                                         "{{" in pos2.text
                                         or "{%" in pos2.text
@@ -462,9 +441,7 @@ class OOXmlDocTransform(OdfDocTransform):
                                         or pos2.text.startswith(".")
                                     ):
                                         self.comments[ref] = pos2.text
-                                        comment = (
-                                            pos2.getparent().getparent().getparent()
-                                        )
+                                        comment = pos2.getparent().getparent().getparent()
                                         comment_list = comment.getparent()
                                         comment_list.remove(comment)
                             self.to_update.append((comments_name, root))
@@ -515,12 +492,8 @@ class OOXmlDocTransform(OdfDocTransform):
 
             self.zip_file.close()
             if self.to_update:
-                delete_from_zip(
-                    self.file_name_out, [item[0] for item in self.to_update]
-                )
-                with zipfile.ZipFile(
-                    self.file_name_out, "a", zipfile.ZIP_DEFLATED
-                ) as z:
+                delete_from_zip(self.file_name_out, [item[0] for item in self.to_update])
+                with zipfile.ZipFile(self.file_name_out, "a", zipfile.ZIP_DEFLATED) as z:
                     for item in self.to_update:
                         z.writestr(item[0], item[1].encode("utf-8"))
 
@@ -543,13 +516,13 @@ class OOXmlDocTransform(OdfDocTransform):
         try:
             return self._process_impl(context, debug)
         except zipfile.BadZipFile as e:
-            logger.error("Invalid zip file '%s': %s", self.file_name_in, e)
+            logger.error("Invalid zip file '%s': %s", self.file_name_in, e, exc_info=True)
             return 0
         except OSError as e:
-            logger.error("File I/O error processing '%s': %s", self.file_name_in, e)
+            logger.error("File I/O error processing '%s': %s", self.file_name_in, e, exc_info=True)
             return 0
         except Exception as e:
-            logger.error("Error processing file '%s': %s", self.file_name_in, e)
+            logger.error("Error processing file '%s': %s", self.file_name_in, e, exc_info=True)
             return 0
 
 
