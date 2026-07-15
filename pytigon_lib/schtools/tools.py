@@ -170,9 +170,8 @@ def get_request():
             frame = frame_info.frame
             code = frame.f_code
             varnames = code.co_varnames
-            if (
-                (varnames[:1] == ("request",) and "request" in frame.f_locals)
-                or (varnames[:2] == ("self", "request") and "request" in frame.f_locals)
+            if (varnames[:1] == ("request",) and "request" in frame.f_locals) or (
+                varnames[:2] == ("self", "request") and "request" in frame.f_locals
             ):
                 request = frame.f_locals["request"]
             else:
@@ -242,3 +241,15 @@ def update_nested_dict(d, u):
         else:
             d[k] = v
     return d
+
+
+def transform_backslash_input_str(s):
+    return s.replace("\\\\", "[$Backward SlashBackward Slash$]").replace(
+        "\\n", "[$Backward Slash n$]"
+    )
+
+
+def transform_backslash_output_str(s):
+    return s.replace("[$Backward SlashBackward Slash$]", "\\").replace(
+        "[$Backward Slash n$]", "\n"
+    )

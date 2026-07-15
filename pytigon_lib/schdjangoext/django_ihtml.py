@@ -72,6 +72,7 @@ def ihtml_to_html(file_name, input_str=None, lang="en"):
             output_processors={
                 "fa": fa_icons,
             },
+            process_new_line=True,
         )
         conwert.process()
         return conwert.to_str()
