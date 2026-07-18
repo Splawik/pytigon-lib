@@ -262,8 +262,8 @@ def vfsopen(request, file):
     """Handle requests to open a file."""
     try:
         file2 = bdecode(file)
-        with default_storage.fs.open(automount(file2), "rb") as plik:
-            buf = plik.read()
+        with default_storage.fs.open(automount(file2), "rb") as fh:
+            buf = fh.read()
     except Exception as e:
         _logger.error("Error opening file %s: %s", file, e)
         buf = b""
@@ -306,9 +306,9 @@ def vfsopen_page(request, file, page):
     try:
         file2 = bdecode(file)
         page2 = int(page)
-        with default_storage.fs.open(automount(file2), "rb") as plik:
-            plik.seek(page2 * 4096)
-            buf = binascii.hexlify(plik.read(4096))
+        with default_storage.fs.open(automount(file2), "rb") as fh:
+            fh.seek(page2 * 4096)
+            buf = binascii.hexlify(fh.read(4096))
     except Exception as e:
         _logger.error("Error opening page %s of file %s: %s", page, file, e)
         buf = b""
@@ -322,8 +322,8 @@ def vfssave(request, file):
         try:
             data = request.POST["data"]
             file2 = bdecode(file)
-            with default_storage.fs.open(automount(file2), "w") as plik:
-                plik.write(data)
+            with default_storage.fs.open(automount(file2), "w") as fh:
+                fh.write(data)
             x = file2.split("/")[-1].split(".")
             if len(x) > 2 and x[-1].lower() in ("imd", "md", "ihtml", "html"):
                 if x[-2].lower() in ("html", "pdf", "spdf", "docx", "xlsx"):

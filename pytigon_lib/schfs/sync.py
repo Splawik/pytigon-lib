@@ -20,7 +20,7 @@ def rsync_style_sync(src, dst):
         if os.path.isdir(src_file):
             shutil.copytree(src_file, dst_file)
         else:
-            shutil.copy2(src_file, dst_file)  # copy2 zachowuje metadane (czas modyfikacji)
+            shutil.copy2(src_file, dst_file)  # copy2 preserves metadata (modification time)
 
     for file in comparison.right_only:
         dst_file = os.path.join(dst, file)
