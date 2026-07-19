@@ -17,7 +17,7 @@ author: Sławomir Chołaj (slawomir.cholaj@gmail.com)
 license: LGPL 3.0
 """
 
-__version__ = "0.260714"
+__version__ = "0.260719"
 
 import importlib.util
 import logging
