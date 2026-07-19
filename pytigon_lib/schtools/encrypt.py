@@ -1,6 +1,7 @@
 import base64
 import secrets
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -9,18 +10,20 @@ from django.conf import settings
 KDF_ALGORITHM = hashes.SHA256()
 KDF_LENGTH = 32
 KDF_ITERATIONS = 120000
-# Salt derived from SECRET_KEY ensures deterministic key derivation
-# between encrypt/decrypt calls for the same password. Computed lazily
-# from settings so it stays current if SECRET_KEY changes at runtime.
-# NOTE: For production use where different salts per message are required,
-# prepend the random salt to the ciphertext and extract it during decryption.
+# Length of the per-message random salt prepended to the ciphertext.
+SALT_LENGTH = 16
+
+# Legacy fallback salt derived from SECRET_KEY — used to decrypt ciphertext
+# produced by older versions of this module that did not prepend a random
+# salt. New ciphertexts always use a fresh random salt.
 
 
 def _get_salt() -> bytes:
-    """Return the KDF salt derived from Django settings.
+    """Return the legacy KDF salt derived from Django settings.
 
-    The salt is computed from SECRET_KEY with a fallback for
-    environments where it is not set.
+    Only used for decrypting ciphertexts produced by older versions
+    that did not prepend a random salt. New ``encrypt`` calls generate a
+    fresh random salt per message.
     """
     return base64.b64encode(
         f"{getattr(settings, 'SECRET_KEY', 'fallback-key'):<32}".encode()
@@ -47,10 +50,12 @@ def _generate_key(password: str, salt: bytes) -> bytes:
 
 
 def encrypt(plaintext: bytes, password: str, b64: bool = False) -> bytes | str:
-    """Encrypt plaintext using AES-GCM with a random nonce.
+    """Encrypt plaintext using AES-GCM with a random salt and nonce.
 
-    The nonce (12 bytes) is prepended to the ciphertext. AES-GCM provides
-    both confidentiality and integrity/authentication.
+    The format is ``salt (16B) + nonce (12B) + ciphertext``. A fresh
+    random salt is generated per call so that the same plaintext
+    encrypted with the same password yields a different key and thus a
+    different ciphertext, defeating precomputed-key attacks.
 
     Args:
         plaintext: The data to encrypt.
@@ -58,17 +63,19 @@ def encrypt(plaintext: bytes, password: str, b64: bool = False) -> bytes | str:
         b64: If True, return base64-encoded ciphertext string.
 
     Returns:
-        Union[bytes, str]: The ciphertext with prepended nonce, optionally base64-encoded.
+        Union[bytes, str]: The ciphertext with prepended salt and nonce,
+        optionally base64-encoded.
 
     Raises:
         ValueError: If encryption fails for any reason.
     """
     try:
-        key = _generate_key(password, _get_salt())
+        salt = secrets.token_bytes(SALT_LENGTH)
+        key = _generate_key(password, salt)
         nonce = secrets.token_bytes(
             12
         )  # GCM requires a fresh 12-byte nonce per encryption
-        ciphertext = nonce + AESGCM(key).encrypt(nonce, plaintext, b"")
+        ciphertext = salt + nonce + AESGCM(key).encrypt(nonce, plaintext, b"")
         return base64.b64encode(ciphertext).decode("ascii") if b64 else ciphertext
     except Exception as e:
         raise ValueError(f"Encryption failed: {e}") from e
@@ -77,11 +84,13 @@ def encrypt(plaintext: bytes, password: str, b64: bool = False) -> bytes | str:
 def decrypt(ciphertext: bytes | str, password: str, b64: bool = False) -> str:
     """Decrypt ciphertext that was encrypted with AES-GCM.
 
-    Extracts the 12-byte nonce from the beginning of the ciphertext and
-    uses it together with the derived key for decryption.
+    Supports the current format ``salt (16B) + nonce (12B) + ciphertext``
+    and falls back to the legacy format ``nonce (12B) + ciphertext``
+    (with the deterministic SECRET_KEY-derived salt) for ciphertexts
+    produced by older versions.
 
     Args:
-        ciphertext: The encrypted data (nonce + ciphertext), optionally base64-encoded.
+        ciphertext: The encrypted data, optionally base64-encoded.
         password: The decryption password.
         b64: If True, ciphertext is treated as a base64-encoded string.
 
@@ -92,9 +101,20 @@ def decrypt(ciphertext: bytes | str, password: str, b64: bool = False) -> str:
         ValueError: If decryption fails (wrong password, corrupted data, etc.).
     """
     try:
-        key = _generate_key(password, _get_salt())
         if b64:
             ciphertext = base64.b64decode(ciphertext)
+        # New format: salt + nonce + ciphertext
+        if len(ciphertext) >= SALT_LENGTH + 12:
+            salt = ciphertext[:SALT_LENGTH]
+            nonce = ciphertext[SALT_LENGTH : SALT_LENGTH + 12]
+            try:
+                key = _generate_key(password, salt)
+                plaintext = AESGCM(key).decrypt(nonce, ciphertext[SALT_LENGTH + 12 :], b"")
+                return plaintext.decode("utf-8")
+            except InvalidTag:
+                pass  # Fall through to legacy format
+        # Legacy format: nonce (12B) + ciphertext with deterministic salt
+        key = _generate_key(password, _get_salt())
         plaintext = AESGCM(key).decrypt(ciphertext[:12], ciphertext[12:], b"")
         return plaintext.decode("utf-8")
     except Exception as e:

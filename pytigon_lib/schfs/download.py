@@ -1,3 +1,4 @@
+import ipaddress
 import os
 import logging
 import platform
@@ -13,37 +14,78 @@ _logger = logging.getLogger(__name__)
 
 _SAFE_URL_PREFIXES = frozenset({"https", "http"})
 
+# Cloud-provider metadata endpoints that must never be reachable via SSRF.
+_METADATA_HOSTS = frozenset(
+    {
+        "localhost",  # resolves to loopback
+        "metadata.google.internal",  # GCP
+        "169.254.169.254",  # AWS / Azure / GCP link-local metadata
+        "metadata.azure.com",  # Azure
+        "169.254.169.253",  # Azure IMDS (alt)
+        "100.100.100.200",  # Alibaba Cloud
+    }
+)
+
+
+def _is_private_or_loopback_ip(ip_str: str) -> bool:
+    """Return True if *ip_str* is a private, loopback, link-local, or
+    multicast IP address (IPv4 or IPv6).
+
+    Handles IP addresses in decimal, octal, hexadecimal, and integer
+    notation by delegating to :func:`ipaddress.ip_address`, which rejects
+    ambiguous forms only when strict=True; here we accept any form that
+    Python's parser recognizes as a valid address.
+    """
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
 
 def _is_safe_url(url: str) -> bool:
-    """Validate that *url* uses an allowed scheme and does not target internal
-    or loopback hosts (SSRF prevention).
+    """Validate that *url* uses an allowed scheme and does not target
+    internal, loopback, link-local, or cloud-metadata hosts (SSRF
+    prevention).
 
-    Returns *True* if the URL is considered safe.
+    Note: this performs a static check on the hostname literal. DNS
+    rebinding — where a hostname resolves to a public IP at check time
+    but to a private IP at request time — is a known limitation; callers
+    that need stronger guarantees should resolve the hostname and pin
+    the IP for the actual request.
     """
     parsed = urlparse(url)
     if parsed.scheme not in _SAFE_URL_PREFIXES:
         return False
-    hostname = (parsed.hostname or "").lower()
+    hostname = (parsed.hostname or "").lower().strip("[]")
     if not hostname:
         return False
-    if hostname in (
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
-        "::1",
-        "[::1]",
-        "0:0:0:0:0:0:0:1",
-    ):
+    if hostname in _METADATA_HOSTS:
         return False
+    # If the hostname is a literal IP, validate it directly. This catches
+    # decimal/octal/hex/integer forms that the string-prefix checks below
+    # would miss.
+    if _is_private_or_loopback_ip(hostname):
+        return False
+    # Fallback string-prefix checks for hostnames that embed IPv4 ranges
+    # (e.g. "10.evil.com" should not match the 10.0.0.0/8 rule, but
+    # "10.0.0.5.evil.com" should be allowed — only literal IPs match).
     if hostname.startswith("169.254.") or hostname.startswith("10."):
         return False
     if hostname.startswith("172."):
         parts = hostname.split(".")
-        if len(parts) >= 2 and 16 <= int(parts[1]) <= 31:
+        if len(parts) >= 2 and parts[1].isdigit() and 16 <= int(parts[1]) <= 31:
             return False
     if hostname.startswith("192.168."):
         return False
-    if hostname == "0.0.0.0" or hostname == "255.255.255.255":
+    if hostname in ("0.0.0.0", "255.255.255.255"):
         return False
     return True
 

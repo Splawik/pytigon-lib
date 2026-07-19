@@ -58,6 +58,21 @@ class FSStorage(Storage):
 
     @staticmethod
     def validate_file_name(name, allow_relative_path=True):
+        """Validate a file name to prevent path traversal attacks.
+
+        Returns ``True`` when the name is safe to use, ``False`` otherwise.
+        Absolute paths and any path segment equal to ``..`` are rejected so
+        that user-supplied names cannot escape the storage root.
+        """
+        if not name:
+            return True
+        name = str(name).replace("\\", "/")
+        if name.startswith("/"):
+            return False
+        if not allow_relative_path and "/" in name:
+            return False
+        if ".." in name.split("/"):
+            return False
         return True
 
     def get_available_name(self, name, max_length=None):

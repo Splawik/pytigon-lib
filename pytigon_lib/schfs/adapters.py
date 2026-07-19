@@ -12,6 +12,7 @@ from functools import cached_property
 from typing import Any
 
 from fsspec.implementations.local import LocalFileSystem
+from fsspec.spec import AbstractFileSystem
 
 
 class _FsspecInfo:
@@ -77,11 +78,44 @@ class _FsspecInfoExt(_FsspecInfo):
 
 
 class _AutoCreateLocalFs(LocalFileSystem):
-    """LocalFileSystem variant that auto-creates directories on init (mirrors OSFS_EXT behaviour)."""
+    """LocalFileSystem variant rooted at ``root_path``.
+
+    Behaves like PyFilesystem2's ``OSFS``/``OSFS_EXT``: relative paths (the
+    kind produced after a mount prefix is stripped in :class:`FsspecMountFS`)
+    are resolved *inside* ``root_path`` rather than against the process CWD,
+    and the directory is auto-created on init.
+    """
 
     def __init__(self, root_path: str, auto_mkdir: bool = True, **kwargs: Any) -> None:
         super().__init__(auto_mkdir=auto_mkdir, **kwargs)
         self._root = os.path.abspath(root_path)
+        if auto_mkdir:
+            with contextlib.suppress(OSError):
+                os.makedirs(self._root, exist_ok=True)
+
+    def _strip_protocol(self, path: str) -> str:  # type: ignore[override]
+        """Resolve *path* relative to the filesystem root before delegating.
+
+        Absolute paths and ``file://`` URLs are handled by the base
+        implementation unchanged. Relative paths (including the empty/root
+        path used to list the mount itself) are joined onto ``self._root`` so
+        operations like ``ls``/``info``/``open`` stay confined to the root.
+        """
+        raw = "" if path is None else str(path)
+        stripped = raw
+        for prefix in ("file://", "file:", "local://", "local:"):
+            if stripped.startswith(prefix):
+                stripped = stripped[len(prefix) :]
+                break
+        normalized = stripped.replace("\\", "/")
+        is_absolute = normalized.startswith("/") or (
+            os.sep != "/" and len(normalized) > 1 and normalized[1:2] == ":"
+        )
+        if not is_absolute:
+            rel = normalized.strip("/")
+            joined = os.path.join(self._root, rel) if rel else self._root
+            return LocalFileSystem._strip_protocol(joined)
+        return LocalFileSystem._strip_protocol(raw)
 
 
 class FsspecMountFS:
@@ -126,7 +160,9 @@ class FsspecMountFS:
         if path.startswith("/"):
             path = path[1:]
         if not path:
-            return self._mounts.get(self._order[0]) if self._order else (None, "/")
+            if self._order:
+                return self._mounts.get(self._order[0]), ""
+            return None, "/"
         parts = path.split("/", 1)
         prefix = parts[0]
         rest = parts[1] if len(parts) > 1 else ""
@@ -192,7 +228,15 @@ class FsspecMountFS:
             return fs.exists(rest)
         return fs.exists(rest)
 
+    def _is_root(self, path: str) -> bool:
+        return str(path).strip("/") == ""
+
     def scandir(self, path: str) -> list[Any]:
+        if self._is_root(path):
+            return [
+                _FsspecInfoExt({"name": name, "type": "directory"})
+                for name in self._order
+            ]
         fs, rest = self._resolve(path)
         if fs is None:
             return []
@@ -205,15 +249,20 @@ class FsspecMountFS:
             return []
 
     def listdir(self, path: str) -> list[str]:
+        if self._is_root(path):
+            return list(self._order)
         fs, rest = self._resolve(path)
         if fs is None:
             return []
-        if hasattr(fs, "listdir"):
-            return fs.listdir(rest)
-        try:
-            return fs.ls(rest or "", detail=False)
-        except (FileNotFoundError, OSError):
-            return []
+        # fsspec's AbstractFileSystem exposes ``listdir`` as an alias of ``ls``
+        # that returns detail dicts (or full paths), not the bare names the rest
+        # of the codebase expects. Only trust a *custom* ``listdir`` (e.g. a
+        # PyFilesystem-style backend); otherwise normalize via ``scandir``.
+        fsspec_listdir = getattr(AbstractFileSystem, "listdir", None)
+        native = getattr(fs, "listdir", None)
+        if native is not None and getattr(type(fs), "listdir", None) is not fsspec_listdir:
+            return _normalize_names(native(rest))
+        return [entry.name for entry in self.scandir(path)]
 
     def getinfo(self, path: str, namespaces: Any = None) -> _FsspecInfo:
         fs, rest = self._resolve(path)
@@ -466,6 +515,22 @@ class FsspecMultiFS:
 
     def __repr__(self) -> str:
         return f"<FsspecMultiFS subfs={[n for n, _ in self._fs_list]}>"
+
+
+def _normalize_names(entries: Any) -> list[str]:
+    """Normalize a listing result to a list of bare entry names.
+
+    Accepts the various shapes filesystem backends return from ``listdir``:
+    plain names, full paths, or fsspec detail dicts.
+    """
+    names: list[str] = []
+    for entry in entries or []:
+        if isinstance(entry, dict):
+            raw = entry.get("name") or ""
+        else:
+            raw = str(entry)
+        names.append(raw.rstrip("/").rsplit("/", 1)[-1])
+    return names
 
 
 def _fsspec_abspath(path: str) -> str:

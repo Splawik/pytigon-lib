@@ -249,8 +249,14 @@ class HttpResponse:
 
     def process_response(self, http_client, parent, post_request):
         """Process HTTP response."""
-        global COOKIES, COOKIES_EMBEDED, BLOCK, HTTP_ERROR_FUNC
-        cookies = COOKIES_EMBEDED if self.url.startswith("http://127.0.0.2/") else COOKIES
+        global BLOCK, HTTP_ERROR_FUNC
+        # Use the per-instance cookie jar from the HttpClient so that
+        # concurrent clients don't share session cookies.
+        cookies = (
+            http_client.cookies_embeded
+            if self.url.startswith("http://127.0.0.2/")
+            else http_client.cookies
+        )
         self.content = self.response.content
         self.ret_code = self.response.status_code
         if self.response.status_code != 200:
@@ -318,8 +324,12 @@ class HttpClient:
         self.base_address = address if address else "http://127.0.0.2"
         self.http_cache = OrderedDict()
         self.app = None
-        self.cookies = None
-        self.cookies_embeded = None
+        # Per-instance cookie jars so that concurrent HttpClient instances
+        # (e.g. serving different users in a multi-threaded server) do not
+        # leak each other's session cookies through the module-level
+        # COOKIES / COOKIES_EMBEDED dicts.
+        self.cookies = {}
+        self.cookies_embeded = {}
 
     def close(self):
         """Close HTTP client."""
@@ -373,7 +383,7 @@ class HttpClient:
                         ret_content_type=t[0],
                     )
             return HttpResponse(address_str, 500)
-        global COOKIES, COOKIES_EMBEDED, BLOCK
+        global BLOCK
         if BLOCK:
             while BLOCK:
                 if HTTP_IDLE_FUNC:
@@ -388,10 +398,10 @@ class HttpClient:
         adr = schurljoin(self.base_address, address) if address[0] in ("/", ".") else address
         adr = norm_path(adr)
         if adr.startswith("http://127.0.0.2") or self.base_address.startswith("http://127.0.0.2"):
-            cookies = self.cookies_embeded if self.cookies_embeded is not None else COOKIES_EMBEDED
+            cookies = self.cookies_embeded
             direct_access = True
         else:
-            cookies = self.cookies if self.cookies is not None else COOKIES
+            cookies = self.cookies
             direct_access = False
         LOGGER.info(adr)
         if not post_request and "?" not in adr and adr in self.http_cache:
