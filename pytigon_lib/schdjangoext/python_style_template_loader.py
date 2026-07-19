@@ -1,4 +1,5 @@
 
+import logging
 import os
 
 import django.template.loaders.filesystem
@@ -10,7 +11,53 @@ from django.utils._os import safe_join
 
 from pytigon_lib.schdjangoext.django_ihtml import ihtml_to_html
 
+_logger = logging.getLogger(__name__)
+
 CONTENT_TYPE = None
+
+
+def _compile_and_write_ihtml(filepath, filepath2, compiled=None, source=None, field_name=None):
+    """Compile an ihtml source to html for every configured language and write it.
+
+    Shared by :func:`compile_template` and the FS/DB loaders so the
+    per-language compile+write logic exists in exactly one place.
+
+    Args:
+        filepath: Path to the ``.ihtml`` source (only used when *source*
+            is ``None``).
+        filepath2: Output ``.html`` path for the default (``en``) language.
+        compiled: Optional list to append compiled output paths to.
+        source: Optional in-memory source string. When provided,
+            :func:`ihtml_to_html` is called with ``input_str=source``
+            instead of reading *filepath* from disk.
+        field_name: Optional field name forwarded to ``ihtml_to_html``
+            when *source* is used (used by the DB loader).
+    """
+    if not os.path.exists(os.path.dirname(filepath2)):
+        os.makedirs(os.path.dirname(filepath2))
+    for lang_code, _ in settings.LANGUAGES:
+        try:
+            if source is not None:
+                ret = ihtml_to_html(None, input_str=source, lang=lang_code)
+            else:
+                ret = ihtml_to_html(filepath, lang=lang_code)
+            if ret:
+                output_path = (
+                    filepath2
+                    if lang_code == "en"
+                    else filepath2.replace(".html", f"_{lang_code}.html")
+                )
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(ret)
+                if compiled is not None:
+                    compiled.append(output_path)
+        except Exception:
+            _logger.debug(
+                "Failed to compile ihtml template %s for language %s",
+                filepath,
+                lang_code,
+                exc_info=True,
+            )
 
 
 def compile_template(
@@ -56,21 +103,7 @@ def compile_template(
             )
 
             if write:
-                for lang_code, _ in settings.LANGUAGES:
-                    try:
-                        ret = ihtml_to_html(filepath, lang=lang_code)
-                        if ret:
-                            output_path = (
-                                filepath2
-                                if lang_code == "en"
-                                else filepath2.replace(".html", f"_{lang_code}.html")
-                            )
-                            with open(output_path, "w", encoding="utf-8") as f:
-                                f.write(ret)
-                            if compiled is not None:
-                                compiled.append(output_path)
-                    except Exception:
-                        continue
+                _compile_and_write_ihtml(filepath, filepath2, compiled=compiled)
 
             if tried is not None:
                 tried.append(filepath)
@@ -175,25 +208,9 @@ class Loader(BaseLoader):
                 ) > os.path.getmtime(filepath2)
 
                 if write:
-                    for lang_code, _ in settings.LANGUAGES:
-                        try:
-                            ret = ihtml_to_html(filepath, lang=lang_code)
-                            if ret:
-                                output_path = (
-                                    filepath2
-                                    if lang_code == "en"
-                                    else filepath2.replace(
-                                        ".html", f"_{lang_code}.html"
-                                    )
-                                )
-                                with open(
-                                    output_path, "w", encoding="utf-8"
-                                ) as f:
-                                    f.write(ret)
-                        except Exception:
-                            continue
+                    _compile_and_write_ihtml(filepath, filepath2)
         except Exception:
-            pass
+            _logger.debug("FSLoader.get_contents failed for %s", filepath, exc_info=True)
         raise TemplateDoesNotExist(origin)
 
 
@@ -253,27 +270,11 @@ class DBLoader(BaseLoader):
                     ) or obj.update_time.timestamp() > os.path.getmtime(filepath2)
 
                     if write:
-                        for lang_code, _ in settings.LANGUAGES:
-                            try:
-                                ret = ihtml_to_html(
-                                    None,
-                                    input_str=getattr(obj, field_name),
-                                    lang=lang_code,
-                                )
-                                if ret:
-                                    output_path = (
-                                        filepath2
-                                        if lang_code == "en"
-                                        else filepath2.replace(
-                                            ".html", f"_{lang_code}.html"
-                                        )
-                                    )
-                                    with open(
-                                        output_path, "w", encoding="utf-8"
-                                    ) as f:
-                                        f.write(ret)
-                            except Exception:
-                                continue
+                        _compile_and_write_ihtml(
+                            filepath, filepath2, source=getattr(obj, field_name)
+                        )
             except Exception:
-                pass
+                _logger.debug(
+                    "DBLoader.get_contents failed for %s", filepath, exc_info=True
+                )
         raise TemplateDoesNotExist(origin)

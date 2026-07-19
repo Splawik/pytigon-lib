@@ -524,6 +524,13 @@ class OOXmlDocTransform(OdfDocTransform):
         except Exception as e:
             logger.error("Error processing file '%s': %s", self.file_name_in, e, exc_info=True)
             return 0
+        finally:
+            zf = getattr(self, "zip_file", None)
+            if zf is not None and zf.fp is not None:
+                try:
+                    zf.close()
+                except Exception:
+                    pass
 
 
 if __name__ == "__main__":

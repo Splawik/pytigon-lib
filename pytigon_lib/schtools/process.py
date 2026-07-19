@@ -1,6 +1,7 @@
 """Subprocess and Django management command execution utilities."""
 
 import asyncio
+import importlib
 import logging
 import os
 import sys
@@ -123,19 +124,22 @@ def _manage(path: str, cmd: list[str]):
     original_cwd = os.getcwd()
     frozen_modules = FrozenModules()
 
+    prev_loop = asyncio.get_event_loop_policy().get_event_loop()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     try:
         os.chdir(path)
 
-        m = __import__("pytigon_lib.schdjangoext.django_manage")
         sys.path.insert(0, path)
-        m.schdjangoext.django_manage.cmd(cmd, from_main=False)
+        m = importlib.import_module("pytigon_lib.schdjangoext.django_manage")
+        m.cmd(cmd, from_main=False)
     finally:
         sys.path.pop(0)
         os.chdir(original_cwd)
         frozen_modules.restore()
+        loop.close()
+        asyncio.set_event_loop(prev_loop)
 
 
 def py_manage(
@@ -161,9 +165,20 @@ def py_manage(
         return 0, [], []
 
     if thread_version:
-        thread = Thread(target=_manage, args=(os.getcwd(), cmd))
+        result_holder: dict = {"exc": None}
+
+        def _thread_target():
+            try:
+                _manage(os.getcwd(), cmd)
+            except Exception as exc:
+                result_holder["exc"] = exc
+
+        thread = Thread(target=_thread_target, args=())
         thread.start()
         thread.join()
+        if result_holder["exc"] is not None:
+            _logger.error("Threaded py_manage failed: %s", result_holder["exc"])
+            return 1, [], [str(result_holder["exc"])]
         return 0, [], []
     else:
         return py_run(["manage.py"] + cmd)

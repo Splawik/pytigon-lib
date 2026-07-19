@@ -167,10 +167,13 @@ class VfsTable(Table):
     def page(self, nr, sort=None, value=None):
         """Get a page of the table data."""
         key = f"FOLDER_{bencode(self.folder)}_TAB"
-        tab = self._get_table(value)[nr * 256 : (nr + 1) * 256]
-        cache.set(f"{key}::{is_null(value, '')}", tab, 300)
+        cache_key = f"{key}::{is_null(value, '')}::{nr}::{sort or ''}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            self.var_count = len(cached)
+            return cached
 
-        self.var_count = len(tab)
+        elements = self._get_table(value)
         if sort:
             s = sort.split(",")
             ts = []
@@ -183,14 +186,22 @@ class VfsTable(Table):
             def _cmp(x, y):
                 return str_cmp(x, y, ts)
 
-            tab.sort(key=functools.cmp_to_key(_cmp))
+            elements.sort(key=functools.cmp_to_key(_cmp))
+
+        tab = elements[nr * 256 : (nr + 1) * 256]
+        cache.set(cache_key, tab, 300)
+        self.var_count = len(tab)
         return tab
 
     def count(self, value):
         """Get the count of items in the table."""
         key = f"FOLDER_{bencode(self.folder)}_COUNT"
+        cache_key = f"{key}::{is_null(value, '')}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         countvalue = len(self._get_table(value))
-        cache.set(f"{key}::{is_null(value, '')}", countvalue, 300)
+        cache.set(cache_key, countvalue, 300)
         return countvalue
 
     def insert_rec(self, rec):

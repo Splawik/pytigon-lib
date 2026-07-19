@@ -58,7 +58,7 @@ class VectorImg(BaseHtmlAtomParser):
             self.atom_list.append_atom(img_atom)
             self.parent.append_atom_list(self.atom_list)
         except Exception as e:
-            raise RuntimeError(f"Error closing VectorImg: {e}")
+            raise RuntimeError(f"Error closing VectorImg: {e}") from e
 
     def handle_data(self, data):
         """Handle the data within the VectorImg element.
@@ -91,7 +91,7 @@ class VectorImg(BaseHtmlAtomParser):
             dc2.play_str(self.draw_txt)
             return True
         except Exception as e:
-            raise RuntimeError(f"Error drawing atom: {e}")
+            raise RuntimeError(f"Error drawing atom: {e}") from e
 
 
 register_tag_map("vimg", VectorImg)

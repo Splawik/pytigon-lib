@@ -1,4 +1,5 @@
 import fcntl
+import importlib
 import logging
 import os
 import socket
@@ -160,8 +161,8 @@ class InterfaceManager(BoxLayout):
         for prj in os.listdir(base_apps_path):
             if not prj.startswith("_"):
                 try:
-                    x = __import__(prj + ".apps")
-                    if hasattr(x.apps, "PUBLIC") and x.apps.PUBLIC:
+                    x = importlib.import_module(prj + ".apps")
+                    if hasattr(x, "PUBLIC") and x.PUBLIC:
                         apps.append(prj)
                 except ImportError:
                     _logger.warning("Error importing module: %s.apps", prj)
@@ -218,7 +219,7 @@ class InterfaceManager(BoxLayout):
         pass
 
     def on_page_finish(self, view, url):
-        print(f"python:Pytigon:XXXXXX1 {url}")
+        _logger.debug("Page finished: %s", url)
 
     def on_fragment_finished(self):
         pass
@@ -242,7 +243,7 @@ class PytigonApp(App):
         pass
 
     def on_stop(self):
-        print("python:Pytigon:on_stop")
+        _logger.debug("Pytigon stopped")
 
 
 if __name__ == "__main__":

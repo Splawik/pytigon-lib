@@ -67,13 +67,13 @@ def compile_str_to_module(llvm_ir):
         try:
             return _compile_ir(ENGINE, llvm_ir)
         except Exception as e:
-            raise RuntimeError(f"Error compiling LLVM IR: {e}")
+            raise RuntimeError(f"Error compiling LLVM IR: {e}") from e
     elif isinstance(llvm_ir, (list, tuple)):
         for ir in llvm_ir:
             try:
                 _compile_ir(ENGINE, ir)
             except Exception as e:
-                raise RuntimeError(f"Error compiling LLVM IR: {e}")
+                raise RuntimeError(f"Error compiling LLVM IR: {e}") from e
     else:
         raise TypeError("Expected a string or list of strings for LLVM IR.")
 
@@ -96,14 +96,14 @@ def compile_file_to_module(llvm_ir_path):
             with open(llvm_ir_path) as f:
                 return compile_str_to_module(f.read())
         except OSError as e:
-            raise RuntimeError(f"Error reading file {llvm_ir_path}: {e}")
+            raise RuntimeError(f"Error reading file {llvm_ir_path}: {e}") from e
     elif isinstance(llvm_ir_path, (list, tuple)):
         for path in llvm_ir_path:
             try:
                 with open(path) as f:
                     compile_str_to_module(f.read())
             except OSError as e:
-                raise RuntimeError(f"Error reading file {path}: {e}")
+                raise RuntimeError(f"Error reading file {path}: {e}") from e
     else:
         raise TypeError("Expected a string or list of strings for file paths.")
 
@@ -124,4 +124,4 @@ def get_function(name):
         func_ptr = ENGINE.get_function_address(name)
         return func_ptr
     except Exception as e:
-        raise RuntimeError(f"Error getting function address for '{name}': {e}")
+        raise RuntimeError(f"Error getting function address for '{name}': {e}") from e

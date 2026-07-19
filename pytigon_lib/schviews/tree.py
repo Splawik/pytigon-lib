@@ -90,23 +90,29 @@ class MakeTreeFromObject:
         parts.append(_LI_END)
         return "".join(parts)
 
-    def _tree_from_object_children(self, parent: Any) -> str:
+    def _tree_from_object_children(self, parent: Any, children_map: dict | None = None) -> str:
         """Recursively generate HTML for child nodes of a parent.
 
         Args:
             parent: The parent model instance.
+            children_map: Optional pre-built ``parent_id → [children]`` map
+                to avoid N+1 queries. If ``None``, queries per parent.
 
         Returns:
             HTML string for the subtree rooted at *parent*.
         """
-        try:
-            children = self.model.objects.filter(parent=parent)
-        except Exception:
-            logger.exception(
-                "Error querying children for parent id=%s",
-                getattr(parent, "pk", "?"),
-            )
-            return ""
+        if children_map is not None:
+            parent_pk = getattr(parent, "pk", None)
+            children = children_map.get(parent_pk, [])
+        else:
+            try:
+                children = self.model.objects.filter(parent=parent)
+            except Exception:
+                logger.exception(
+                    "Error querying children for parent id=%s",
+                    getattr(parent, "pk", "?"),
+                )
+                return ""
 
         parts = []
         for child in children:
@@ -114,7 +120,7 @@ class MakeTreeFromObject:
                 if self.callback(0, child):
                     label = str(self.callback(1, child))
                     actions = self.callback(2, child) or []
-                    children_html = self._tree_from_object_children(child)
+                    children_html = self._tree_from_object_children(child, children_map)
                     parts.append(self._build_node_html(label, actions, children_html))
             except Exception:
                 logger.exception(
@@ -132,18 +138,24 @@ class MakeTreeFromObject:
             HTML string for all root-level nodes.
         """
         try:
-            root_nodes = self.model.objects.filter(parent=None)
+            all_nodes = list(self.model.objects.all())
         except Exception:
-            logger.exception("Error querying root nodes for model %s", self.model)
+            logger.exception("Error querying all nodes for model %s", self.model)
             return ""
 
+        children_map: dict = {}
+        for node in all_nodes:
+            pid = getattr(node, "parent_id", None)
+            children_map.setdefault(pid, []).append(node)
+
+        root_children = children_map.get(None, [])
         parts = []
-        for node in root_nodes:
+        for node in root_children:
             try:
                 if self.callback(0, node):
                     label = str(self.callback(1, node))
                     actions = self.callback(2, node) or []
-                    children_html = self._tree_from_object_children(node)
+                    children_html = self._tree_from_object_children(node, children_map)
                     parts.append(self._build_node_html(label, actions, children_html))
             except Exception:
                 logger.exception(

@@ -188,7 +188,7 @@ class HtmlViewerParser(HtmlModParser):
         try:
             if "style" in attrs:
                 for s in attrs["style"].split(";"):
-                    s2 = s.split(":")
+                    s2 = s.split(":", 1)
                     if len(s2) == 2:
                         attrs[s2[0].lower()] = s2[1]
 

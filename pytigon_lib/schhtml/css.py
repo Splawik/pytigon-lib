@@ -79,7 +79,7 @@ class CssPos:
             if obj.get_id():
                 self._get_dict_from_parent("#" + obj.get_id(), ret_attrs, obj)
                 self._get_dict_from_parent(
-                    obj.get_tag() + "." + obj.get_id(), ret_attrs, obj
+                    obj.get_tag() + "#" + obj.get_id(), ret_attrs, obj
                 )
         return ret_attrs
 
@@ -121,12 +121,12 @@ class Css:
         for line in s.splitlines():
             if not line:
                 continue
-            indent = line[0] == " "
+            indent = bool(line) and line[0] in " \t"
             line = superstrip(line.split("//")[0])
             if not line:
                 continue
             if indent:
-                key, *value = line.split(":")
+                key, *value = line.split(":", 1)
                 self._act_dict[key.strip()] = value[0].strip() if value else "0"
             else:
                 if self._act_keys:
@@ -152,7 +152,7 @@ class Css:
         ]
         self._act_dict = {}
         for prop in content[0].split(";"):
-            key, *value = self._strip_list(prop.split(":"))
+            key, *value = self._strip_list(prop.split(":", 1))
             if key:
                 self._act_dict[key] = value[0] if value else "0"
         if self._act_keys:

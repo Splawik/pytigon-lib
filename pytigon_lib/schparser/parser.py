@@ -15,6 +15,7 @@ Functions:
 """
 
 import io
+import logging
 import re
 from collections.abc import Callable
 from typing import Optional, Union
@@ -29,6 +30,8 @@ except ImportError:
     from naivehtmlparser import NaiveHTMLParser
 
     _LXML_AVAILABLE = False
+
+_logger = logging.getLogger(__name__)
 
 
 class Parser:
@@ -165,7 +168,8 @@ class Parser:
         else:
             try:
                 self._tree = self.from_html(html_txt)
-            except Exception:
+            except (etree.ParseError, ValueError, OSError) as e:
+                _logger.warning("Failed to parse HTML: %s", e)
                 self._tree = None
 
     def feed(self, html_txt: Union[str, "Elem"]) -> None:

@@ -10,6 +10,18 @@ LOGGER = logging.getLogger("pytigon_task")
 INIT_TIME = datetime.datetime.now()
 
 
+def _add_months(dt, months=1):
+    """Add months to a datetime, handling year rollover and day clamping."""
+    month = dt.month - 1 + months
+    year = dt.year + month // 12
+    month = month % 12 + 1
+    import calendar
+
+    last_day = calendar.monthrange(year, month)[1]
+    day = min(dt.day, last_day)
+    return dt.replace(year=year, month=month, day=day)
+
+
 def at_iterate(param):
     """Convert a string or list of time strings into a list of [hour, minute, second] lists."""
     ret = []
@@ -45,14 +57,16 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz="local"):
             x = dt.replace(day=day, hour=_hour, minute=_minute, second=_second)
 
             if x < dt:
-                x = x.replace(month=x.month + 1)
+                x = _add_months(x, 1)
 
             if in_months and x.month not in in_months:
-                x = x.replace(month=in_months[0])
+                target = in_months[0]
+                delta = target - x.month if target >= x.month else 12 - x.month + target
+                x = _add_months(x, delta)
 
             if in_weekdays and x.weekday() not in in_weekdays:
                 for _ in range(7):
-                    x = x.replace(day=x.day + 1)
+                    x = x + datetime.timedelta(days=1)
                     if x.weekday() in in_weekdays:
                         break
             return x
@@ -75,11 +89,11 @@ def daily(at=0, in_weekdays=None, tz="local"):
             x = dt.replace(hour=_hour, minute=_minute, second=_second)
 
             if x < dt:
-                x = x.replace(day=x.day + 1)
+                x = x + datetime.timedelta(days=1)
 
             if in_weekdays and x.weekday() not in in_weekdays:
                 for _ in range(7):
-                    x = x.replace(day=x.day + 1)
+                    x = x + datetime.timedelta(days=1)
                     if x.weekday() in in_weekdays:
                         break
             return x
@@ -102,14 +116,14 @@ def hourly(period=1, at=0, in_weekdays=None, in_hours=None):
             x = dt.replace(minute=_minute, second=_second)
 
             if x < dt:
-                x = x.replace(hour=x.hour + period)
+                x = x + datetime.timedelta(hours=period)
 
             if in_hours and x.hour not in in_hours:
-                x = x.replace(hour=in_hours[0], day=x.day + 1)
+                x = (x + datetime.timedelta(days=1)).replace(hour=in_hours[0])
 
             if in_weekdays and x.weekday() not in in_weekdays:
                 for _ in range(7):
-                    x = x.replace(day=x.day + 1)
+                    x = x + datetime.timedelta(days=1)
                     if x.weekday() in in_weekdays:
                         if in_hours:
                             x = x.replace(hour=in_hours[0])
@@ -136,14 +150,14 @@ def in_minute_intervals(period=1, at=0, in_weekdays=None, in_hours=None):
             x = dt.replace(second=_second)
 
             if x < dt:
-                x = x.replace(minute=x.minute + period)
+                x = x + datetime.timedelta(minutes=period)
 
             if in_hours and x.hour not in in_hours:
-                x = x.replace(hour=in_hours[0], day=x.day + 1)
+                x = (x + datetime.timedelta(days=1)).replace(hour=in_hours[0])
 
             if in_weekdays and x.weekday() not in in_weekdays:
                 for _ in range(7):
-                    x = x.replace(day=x.day + 1)
+                    x = x + datetime.timedelta(days=1)
                     if x.weekday() in in_weekdays:
                         if in_hours:
                             x = x.replace(hour=in_hours[0])
@@ -165,14 +179,14 @@ def in_second_intervals(period=1, in_weekdays=None, in_hours=None):
     def _in_second_intervals(dt=None):
         nonlocal period, in_weekdays, in_hours
         dt = dt or INIT_TIME
-        x = dt.replace(second=dt.second + period)
+        x = dt + datetime.timedelta(seconds=period)
 
         if in_hours and x.hour not in in_hours:
-            x = x.replace(hour=in_hours[0], day=x.day + 1)
+            x = (x + datetime.timedelta(days=1)).replace(hour=in_hours[0])
 
         if in_weekdays and x.weekday() not in in_weekdays:
             for _ in range(7):
-                x = x.replace(day=x.day + 1)
+                x = x + datetime.timedelta(days=1)
                 if x.weekday() in in_weekdays:
                     if in_hours:
                         x = x.replace(hour=in_hours[0])
@@ -301,17 +315,22 @@ class SChScheduler:
 
     def show_current_tasks(self):
         """Show currently running tasks."""
-        return [
-            task._coro.__name__
-            for task in asyncio.all_tasks()
-            if task._coro.__name__ not in ("_run", "process")
-        ]
+        result = []
+        for task in asyncio.all_tasks():
+            coro = getattr(task, "get_coro", lambda: None)()
+            if coro is not None and hasattr(coro, "__name__"):
+                name = coro.__name__
+            else:
+                name = task.get_name()
+            if name not in ("_run", "process"):
+                result.append(name)
+        return result
 
     async def _run(self):
         """Main scheduler loop."""
         while self.tasks or self.rpcserver_activated:
             try:
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 _ = loop.create_task(self.process(datetime.datetime.now()))  # noqa: RUF006
             except Exception as e:
                 LOGGER.exception(f"Problem with scheduler: {e}")
@@ -319,7 +338,11 @@ class SChScheduler:
 
     def run(self):
         """Run the scheduler."""
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         loop.run_until_complete(self._run())
 
 

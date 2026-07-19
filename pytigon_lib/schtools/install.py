@@ -358,27 +358,28 @@ class Ptig:
             backup_zip = None
             exclude = None
 
-        extractall(
-            self.archive,
-            base_path,
-            backup_zip=backup_zip,
-            exclude=exclude,
-            only_path=self.prj_name + "/",
-            backup_exts=[
-                "py",
-                "txt",
-                "wsgi",
-                "asgi",
-                "ihtml",
-                "htlm",
-                "css",
-                "js",
-                "prj",
-            ],
-        )
-
-        if backup_zip:
-            backup_zip.close()
+        try:
+            extractall(
+                self.archive,
+                base_path,
+                backup_zip=backup_zip,
+                exclude=exclude,
+                only_path=self.prj_name + "/",
+                backup_exts=[
+                    "py",
+                    "txt",
+                    "wsgi",
+                    "asgi",
+                    "ihtml",
+                    "html",
+                    "css",
+                    "js",
+                    "prj",
+                ],
+            )
+        finally:
+            if backup_zip:
+                backup_zip.close()
 
         src_db = self.get_db()
         if src_db:

@@ -328,7 +328,7 @@ class IndentMarkdownProcessor:
         Returns:
             JSON string with escaped newlines.
         """
-        return json.dumps(obj).replace("\n", "\\n")
+        return json.dumps(obj)
 
     @staticmethod
     def _json_loads(s: str) -> Any:
@@ -341,7 +341,7 @@ class IndentMarkdownProcessor:
             Parsed object, or the original string if not JSON.
         """
         if s and s[0] == "{":
-            return json.loads(s.replace("\\n", "\\n"))
+            return json.loads(s)
         return s
 
     def _render_obj(self, config: str, lines: list[str] | None) -> str:

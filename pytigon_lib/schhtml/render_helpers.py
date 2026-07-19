@@ -35,7 +35,7 @@ class RenderBase:
                 if self.parent.hover and attr in self.parent.hover_css_attrs:
                     value = self.parent.hover_css_attrs[attr]
                 if value:
-                    return self.handle_render(dc, attr, value)
+                    dc = self.handle_render(dc, attr, value)
         return dc
 
 

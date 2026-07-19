@@ -6,6 +6,7 @@ allowing view execution. Integrates with the Django authentication
 system and optional django-rules object-level access control.
 """
 
+import importlib
 import logging
 import threading
 from collections.abc import Callable
@@ -151,7 +152,7 @@ def make_perms_url_test_fun(
         elements = app.split(".")
         appbase = elements[-1]
         try:
-            module = __import__(elements[0])
+            module = importlib.import_module(elements[0])
             if len(elements) > 1:
                 module2 = getattr(module, elements[-1])
                 if module2:

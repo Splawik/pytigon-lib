@@ -118,7 +118,7 @@ class DbTable(table.Table):
             if isinstance(col, ForeignKey):
                 pos = f"x:/{self.app}/table/{self.tab}/{col.name}/dict/"
                 if col.name[:-2] in self.foreign_key_parm:
-                    pos += "|" + self.foreign_key_parm
+                    pos += "|" + str(self.foreign_key_parm[col.name[:-2]])
                 col_types.append(pos)
             else:
                 col_types.append(
@@ -160,16 +160,25 @@ class DbTable(table.Table):
         )
         if sort:
             data = self._set_sort(data, sort)
+        fk_field_names = [
+            f.name for f in self.model_class._meta.fields if isinstance(f, ForeignKey)
+        ]
+        if fk_field_names:
+            data = data.select_related(*fk_field_names)
         data = data[nr * 256 : (nr + 1) * 256]
+        choice_maps = {
+            f.name: dict(f.choices) for f in self.model_class._meta.fields if f.choices
+        }
         tab = []
         for rec in data:
             row = []
             for field in self.model_class._meta.fields:
                 value = field.value_from_object(rec)
                 if field.choices:
+                    choice_map = choice_maps[field.name]
                     value = (
-                        f"{value}:{dict(field.choices).get(value, '')}"
-                        if value in dict(field.choices)
+                        f"{value}:{choice_map.get(value, '')}"
+                        if value in choice_map
                         else ""
                     )
                 elif isinstance(field, ForeignKey):

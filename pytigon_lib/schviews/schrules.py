@@ -110,7 +110,7 @@ def filter_queryset_by_rules(
         return queryset
 
     allowed_pks = [obj.pk for obj in queryset if user.has_perm(perm, obj)]
-    return model.objects.filter(pk__in=allowed_pks)
+    return queryset.filter(pk__in=allowed_pks)
 
 
 def _make_perm(action: str, model: type[Model]) -> str:

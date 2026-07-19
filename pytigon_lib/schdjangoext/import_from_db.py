@@ -93,7 +93,7 @@ class DBModuleLoader(importlib.abc.SourceLoader):
         parts = path.split(".")
         if len(parts) == 5:
             module_name = f"{parts[1]}.models"
-            tmp = __import__(module_name, fromlist=[parts[2]])
+            tmp = importlib.import_module(module_name)
             model = getattr(tmp, parts[2])
             if hasattr(model, "import"):
                 return model.import_from_source(parts[3], parts[4])
@@ -218,7 +218,7 @@ def get_fun_from_db_field(
         imp_name = src_name.replace(".py", "")
         if file_changed and imp_name in sys.modules:
             del sys.modules[imp_name]
-        x = __import__(imp_name)
+        x = importlib.import_module(imp_name)
         fun = getattr(x, function_name)
         if execute_mode == "import_and_cache":
             add_to_cache(src_name, fun)

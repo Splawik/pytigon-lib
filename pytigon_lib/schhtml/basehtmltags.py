@@ -345,10 +345,10 @@ class BaseHtmlElemParser:
             return 0
         else:
             if len(self.rendered_children):
+                ret = True
                 for child in self.rendered_children:
-                    ret = self.rendered_child.render(dc.subdc(0, 0, self.child_dx, self.child_dy))
+                    ret = child.render(dc.subdc(0, 0, self.child_dx, self.child_dy))
                     self.dy += self.child_dy
-                    self.rendered_child = None
                 return ret
         return True
 

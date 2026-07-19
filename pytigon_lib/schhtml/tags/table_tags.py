@@ -1,4 +1,5 @@
 from collections import deque
+import logging
 
 from pytigon_lib.schhtml.atom import Atom
 from pytigon_lib.schhtml.basehtmltags import (
@@ -15,6 +16,8 @@ from pytigon_lib.schhtml.render_helpers import (
 
 from .block_tags import BodyTag
 from .p_tags import Par
+
+_logger = logging.getLogger(__name__)
 
 
 class TdRef:
@@ -300,7 +303,8 @@ class TableTag(BaseHtmlAtomParser):
                 while row[i] is not None:
                     i += 1
             except IndexError:
-                continue
+                _logger.warning("Table row overflow: cell dropped (col=%d, col_count=%d)", i, self.col_count)
+                break
             row[i] = pos
             if pos.colspan > 1:
                 for j in range(1, pos.colspan):
@@ -324,7 +328,7 @@ class TableTag(BaseHtmlAtomParser):
             for i in range(0, self.col_count):
                 if tr[i].rowspan > 1:
                     for j in range(0, tr[i].rowspan - 1):
-                        if tr[i].__class__ == TdRef:
+                        if isinstance(tr[i], TdRef):
                             col_to_parent = tr[i].col_to_parent
                         else:
                             col_to_parent = 0
@@ -334,7 +338,7 @@ class TableTag(BaseHtmlAtomParser):
         if self.width >= 0 and len(self.tr_queue) == 0:
             if not self.sizes_ok and self.col_count > 0:
                 if not self.sizes:
-                    self.sizes = [[-1, -1, -1]] * self.col_count
+                    self.sizes = [[-1, -1, -1] for _ in range(self.col_count)]
                 no_size_count = 0
                 no_size_id = -1
                 width_tab = 0

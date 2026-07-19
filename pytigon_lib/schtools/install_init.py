@@ -225,7 +225,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             os.makedirs(media_path)
             os.makedirs(os.path.join(media_path, "filer_public"))
             os.makedirs(os.path.join(media_path, "filer_private"))
-            os.makedirs(os.path.join(media_path, "filer_public_tumbnails"))
+            os.makedirs(os.path.join(media_path, "filer_public_thumbnails"))
             os.makedirs(os.path.join(media_path, "filer_private_thumbnails"))
         if not os.path.exists(os.path.join(_data_path, "doc")):
             doc_path = os.path.join(os.path.join(_data_path, "doc"))
@@ -241,36 +241,38 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             ]
 
         tmp = os.getcwd()
-        for app in prjs:
-            path = os.path.join(_prj_path, app)
-            if os.path.isdir(path):
-                db_path = os.path.join(os.path.join(_data_path, app), f"{app}.db")
-                os.chdir(path)
-                print("python: pytigon: init: ", path)
-                if not os.path.exists(db_path):
-                    print("python: pytigon: init: create:", db_path)
-                    exit_code, output_tab, err_tab = py_manage(
-                        ["makeallmigrations"], False
-                    )
-                    if err_tab:
-                        print(err_tab)
-                    exit_code, output_tab, err_tab = py_manage(["migrate"], False)
-                    if err_tab:
-                        print(err_tab)
-                    exit_code, output_tab, err_tab = py_manage(
-                        ["createautouser"], False
-                    )
-                    if err_tab:
-                        print(err_tab)
-                    if app == "schdevtools":
-                        print("python: pytigon: import_projects!")
+        try:
+            for app in prjs:
+                path = os.path.join(_prj_path, app)
+                if os.path.isdir(path):
+                    db_path = os.path.join(os.path.join(_data_path, app), f"{app}.db")
+                    os.chdir(path)
+                    print("python: pytigon: init: ", path)
+                    if not os.path.exists(db_path):
+                        print("python: pytigon: init: create:", db_path)
                         exit_code, output_tab, err_tab = py_manage(
-                            ["import_projects"], False
+                            ["makeallmigrations"], False
                         )
-                        print("python: pytigon: projects imported!")
                         if err_tab:
                             print(err_tab)
-        os.chdir(tmp)
+                        exit_code, output_tab, err_tab = py_manage(["migrate"], False)
+                        if err_tab:
+                            print(err_tab)
+                        exit_code, output_tab, err_tab = py_manage(
+                            ["createautouser"], False
+                        )
+                        if err_tab:
+                            print(err_tab)
+                        if app == "schdevtools":
+                            print("python: pytigon: import_projects!")
+                            exit_code, output_tab, err_tab = py_manage(
+                                ["import_projects"], False
+                            )
+                            print("python: pytigon: projects imported!")
+                            if err_tab:
+                                print(err_tab)
+        finally:
+            os.chdir(tmp)
 
     if upgrade:
         zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")

@@ -86,7 +86,6 @@ class InlineElements(BaseHtmlAtomParser):
 
     def render(self, dc):
         self.last_rendered_dc = dc
-        self.rendered_rects
 
         self.reg_id(dc)
         if "class" in self.attrs:
@@ -277,9 +276,7 @@ class AtomContainer(InlineElements):
 class Par(InlineElements):
     def close(self):
         if (
-            issubclass(type(self.parent), Par)
-            or issubclass(type(self.parent), AtomContainer)
-            or isinstance(self.parent, Atag)
+            isinstance(self.parent, (Par, AtomContainer, Atag))
         ):
             if self.atom_list:
                 self.parent.append_atom_list(self.atom_list)
@@ -295,6 +292,7 @@ class ParArray(AtomContainer):
         super().__init__(parent, parser, tag, attrs)
         self.start = True
         self.end = False
+        self._render_idx = 0
 
     def get_width(self):
         return self.parent.get_client_width()
@@ -315,8 +313,9 @@ class ParArray(AtomContainer):
         if dc_parm.handle_html_directly:
             return (0, False)
 
-        if len(self.rendered_children) > 0:
-            child = self.rendered_children[0]
+        if self._render_idx < len(self.rendered_children):
+            child = self.rendered_children[self._render_idx]
+            self._render_idx += 1
             dc = dc_parm.subdc(
                 child.level * LI_INDENT,
                 0,
@@ -324,11 +323,7 @@ class ParArray(AtomContainer):
                 child.height,
             )
             dyy, cont2 = child.render(dc)
-            self.rendered_children = self.rendered_children[1:]
-            if len(self.rendered_children) > 0:
-                cont = True
-            else:
-                cont = False
+            cont = self._render_idx < len(self.rendered_children)
             self.start = False
             return (dyy, cont)
         else:
@@ -435,7 +430,7 @@ class Ul(ParArray):
             #    self.parent.child_ready_to_render(self)
 
     def _get_sym(self, child):
-        if self.tag == "c":
+        if self.tag == "ol":
             t = "1"
             if "type" in self.attrs:
                 t = self.attrs["type"]

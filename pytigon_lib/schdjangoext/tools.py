@@ -1,7 +1,10 @@
+import importlib
+import logging
 import sys
-import traceback
 
 from django.conf import settings
+
+_logger = logging.getLogger(__name__)
 
 
 def import_model(app, tab):
@@ -19,13 +22,12 @@ def import_model(app, tab):
         module = sys.modules.get(module_path)
 
         if not module:
-            module = __import__(module_path, fromlist=["models"])
+            module = importlib.import_module(module_path)
 
-        models = getattr(module, "models", module)
-        return getattr(models, tab)
+        return getattr(module, tab)
 
     except (ImportError, AttributeError):
-        traceback.print_exc()
+        _logger.debug("Could not import model %s.%s", app, tab, exc_info=True)
         return None
 
 

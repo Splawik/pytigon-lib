@@ -106,7 +106,10 @@ class Table:
 
     def command(self, cmd_dict):
         """Handle a command based on the command dictionary."""
-        cmd = cmd_dict.get("cmd", CMD_PAGE)
+        try:
+            cmd = int(cmd_dict.get("cmd", CMD_PAGE))
+        except (TypeError, ValueError):
+            cmd = CMD_PAGE
         value = cmd_dict.get("value")
         nr = cmd_dict.get("nr", 0)
         sort = cmd_dict.get("sort")

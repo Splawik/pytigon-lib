@@ -138,6 +138,8 @@ class TreeModel(JSONModel):
 
 ASSOCIATED_MODEL_CACHE: dict[str, Any] = {}
 
+_SENTINEL = object()
+
 
 class AssociatedModel(models.Model):
     """Abstract model to handle associations with other models."""
@@ -185,14 +187,16 @@ class AssociatedModel(models.Model):
         if ContentType is None:
             return None
         key = f"{self.application.lower()}/{self.table.lower()}"
-        if key in ASSOCIATED_MODEL_CACHE:
-            return ASSOCIATED_MODEL_CACHE[key]
+        cached = ASSOCIATED_MODEL_CACHE.get(key, _SENTINEL)
+        if cached is not _SENTINEL:
+            return cached
         model_obj = ContentType.objects.filter(
             app_label=self.application.lower(), model=self.table.lower()
         ).first()
         if model_obj:
             model_class = model_obj.model_class()
-            ASSOCIATED_MODEL_CACHE[key] = model_class
+            if model_class is not None:
+                ASSOCIATED_MODEL_CACHE[key] = model_class
             return model_class
         return None
 

@@ -63,53 +63,36 @@ class ModelSelect2MultipleWidgetExt(ModelSelect2MultipleWidget):
         ModelSelect2MultipleWidget.__init__(self, label=label, **argv)
 
 
+# Keyword arguments shared by ForeignKey and ManyToManyField extensions,
+# popped from kwargs before forwarding to the Django base class.
+_FIELD_KWARGS = {
+    "search_fields": None,
+    "query": None,
+    "filter": "-",
+    "show_form": True,
+    "can_add": False,
+    "select2": False,
+    "minimum_input_length": 0,
+    "app_template": "",
+}
+
+
+def _extract_field_kwargs(kwargs):
+    """Pop and return the shared extension keyword arguments from *kwargs*."""
+    extracted = {}
+    for key, default in _FIELD_KWARGS.items():
+        extracted[key] = kwargs.pop(key, default)
+    return extracted
+
+
 class ForeignKey(models.ForeignKey):
     """Extended version of django models.ForeignKey class. Class allows you to add new objects and
     selecting existing objects in better way.
     """
 
     def __init__(self, *args, **kwargs):
-        if "search_fields" in kwargs:
-            self.search_fields = kwargs["search_fields"]
-            del kwargs["search_fields"]
-        else:
-            self.search_fields = None
-        if "filter" in kwargs:
-            self.filter = kwargs["filter"]
-            del kwargs["filter"]
-        else:
-            self.filter = "-"
-        if "query" in kwargs:
-            self.query = kwargs["query"]
-            del kwargs["query"]
-        else:
-            self.query = None
-        if "show_form" in kwargs:
-            self.show_form = kwargs["show_form"]
-            del kwargs["show_form"]
-        else:
-            self.show_form = True
-        if "can_add" in kwargs:
-            self.can_add = kwargs["can_add"]
-            del kwargs["can_add"]
-        else:
-            self.can_add = False
-        if "select2" in kwargs:
-            self.select2 = True
-            del kwargs["select2"]
-        else:
-            self.select2 = False
-
-        if "minimum_input_length" in kwargs:
-            self.minimum_input_length = kwargs["minimum_input_length"]
-            del kwargs["minimum_input_length"]
-        else:
-            self.minimum_input_length = 0
-        if "app_template" in kwargs:
-            self.app_template = kwargs["app_template"]
-            del kwargs["app_template"]
-        else:
-            self.app_template = ""
+        kw = _extract_field_kwargs(kwargs)
+        self.__dict__.update(kw)
 
         super().__init__(*args, **kwargs)
 
@@ -161,7 +144,7 @@ class ForeignKey(models.ForeignKey):
                             queryset = queryset.filter(_query["Q"])
                         if "order" in _query:
                             queryset = queryset.order_by(*_query["order"])
-                        if "limmit" in _query:
+                        if "limit" in _query:
                             queryset = queryset[: _query["limit"]]
 
                     if _search_fields:
@@ -196,31 +179,8 @@ class ManyToManyField(models.ManyToManyField):
     """
 
     def __init__(self, *args, **kwargs):
-        if "search_fields" in kwargs:
-            self.search_fields = kwargs["search_fields"]
-            del kwargs["search_fields"]
-        else:
-            self.search_fields = None
-        if "query" in kwargs:
-            self.query = kwargs["query"]
-            del kwargs["query"]
-        else:
-            self.query = None
-        if "filter" in kwargs:
-            self.filter = kwargs["filter"]
-            del kwargs["filter"]
-        else:
-            self.filter = "-"
-        if "minimum_input_length" in kwargs:
-            self.minimum_input_length = kwargs["minimum_input_length"]
-            del kwargs["minimum_input_length"]
-        else:
-            self.minimum_input_length = 0
-        if "app_template" in kwargs:
-            self.app_template = kwargs["app_template"]
-            del kwargs["app_template"]
-        else:
-            self.app_template = ""
+        kw = _extract_field_kwargs(kwargs)
+        self.__dict__.update(kw)
 
         if "null" in kwargs:
             del kwargs["null"]
@@ -253,7 +213,7 @@ class ManyToManyField(models.ManyToManyField):
                             queryset = queryset.filter(_query["Q"])
                         if "order" in _query:
                             queryset = queryset.order_by(*_query["order"])
-                        if "limmit" in _query:
+                        if "limit" in _query:
                             queryset = queryset[: _query["limit"]]
 
                     if _search_fields:

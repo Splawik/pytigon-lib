@@ -96,7 +96,7 @@ def spec_resize(image, width=0, height=0):
         return dst
 
     except Exception as e:
-        raise ValueError(f"Error during image resizing: {e}")
+        raise ValueError(f"Error during image resizing: {e}") from e
 
 
 def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
@@ -165,7 +165,7 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
                 return drawing.asString("png")
 
     except Exception as e:
-        raise ValueError(f"Error during SVG to PNG conversion: {e}")
+        raise ValueError(f"Error during SVG to PNG conversion: {e}") from e
 
 
 def mse(image_array1, image_array2):

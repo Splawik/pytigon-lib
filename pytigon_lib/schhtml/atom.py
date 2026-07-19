@@ -204,7 +204,7 @@ class AtomList:
                             last_br.cr_count += 1
                         else:
                             last_br = BrAtom()
-                            self.append_atom(BrAtom())
+                            self.append_atom(last_br)
                         self.append_text(line, style, parent)
                         last_br = None
                     else:
@@ -366,9 +366,13 @@ class AtomList:
                     y += line.get_height() + self.line_dy
                     first = False
 
+        return y - self.line_dy
+
+    def clear_draw_cache(self):
+        """Clear cached draw data to free memory. Call after rendering is complete
+        and no re-render is needed."""
         self.list_for_draw = []
         self.atom_list = []
-        return y - self.line_dy
 
     def to_txt(self):
         """Convert the atom list to a plain text string."""
