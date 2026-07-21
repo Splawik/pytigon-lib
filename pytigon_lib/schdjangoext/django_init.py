@@ -33,9 +33,7 @@ class AppConfigMod(AppConfig):
             all_models: Optional pre-loaded models dictionary. If not
                 given, ``self.apps.all_models`` is used.
         """
-        self.models = (
-            self.apps.all_models[self.label] if all_models is None else all_models
-        )
+        self.models = self.apps.all_models[self.label] if all_models is None else all_models
 
         if module_has_submodule(self.module, MODELS_MODULE_NAME):
             models_module_name = f"{self.name}.{MODELS_MODULE_NAME}"
@@ -61,6 +59,16 @@ class AppConfigMod(AppConfig):
         if isinstance(other, AppConfigMod):
             return self.name + other.name
         return self.name + str(other)
+
+    def ready(self):
+        from django.conf import settings
+
+        if settings.MCP_SERVER:
+            try:
+                mcp = import_module(f"{self.name}.mcp")
+            except ImportError as e:
+                pass
+                # print(f""Failed to import {mcp}: {e}")
 
 
 def get_app_config(app_name):
