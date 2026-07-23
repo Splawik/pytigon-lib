@@ -25,7 +25,9 @@ def get_rest_client(base_url: str, refresh_token: str) -> Callable:
     """
     tokens: dict[str, str] = {"refresh_token": refresh_token}
 
-    def _oauth2_httpx(httpx_method: Callable, relative_url: str, *args, **kwargs) -> httpx.Response | None:
+    def _oauth2_httpx(
+        httpx_method: Callable, relative_url: str, *args, **kwargs
+    ) -> httpx.Response | None:
         """
         Internal function to handle OAuth2 authentication and make HTTP requests.
 
