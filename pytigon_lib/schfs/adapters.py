@@ -91,18 +91,14 @@ def _as_backend(
     if isinstance(filesystem, tuple):
         fs, tuple_root = filesystem
         if not isinstance(fs, AbstractFileSystem):
-            raise TypeError(
-                "First item in filesystem tuple must be an fsspec filesystem"
-            )
+            raise TypeError("First item in filesystem tuple must be an fsspec filesystem")
         return _Backend(fs=fs, root=_normalise_backend_root(root or tuple_root))
 
     if isinstance(filesystem, AbstractFileSystem):
         return _Backend(fs=filesystem, root=_normalise_backend_root(root))
 
     if not isinstance(filesystem, str):
-        raise TypeError(
-            "filesystem must be an fsspec AbstractFileSystem, path, URL or (fs, root) tuple"
-        )
+        raise TypeError("filesystem must be an fsspec AbstractFileSystem, path, URL or (fs, root) tuple")
 
     fs, fs_root = fsspec.core.url_to_fs(filesystem)
     effective_root = root if root is not None else fs_root
@@ -194,15 +190,11 @@ class FsspecSimpleFS(AbstractFileSystem):
 
     def info(self, path: str, **kwargs: Any) -> dict[str, Any]:
         logical_path = _normalise_path(path)
-        result = copy.deepcopy(
-            self._backend.fs.info(self._path(logical_path), **kwargs)
-        )
+        result = copy.deepcopy(self._backend.fs.info(self._path(logical_path), **kwargs))
         result["name"] = logical_path
         return result
 
-    def ls(
-        self, path: str, detail: bool = True, **kwargs: Any
-    ) -> list[dict[str, Any]] | list[str]:
+    def ls(self, path: str, detail: bool = True, **kwargs: Any) -> list[dict[str, Any]] | list[str]:
         logical_path = _normalise_path(path)
         entries = self._backend.fs.ls(self._path(logical_path), detail=True, **kwargs)
         result: list[dict[str, Any]] = []
@@ -238,9 +230,7 @@ class FsspecSimpleFS(AbstractFileSystem):
         return result if detail else sorted(result)
 
     def mkdir(self, path: str, create_parents: bool = True, **kwargs: Any) -> None:
-        self._backend.fs.mkdir(
-            self._path(path), create_parents=create_parents, **kwargs
-        )
+        self._backend.fs.mkdir(self._path(path), create_parents=create_parents, **kwargs)
 
     def makedirs(self, path: str, exist_ok: bool = False) -> None:
         self._backend.fs.makedirs(self._path(path), exist_ok=exist_ok)
@@ -252,9 +242,7 @@ class FsspecSimpleFS(AbstractFileSystem):
         maxdepth: int | None = None,
         **kwargs: Any,
     ) -> None:
-        paths = [
-            self._path(item) for item in ([path] if isinstance(path, str) else path)
-        ]
+        paths = [self._path(item) for item in ([path] if isinstance(path, str) else path)]
         self._backend.fs.rm(paths, recursive=recursive, maxdepth=maxdepth, **kwargs)
 
     def touch(self, path: str, truncate: bool = True, **kwargs: Any) -> None:
@@ -299,9 +287,7 @@ class _AutoCreateLocalFs(FsspecSimpleFS):
     ``root_path``; absolute paths remain absolute.
     """
 
-    def __init__(
-        self, root_path: str, auto_mkdir: bool = True, **kwargs: Any
-    ) -> None:
+    def __init__(self, root_path: str, auto_mkdir: bool = True, **kwargs: Any) -> None:
         if not isinstance(root_path, str) or not root_path:
             raise ValueError("root_path must be a non-empty path")
         absolute = os.path.abspath(root_path)
@@ -410,9 +396,7 @@ class FsspecMultiFS(AbstractFileSystem):
         result["name"] = path
         return result
 
-    def ls(
-        self, path: str, detail: bool = True, **kwargs: Any
-    ) -> list[dict[str, Any]] | list[str]:
+    def ls(self, path: str, detail: bool = True, **kwargs: Any) -> list[dict[str, Any]] | list[str]:
         path = _normalise_path(path)
         entries: dict[str, dict[str, Any]] = {}
         for _, backend in self._filesystems:
@@ -490,9 +474,7 @@ class FsspecMultiFS(AbstractFileSystem):
             backend = self._find_backend(item)
             if backend is None:
                 raise FileNotFoundError(item)
-            backend.fs.rm(
-                backend.path(item), recursive=recursive, maxdepth=maxdepth, **kwargs
-            )
+            backend.fs.rm(backend.path(item), recursive=recursive, maxdepth=maxdepth, **kwargs)
 
     def touch(self, path: str, truncate: bool = True, **kwargs: Any) -> None:
         backend = self._require_write_backend()
@@ -589,11 +571,7 @@ class FsspecMountFS(AbstractFileSystem):
 
     def _resolve(self, path: str) -> tuple[_Backend, str]:
         path = _normalise_path(path)
-        matches = [
-            mount
-            for mount in self._mounts
-            if path == mount or path.startswith(f"{mount}/")
-        ]
+        matches = [mount for mount in self._mounts if path == mount or path.startswith(f"{mount}/")]
         if not matches:
             raise FileNotFoundError(f"No filesystem mounted for path: {path!r}")
         mount = max(matches, key=len)
@@ -601,24 +579,14 @@ class FsspecMountFS(AbstractFileSystem):
 
     def _virtual_directory_info(self, path: str) -> dict[str, Any] | None:
         path = _normalise_path(path)
-        if (
-            not path
-            or path in self._mounts
-            or any(mount.startswith(f"{path}/") for mount in self._mounts)
-        ):
+        if not path or path in self._mounts or any(mount.startswith(f"{path}/") for mount in self._mounts):
             return {"name": path, "type": "directory", "size": 0}
         return None
 
     def _virtual_children(self, path: str) -> list[str]:
         path = _normalise_path(path)
         prefix = f"{path}/" if path else ""
-        return sorted(
-            {
-                mount[len(prefix) :].split("/", 1)[0]
-                for mount in self._mounts
-                if mount.startswith(prefix)
-            }
-        )
+        return sorted({mount[len(prefix) :].split("/", 1)[0] for mount in self._mounts if mount.startswith(prefix)})
 
     def _open(
         self,
@@ -662,9 +630,7 @@ class FsspecMountFS(AbstractFileSystem):
         result["name"] = path
         return result
 
-    def ls(
-        self, path: str, detail: bool = True, **kwargs: Any
-    ) -> list[dict[str, Any]] | list[str]:
+    def ls(self, path: str, detail: bool = True, **kwargs: Any) -> list[dict[str, Any]] | list[str]:
         path = _normalise_path(path)
         result: dict[str, dict[str, Any]] = {}
         # Virtual directories created by mounts.
@@ -711,11 +677,7 @@ class FsspecMountFS(AbstractFileSystem):
         root = backend.root.rstrip("/")
         for backend_name, entry in entries.items():
             name = str(backend_name).replace("\\", "/")
-            logical = (
-                name[len(root) + 1 :]
-                if root and name.startswith(f"{root}/")
-                else name.strip("/")
-            )
+            logical = name[len(root) + 1 :] if root and name.startswith(f"{root}/") else name.strip("/")
             item = copy.deepcopy(entry)
             item["name"] = logical
             result[logical] = item
@@ -723,9 +685,7 @@ class FsspecMountFS(AbstractFileSystem):
 
     def mkdir(self, path: str, create_parents: bool = True, **kwargs: Any) -> None:
         backend, relative = self._resolve(path)
-        backend.fs.mkdir(
-            backend.path(relative), create_parents=create_parents, **kwargs
-        )
+        backend.fs.mkdir(backend.path(relative), create_parents=create_parents, **kwargs)
 
     def makedirs(self, path: str, exist_ok: bool = False) -> None:
         backend, relative = self._resolve(path)
@@ -743,9 +703,7 @@ class FsspecMountFS(AbstractFileSystem):
             if item in self._mounts:
                 raise PermissionError(f"Removing mount root is not allowed: {item!r}")
             backend, relative = self._resolve(item)
-            backend.fs.rm(
-                backend.path(relative), recursive=recursive, maxdepth=maxdepth, **kwargs
-            )
+            backend.fs.rm(backend.path(relative), recursive=recursive, maxdepth=maxdepth, **kwargs)
 
     def touch(self, path: str, truncate: bool = True, **kwargs: Any) -> None:
         backend, relative = self._resolve(path)
@@ -761,9 +719,7 @@ class FsspecMountFS(AbstractFileSystem):
         if parent:
             target.fs.makedirs(target.path(parent), exist_ok=True)
         if source.fs is target.fs:
-            target.fs.cp_file(
-                source.path(source_relative), target.path(target_relative), **kwargs
-            )
+            target.fs.cp_file(source.path(source_relative), target.path(target_relative), **kwargs)
             return
         with (
             source.fs.open(source.path(source_relative), "rb") as src,
@@ -792,6 +748,8 @@ class FsspecMountFS(AbstractFileSystem):
             )
             return
         self.cp_file(path1, path2, **kwargs)
-        source.fs.rm(
-            source.path(source_relative), recursive=recursive, maxdepth=maxdepth
-        )
+        source.fs.rm(source.path(source_relative), recursive=recursive, maxdepth=maxdepth)
+
+    def getsyspath(self, path):
+        backend, path2 = self._resolve(path)
+        return backend.fs._path(path2)
