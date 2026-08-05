@@ -347,25 +347,18 @@ class TestHttpClientGetPostIntegration:
 
     @patch("pytigon_lib.schhttptools.httpclient.request")
     def test_post_with_csrf_token(self, mock_req):
-        import pytigon_lib.schhttptools.httpclient as mod
-
         mock_req.return_value = MagicMock(
             status_code=200, content=b"ok", headers={},
             cookies=MagicMock(items=lambda: []), history=None, url="http://127.0.0.2/submit"
         )
-        old = dict(mod.COOKIES_EMBEDED)
-        try:
-            mod.COOKIES_EMBEDED["csrftoken"] = "abc123"
-            client = HttpClient()
-            client.get(None, "http://127.0.0.2/submit", parm={"x": "1"}, post_request=True)
-            call_args = mock_req.call_args
-            assert call_args is not None
-            argv = call_args[0][3]
-            assert "X-CSRFToken" in argv["headers"]
-            assert argv["headers"]["X-CSRFToken"] == "abc123"
-        finally:
-            mod.COOKIES_EMBEDED.clear()
-            mod.COOKIES_EMBEDED.update(old)
+        client = HttpClient()
+        client.cookies_embeded["csrftoken"] = "abc123; Path=/"
+        client.get(None, "http://127.0.0.2/submit", parm={"x": "1"}, post_request=True)
+        call_args = mock_req.call_args
+        assert call_args is not None
+        argv = call_args[0][3]
+        assert "X-CSRFToken" in argv["headers"]
+        assert argv["headers"]["X-CSRFToken"] == "abc123"
 
     @patch("pytigon_lib.schhttptools.httpclient.request")
     def test_get_passes_user_agent(self, mock_req):
@@ -487,6 +480,8 @@ class TestHttpResponseProcessResponse:
     def test_caches_non_post_questionless_url(self):
         class MockClient:
             http_cache = {}
+            cookies = {}
+            cookies_embeded = {}
 
         http_client = MockClient()
         mock_response = MagicMock()
@@ -522,10 +517,9 @@ class TestHttpResponseProcessResponse:
             mock_logger.error.assert_called()
 
     def test_propagates_cookies_from_history(self):
-        import pytigon_lib.schhttptools.httpclient as mod
-
         http_client = MagicMock()
         http_client.http_cache = MagicMock()
+        http_client.cookies_embeded = {}
         hist_entry = MagicMock()
         hist_entry.cookies = MagicMock()
         hist_entry.cookies.items.return_value = [("session", "abc")]
@@ -537,21 +531,15 @@ class TestHttpResponseProcessResponse:
         mock_response.history = [hist_entry]
         mock_response.url = "http://127.0.0.2/test"
 
-        old_cookies = dict(mod.COOKIES_EMBEDED)
-        try:
-            hr = HttpResponse("http://127.0.0.2/test")
-            hr.response = mock_response
-            hr.process_response(http_client, None, False)
-            assert mod.COOKIES_EMBEDED.get("session") == "abc"
-        finally:
-            mod.COOKIES_EMBEDED.clear()
-            mod.COOKIES_EMBEDED.update(old_cookies)
+        hr = HttpResponse("http://127.0.0.2/test")
+        hr.response = mock_response
+        hr.process_response(http_client, None, False)
+        assert http_client.cookies_embeded.get("session") == "abc"
 
     def test_propagates_response_cookies(self):
-        import pytigon_lib.schhttptools.httpclient as mod
-
         http_client = MagicMock()
         http_client.http_cache = MagicMock()
+        http_client.cookies_embeded = {}
         mock_response = MagicMock()
         mock_response.content = b""
         mock_response.status_code = 200
@@ -561,15 +549,10 @@ class TestHttpResponseProcessResponse:
         mock_response.history = None
         mock_response.url = "http://127.0.0.2/test"
 
-        old_cookies = dict(mod.COOKIES_EMBEDED)
-        try:
-            hr = HttpResponse("http://127.0.0.2/test")
-            hr.response = mock_response
-            hr.process_response(http_client, None, False)
-            assert mod.COOKIES_EMBEDED.get("token") == "xyz"
-        finally:
-            mod.COOKIES_EMBEDED.clear()
-            mod.COOKIES_EMBEDED.update(old_cookies)
+        hr = HttpResponse("http://127.0.0.2/test")
+        hr.response = mock_response
+        hr.process_response(http_client, None, False)
+        assert http_client.cookies_embeded.get("token") == "xyz"
 
     def test_traceback_in_content_triggers_error_func(self):
         import pytigon_lib.schhttptools.httpclient as mod
