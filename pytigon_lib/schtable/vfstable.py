@@ -25,6 +25,42 @@ _ = gettext.gettext
 _logger = logging.getLogger(__name__)
 
 
+def _fs_info(fs, path):
+    """Return metadata for *path*, normalising between VFS backends.
+
+    The default VFS may be either a pyfilesystem2-style fs (with
+    ``getdetails`` returning an ``Info``) or an fsspec-style fs (with
+    ``info`` returning a dict). Returns an object exposing ``modified``,
+    ``size`` and ``raw`` attributes regardless of the backend.
+
+    Args:
+        fs: The virtual file system object.
+        path: Path to query.
+
+    Returns:
+        An object with ``modified`` (datetime), ``size`` (int) and
+        ``raw`` (dict) attributes.
+    """
+    if hasattr(fs, "getdetails"):
+        return fs.getdetails(path)
+    data = fs.info(path)
+    mtime = data.get("mtime", 0) or 0
+    return _VfsInfo(
+        modified=datetime.datetime.fromtimestamp(mtime),
+        size=int(data.get("size", 0) or 0),
+        raw=data,
+    )
+
+
+class _VfsInfo:
+    """Minimal metadata object used when the VFS exposes ``info`` only."""
+
+    def __init__(self, modified, size, raw):
+        self.modified = modified
+        self.size = size
+        self.raw = raw
+
+
 def str_cmp(x, y, ts):
     """Compare two strings based on the given sorting criteria."""
     (id, znak) = ts[0]
@@ -103,6 +139,10 @@ class VfsTable(Table):
         """Get the table data for the current folder."""
         try:
             f = default_storage.fs.listdir(automount(self.folder))
+            # Some VFS backends return dict entries like
+            # {'name': ..., 'type': ...}; normalise to plain names so that
+            # os.path.join/isdir/getdetails keep working.
+            f = [e["name"] if isinstance(e, dict) else e for e in f]
         except Exception as e:
             _logger.error("Error listing directory: %s", e)
             return []
@@ -120,7 +160,7 @@ class VfsTable(Table):
                 if not cmp or cmp.match(p):
                     try:
                         id = bencode(pos)
-                        info = default_storage.fs.getdetails(pos)
+                        info = _fs_info(default_storage.fs, pos)
                         elements.append(
                             [
                                 id,
@@ -146,7 +186,7 @@ class VfsTable(Table):
             if not cmp or cmp.match(p):
                 try:
                     id = bencode(pos)
-                    info = default_storage.fs.getdetails(pos)
+                    info = _fs_info(default_storage.fs, pos)
                     size = info.size
                     ctime = info.modified.replace(tzinfo=None)
                     elements.append(
