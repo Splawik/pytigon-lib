@@ -94,8 +94,13 @@ class VfsTable(Table):
         self.var_count = -1
         self.folder = norm_path(folder)
         self.auto_cols = []
-        self.col_length = [10, 10, 10]
-        self.col_names = ["ID", "Name", "Size", "Created"]
+        self.col_length = [28, 12, 18]
+        self.col_names = [
+            "ID",
+            "Name",
+            "Size",
+            "Created",
+        ]
         self.col_types = ["int", "str", "int", "datetime"]
         self.default_rec = ["", 0, None]
         self.task_href = None
@@ -138,7 +143,8 @@ class VfsTable(Table):
     def _get_table(self, value=None):
         """Get the table data for the current folder."""
         try:
-            f = default_storage.fs.listdir(automount(self.folder))
+            folder = automount(self.folder)
+            f = default_storage.fs.listdir(folder)
             # Some VFS backends return dict entries like
             # {'name': ..., 'type': ...}; normalise to plain names so that
             # os.path.join/isdir/getdetails keep working.
@@ -151,23 +157,48 @@ class VfsTable(Table):
         files = []
         cmp = re.compile(value, re.IGNORECASE) if value else None
 
-        if self.folder != "/":
+        if self.folder != "/" and self.folder != "" and not value:
             f = [".."] + f
 
         for p in f:
-            pos = os.path.join(self.folder, p)
-            if default_storage.fs.isdir(pos) or p.lower().endswith(".zip"):
-                if not cmp or cmp.match(p):
+            pos = p
+            if pos == "..":
+                if "/" in folder:
+                    id = bencode(folder.rsplit("/", 1)[0])
+                else:
+                    id = bencode("")
+                elements.append(
+                    [
+                        id,
+                        (p, ",#fdd"),
+                        "",
+                        (None, ",,#f00,s"),
+                        {
+                            "edit": (
+                                "tableurl",
+                                f"../../{id}/_/",
+                                _("Change folder"),
+                            )
+                        },
+                    ]
+                )
+
+            elif default_storage.fs.isdir(pos) or p.lower().endswith(".zip"):
+                folder_name = p.split("/")[-1]
+
+                if len(folder_name) > self.col_length[0]:
+                    self.col_length[0] = len(folder_name)
+
+                if not cmp or cmp.match(folder_name):
                     try:
                         id = bencode(pos)
                         info = _fs_info(default_storage.fs, pos)
                         elements.append(
                             [
                                 id,
-                                (p, ",#fdd"),
-                                "",
+                                (folder_name, ",#fdd"),
+                                info.size,
                                 (info.modified.replace(tzinfo=None), ",,#f00,s"),
-                                info.raw,
                                 {
                                     "edit": (
                                         "tableurl",
@@ -183,7 +214,12 @@ class VfsTable(Table):
                 files.append((p, pos))
 
         for p, pos in files:
-            if not cmp or cmp.match(p):
+            file_name = p.split("/")[-1]
+
+            if len(file_name) > self.col_length[0]:
+                self.col_length[0] = len(file_name)
+
+            if not cmp or cmp.match(file_name):
                 try:
                     id = bencode(pos)
                     info = _fs_info(default_storage.fs, pos)
@@ -192,16 +228,14 @@ class VfsTable(Table):
                     elements.append(
                         [
                             id,
-                            p,
+                            file_name,
                             (size, f">,{self._size_to_color(size)}"),
                             (ctime, f",{self._time_to_color(ctime)}"),
-                            info.raw,
                             {"edit": ("command", f"../../{id}/_/", _("Open file"))},
                         ]
                     )
                 except Exception as e:
                     _logger.error("Error processing file %s: %s", p, e)
-
         return elements
 
     def page(self, nr, sort=None, value=None):
@@ -270,9 +304,7 @@ class VfsTable(Table):
         if value[0] in thread_commands:
             parm = {"cmd": value[0]}
             parm["files"] = (
-                [bdecode(v) for v in value[1][1]]
-                if value[1][1]
-                else [bdecode(value[1][0])]
+                [bdecode(v) for v in value[1][1]] if value[1][1] else [bdecode(value[1][0])]
             )
             if len(value[2]) > 1:
                 parm["dest"] = bdecode(value[2][1])

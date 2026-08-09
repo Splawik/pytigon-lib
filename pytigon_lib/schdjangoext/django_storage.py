@@ -22,8 +22,7 @@ from django.utils import timezone
 from django.utils.encoding import filepath_to_uri
 
 
-
-#from pytigon_lib.schfs.adapters import _AutoCreateLocalFs, _fsspec_abspath, _fsspec_dirname
+# from pytigon_lib.schfs.adapters import _AutoCreateLocalFs, _fsspec_abspath, _fsspec_dirname
 from pytigon_lib.schfs.adapters import FsspecMountFS, FsspecMultiFS, FsspecSimpleFS
 
 
@@ -70,7 +69,9 @@ class FSStorage(Storage):
             fs = settings.DEFAULT_FILE_STORAGE_FS()
 
         self.fs = fs
-        self.base_url = base_url if base_url is not None else getattr(settings, "MEDIA_URL", None)
+        self.base_url = (
+            base_url if base_url is not None else getattr(settings, "MEDIA_URL", None)
+        )
 
         if self.base_url:
             self.base_url = self.base_url.rstrip("/") + "/"
