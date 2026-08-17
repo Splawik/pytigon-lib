@@ -33,6 +33,12 @@ HTTP_LOCK = threading.Lock()
 HTTP_ERROR_FUNC = None
 HTTP_IDLE_FUNC = None
 
+# Set to a value > 0 while a paint/draw event is being processed on the GUI
+# thread. While painting, pumping the GTK event loop with app.Yield() would
+# re-enter drawing on the same window and crash (cairo: "window already has a
+# drawing context"), so the GUI thread must block instead of yielding.
+IN_PAINT = 0
+
 
 def decode(bstr, dec="utf-8"):
     """Decode bytes to string."""
@@ -208,8 +214,11 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
             t.start()
             if app:
                 try:
-                    while t.is_alive():
-                        app.Yield()
+                    if IN_PAINT:
+                        t.join()
+                    else:
+                        while t.is_alive():
+                            app.Yield()
                 except Exception:
                     t.join()
             else:
@@ -225,8 +234,11 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                 t = Thread(target=requests_request, args=(method, url, argv, ret), daemon=True)
                 t.start()
                 try:
-                    while t.is_alive():
-                        app.Yield()
+                    if IN_PAINT:
+                        t.join()
+                    else:
+                        while t.is_alive():
+                            app.Yield()
                 except Exception:
                     t.join()
         else:
