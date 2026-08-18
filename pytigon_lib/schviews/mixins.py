@@ -1,6 +1,5 @@
 """Template variant mixin for schviews generic views."""
 
-from django.conf import settings
 
 
 class TemplateVariantMixin:

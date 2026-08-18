@@ -4,11 +4,11 @@ The platform can run in several modes: client (AppImage/Emscripten),
 development, web server, Android, or as a library (pytigon-lib).
 """
 
+import importlib.util
 import os
 import sys
 import tempfile
 from os import environ
-import importlib.util
 
 from pytigon_lib.schtools.platform_info import platform_name
 

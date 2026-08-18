@@ -3,12 +3,10 @@ import datetime
 import functools
 import gettext
 import io
+import logging
 import mimetypes
 import re
 import uuid
-import os
-
-import logging
 
 from django.core.cache import cache
 from django.core.files.storage import default_storage

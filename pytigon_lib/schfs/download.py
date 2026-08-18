@@ -1,6 +1,6 @@
 import ipaddress
-import os
 import logging
+import os
 import platform
 import shutil
 import sys

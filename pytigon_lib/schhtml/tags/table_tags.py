@@ -1,5 +1,5 @@
-from collections import deque
 import logging
+from collections import deque
 
 from pytigon_lib.schhtml.atom import Atom
 from pytigon_lib.schhtml.basehtmltags import (

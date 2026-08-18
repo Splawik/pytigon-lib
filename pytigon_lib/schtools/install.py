@@ -7,9 +7,9 @@ import zipfile
 
 from pytigon_lib.schdjangoext.django_manage import cmd
 from pytigon_lib.schfs.vfstools import extractall
+from pytigon_lib.schtools.env import get_environ
 from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
 from pytigon_lib.schtools.process import py_run
-from pytigon_lib.schtools.env import get_environ
 
 
 def install():

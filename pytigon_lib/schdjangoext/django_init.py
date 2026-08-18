@@ -66,7 +66,7 @@ class AppConfigMod(AppConfig):
         if settings.MCP_SERVER:
             try:
                 mcp = import_module(f"{self.name}.mcp")
-            except ImportError as e:
+            except ImportError:
                 pass
                 # print(f""Failed to import {mcp}: {e}")
 

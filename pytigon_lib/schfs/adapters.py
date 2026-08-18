@@ -17,7 +17,7 @@ import copy
 import os
 import posixpath
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 import fsspec
 from fsspec import AbstractFileSystem

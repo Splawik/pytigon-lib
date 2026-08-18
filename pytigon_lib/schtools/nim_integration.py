@@ -5,8 +5,8 @@ nim.cfg to use a zig-based C compiler wrapper, and compiling the
 zigcc helper binary.
 """
 
-import lzma
 import logging
+import lzma
 import os
 import stat
 import tarfile

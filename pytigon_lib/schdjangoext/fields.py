@@ -182,10 +182,8 @@ class ManyToManyField(models.ManyToManyField):
         kw = _extract_field_kwargs(kwargs)
         self.__dict__.update(kw)
 
-        if "null" in kwargs:
-            del kwargs["null"]
-        if "blank" in kwargs:
-            del kwargs["blank"]
+        kwargs.pop("null", None)
+        kwargs.pop("blank", None)
 
         super().__init__(*args, **kwargs)
 

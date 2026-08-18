@@ -1,6 +1,6 @@
 """DetailView for schviews generic views."""
 
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.views import generic
 
