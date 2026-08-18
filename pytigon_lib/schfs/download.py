@@ -85,9 +85,7 @@ def _is_safe_url(url: str) -> bool:
             return False
     if hostname.startswith("192.168."):
         return False
-    if hostname in ("0.0.0.0", "255.255.255.255"):
-        return False
-    return True
+    return hostname not in ("0.0.0.0", "255.255.255.255")
 
 
 def _is_safe_tar_member(member: tarfile.TarInfo, target_path: str) -> bool:

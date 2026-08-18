@@ -83,9 +83,7 @@ class FSStorage(Storage):
             return False
         if not allow_relative_path and "/" in name:
             return False
-        if ".." in name.split("/"):
-            return False
-        return True
+        return ".." not in name.split("/")
 
     def _clean_name(self, name: str) -> str:
         """Return a safe, normalised relative POSIX file name."""
