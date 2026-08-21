@@ -63,8 +63,6 @@ def form(
         else:
             post_data = request.POST
 
-        print("YYY: ", post_data)
-
         if post_data:
             if hasattr(form_instance, "init"):
                 form_instance.init(request)
@@ -87,7 +85,9 @@ def form(
 
                 if hasattr(form_instance, "render_to_response"):
                     return form_instance.render_to_response(
-                        request, template_name, RequestContext(request, result).flatten()
+                        request,
+                        template_name,
+                        RequestContext(request, result).flatten(),
                     )
                 else:
                     doc_type = result.get("doc_type", "html")
@@ -106,9 +106,10 @@ def form(
                     result.update({"form": form_instance})
                     if object_id:
                         result.update({"object_id": object_id})
-                    return render_to_response(template_name, context=result, request=request)
+                    return render_to_response(
+                        template_name, context=result, request=request
+                    )
                 else:
-                    print("XXX:", form_instance)
                     return render_to_response(
                         template_name,
                         context={"form": form_instance},
@@ -255,8 +256,12 @@ def direct_to_template(
     try:
         context = {"params": kwargs}
         if extra_context:
-            context.update({k: v() if callable(v) else v for k, v in extra_context.items()})
+            context.update(
+                {k: v() if callable(v) else v for k, v in extra_context.items()}
+            )
         return render_to_response(template, context=context, request=request)
     except Exception:
         logger.exception("Error rendering template '%s'", template)
-        return HttpResponse("An error occurred while rendering the template.", status=500)
+        return HttpResponse(
+            "An error occurred while rendering the template.", status=500
+        )

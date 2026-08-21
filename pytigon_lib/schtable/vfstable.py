@@ -251,11 +251,7 @@ class VfsTable(Table):
             ts = []
             for pos in s:
                 if pos:
-                    id = (
-                        self.col_names.index(pos[1:])
-                        if pos[0] == "-"
-                        else self.col_names.index(pos)
-                    )
+                    id = self.col_names.index(pos[1:]) if pos[0] == "-" else self.col_names.index(pos)
                     znak = -1 if pos[0] == "-" else 1
                     ts.append((id, znak))
 
@@ -301,16 +297,12 @@ class VfsTable(Table):
         thread_commands = ("COPY", "MOVE", "DELETE")
         if value[0] in thread_commands:
             parm = {"cmd": value[0]}
-            parm["files"] = (
-                [bdecode(v) for v in value[1][1]] if value[1][1] else [bdecode(value[1][0])]
-            )
+            parm["files"] = [bdecode(v) for v in value[1][1]] if value[1][1] else [bdecode(value[1][0])]
             if len(value[2]) > 1:
                 parm["dest"] = bdecode(value[2][1])
 
             publish_id = uuid.uuid4().hex
-            task_id = async_task(
-                "schcommander.tasks.vfs_action", task_publish_id=publish_id, param=parm
-            )
+            task_id = async_task("schcommander.tasks.vfs_action", task_publish_id=publish_id, param=parm)
             c = {"task_id": task_id, "process_id": f"vfs_action__{publish_id}"}
         elif value[0] == "MKDIR":
             path = bdecode(value[2][0])
@@ -337,11 +329,7 @@ class VfsTable(Table):
 def vfstable_view(request, folder, value=None):
     """Handle requests for the VFS table view."""
     if request.POST:
-        d = {
-            key: schjson.loads(val)
-            for key, val in request.POST.items()
-            if key != "csrfmiddlewaretoken"
-        }
+        d = {key: schjson.loads(val) for key, val in request.POST.items() if key != "csrfmiddlewaretoken"}
     else:
         d = {}
 

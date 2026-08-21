@@ -61,7 +61,6 @@ def get_environ(path: str | None = None) -> environ.Env:
             AUTOUSERNAME=(str, "auto"),
             AUTOPASSWORD=(str, "anawa"),
         )
-
     if path:
         env_paths = [os.path.join(path, ".env"), os.path.join(path, "env")]
         for env_path in env_paths:
@@ -70,5 +69,4 @@ def get_environ(path: str | None = None) -> environ.Env:
                     _ENV.read_env(env_path)
                 except Exception as e:
                     _logger.warning("Error reading environment file %s: %s", env_path, e)
-
     return _ENV

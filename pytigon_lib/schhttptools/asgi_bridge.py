@@ -33,9 +33,7 @@ SCOPE_TEMPLATE = {
 }
 
 
-def get_scope_and_content_http_get(
-    path: str, headers: list[tuple[str, str]]
-) -> tuple[dict[str, Any], str]:
+def get_scope_and_content_http_get(path: str, headers: list[tuple[str, str]]) -> tuple[dict[str, Any], str]:
     """Generate a scope dictionary and empty content for an HTTP GET request.
 
     Args:
@@ -57,9 +55,7 @@ def get_scope_and_content_http_get(
         key_bytes = key.encode("utf-8") if isinstance(key, str) else key
         key_bytes = key_bytes.lower()
         value_bytes = value.encode("utf-8") if isinstance(value, str) else value
-        scope["headers"] = [
-            (k, v) for k, v in scope["headers"] if k.lower() != key_bytes
-        ]
+        scope["headers"] = [(k, v) for k, v in scope["headers"] if k.lower() != key_bytes]
         scope["headers"].append((key_bytes, value_bytes))
 
     return scope, ""
@@ -161,9 +157,7 @@ async def get_or_post(
     return ret
 
 
-async def websocket(
-    application, path: str, headers: list[tuple[str, str]], input_queue, output
-) -> dict[str, Any]:
+async def websocket(application, path: str, headers: list[tuple[str, str]], input_queue, output) -> dict[str, Any]:
     """Handle a WebSocket connection through an ASGI application.
 
     Args:
@@ -198,11 +192,7 @@ async def websocket(
             connected = True
             return {"type": "websocket.connect"}
         item = await input_queue.get()
-        return (
-            {"type": "websocket.receive", "text": item}
-            if item
-            else {"type": "websocket.disconnect"}
-        )
+        return {"type": "websocket.receive", "text": item} if item else {"type": "websocket.disconnect"}
 
     await application(scope, receive, send)
     return ret
