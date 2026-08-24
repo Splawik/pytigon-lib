@@ -93,8 +93,8 @@ def get_main_paths(prj_name=None):
 
     prj_path = if_not_in_env("PRJ_PATH", "")
 
-    if prj_path:
-        pytigon_standard_prj_path = prj_path
+    # if prj_path:
+    #    pytigon_standard_prj_path = prj_path
 
     pytigon_path = None
     if pytigon_schserw:
