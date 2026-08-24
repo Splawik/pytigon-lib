@@ -225,14 +225,14 @@ def get_fun_from_db_field(
         return fun
 
     elif execute_mode == "exec_and_cache":
-        local_vars = _safe_exec(field)
+        local_vars = _safe_exec(field, extra_globals=globals())
         fun = local_vars.get(function_name)
         if fun is not None:
             add_to_cache(src_name, fun)
         return fun
 
     else:
-        local_vars = _safe_exec(field)
+        local_vars = _safe_exec(field, extra_globals=globals())
         return local_vars.get(function_name)
 
 
