@@ -228,8 +228,8 @@ def get_main_paths(prj_name=None):
         if not os.path.exists(os.path.join(ret["PRJ_PATH"], PRJ_NAME, "settings_app.py")):
             if os.path.exists(os.path.join(ret["PRJ_PATH_ALT"], PRJ_NAME, "settings_app.py")):
                 tmp = ret["PRJ_PATH"]
-                ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", ret["PRJ_PATH_ALT"])
-                ret["PRJ_PATH_ALT"] = if_not_in_env("PRJ_PATH_ALT", tmp)
+                ret["PRJ_PATH"] = ret["PRJ_PATH_ALT"]
+                ret["PRJ_PATH_ALT"] = tmp
             elif pytigon_path:
                 ret["PRJ_PATH"] = if_not_in_env("PRJ_PATH", os.path.abspath(os.path.join(pytigon_path, "..")))
 

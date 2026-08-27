@@ -33,6 +33,7 @@ def _is_safe_zip_member(member_name: str, target_path: str) -> bool:
     target_real = os.path.realpath(target_path)
     return os.path.commonpath([resolved, target_real]) == target_real
 
+
 # C source for the zigcc wrapper: forwards all arguments to 'ptig zig cc'
 ZIG_CC_C = """
 #include <string.h>
@@ -52,9 +53,9 @@ int main(int argi, char **argv)
 """
 
 NIM_DOWNLOAD_PATH = (
-    "https://nim-lang.org/download/nim-2.0.4_x64.zip"
+    "https://nim-lang.org/download/nim-2.2.10_x64.zip"
     if os.name == "nt"
-    else "https://nim-lang.org/download/nim-2.0.4-linux_x64.tar.xz"
+    else "https://nim-lang.org/download/nim-2.2.10-linux_x64.tar.xz"
 )
 
 
@@ -132,9 +133,7 @@ def install_nim(data_path: str) -> None:
         return
 
     # Compile the zigcc wrapper
-    zigcc_bin = os.path.join(
-        nim_path, "bin", "zigcc.exe" if os.name == "nt" else "zigcc"
-    )
+    zigcc_bin = os.path.join(nim_path, "bin", "zigcc.exe" if os.name == "nt" else "zigcc")
     zigcc_c = os.path.join(temp_dir, "zigcc.c")
     try:
         with open(zigcc_c, "w") as f:
@@ -143,9 +142,7 @@ def install_nim(data_path: str) -> None:
         _logger.error("Failed to write zigcc.c: %s", e)
         return
 
-    exit_code, output_tab, err_tab = run(
-        ["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c], env=os.environ
-    )
+    exit_code, output_tab, err_tab = run(["ptig", "zig", "cc", "-o", zigcc_bin, zigcc_c], env=os.environ)
     if err_tab:
         _logger.error("zigcc build output: %s", err_tab)
 
