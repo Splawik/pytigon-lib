@@ -313,19 +313,23 @@ def _create_list_view(parent_rows):
                         ret = ret.filter(parent=parent)
                     except ValueError:
                         pass
-            if self.search:
-                fields = [
-                    f
-                    for f in self.model._meta.fields
-                    if isinstance(f, django.db.models.CharField)
-                ]
-                queries = [
-                    Q(**{f.name + "__icontains": self.search}) for f in fields
-                ]
-                qs = Q()
-                for query in queries:
-                    qs = qs | query
-                ret = ret.filter(qs)
+
+            if hasattr(self.model, "search"):
+                ret = self.model.search(ret, self.search)
+            else: 
+                if self.search:
+                    fields = [
+                        f
+                        for f in self.model._meta.fields
+                        if isinstance(f, django.db.models.CharField)
+                    ]
+                    queries = [
+                        Q(**{f.name + "__icontains": self.search}) for f in fields
+                    ]
+                    qs = Q()
+                    for query in queries:
+                        qs = qs | query
+                    ret = ret.filter(qs)
 
             if hasattr(self.model, "sort"):
                 ret = self.model.sort(ret, self.sort, self.order)
