@@ -5,6 +5,7 @@ import logging
 import mimetypes
 import os
 import threading
+import json
 from collections import OrderedDict
 from contextlib import ExitStack
 from threading import Thread
@@ -124,8 +125,19 @@ class RetHttp:
 CLIENT = None
 
 
-def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False, ret=None, user_agent="Pytigon", redirect_count=0):
+def asgi_or_wsgi_get_or_post(
+    application,
+    url,
+    headers,
+    params=None,
+    post=False,
+    ret=None,
+    user_agent="Pytigon",
+    redirect_count=0,
+    json_data=False,
+):
     """Handle GET or POST request for Emscripten or WSGI."""
+
     if params is None:
         params = {}
     if ret is None:
@@ -135,13 +147,17 @@ def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False,
         CLIENT = Client(HTTP_USER_AGENT=("Emscripten" if platform_name() == "Emscripten" else user_agent))
     url2 = url.replace("http://127.0.0.2", "")
     if post:
-        params2 = {}
-        for key, value in params.items():
-            if isinstance(value, bytes):
-                params2[key] = value.decode("utf-8")
-            else:
-                params2[key] = value
-        response = CLIENT.post(url2, params2)
+        if json_data:
+            response = CLIENT.post(url2, json.dumps(params), content_type="application/json")
+        else:
+            params2 = {}
+            for key, value in params.items():
+                if isinstance(value, bytes):
+                    params2[key] = value.decode("utf-8")
+                else:
+                    params2[key] = value
+            json_data = False
+            response = CLIENT.post(url2, params2)
     else:
         response = CLIENT.get(url2)
 
@@ -162,6 +178,7 @@ def asgi_or_wsgi_get_or_post(application, url, headers, params=None, post=False,
             ret,
             user_agent,
             redirect_count + 1,
+            json_data,
         )
     ret.append(result)
 
@@ -192,10 +209,12 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                 ASGI_APPLICATION,
                 url.replace("http://127.0.0.2", ""),
                 headers,
-                argv.get("data", {}),
+                argv.get("json", {}) if "json" in argv else argv.get("data", {}),
                 post,
                 ret,
                 user_agent,
+                0,
+                True if "json" in argv else False,
             )
         else:
             t = Thread(
@@ -204,10 +223,12 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                     ASGI_APPLICATION,
                     url.replace("http://127.0.0.2", ""),
                     headers,
-                    argv.get("data", {}),
+                    argv.get("json", {}) if "json" in argv else argv.get("data", {}),
                     post,
                     ret,
                     user_agent,
+                    0,
+                    True if "json" in argv else False,
                 ),
                 daemon=True,
             )
@@ -264,11 +285,7 @@ class HttpResponse:
         global BLOCK, HTTP_ERROR_FUNC
         # Use the per-instance cookie jar from the HttpClient so that
         # concurrent clients don't share session cookies.
-        cookies = (
-            http_client.cookies_embeded
-            if self.url.startswith("http://127.0.0.2/")
-            else http_client.cookies
-        )
+        cookies = http_client.cookies_embeded if self.url.startswith("http://127.0.0.2/") else http_client.cookies
         self.content = self.response.content
         self.ret_code = self.response.status_code
         if self.response.status_code != 200:
@@ -428,8 +445,8 @@ class HttpClient:
                 ext = "." + path.split(".")[-1]
                 mt = mimetypes.types_map.get(ext, "text/javascript")
                 if path.startswith(settings.STATIC_URL):
-                    path = finders.find(path[len(settings.STATIC_URL) :])
-                    for_vfs = False
+                    path = "static/" + path[len(settings.STATIC_URL) :]
+                    for_vfs = True
                 with open_file(path, "rb", for_vfs=for_vfs) as f:
                     content = f.read()
                     ret_http = RetHttp(
@@ -463,6 +480,7 @@ class HttpClient:
                 return HttpResponse(adr, content=f.read(), ret_content_type=mt)
         if parm is None:
             parm = {}
+
         headers = {"User-Agent": user_agent, "Referer": adr} if user_agent else {"Referer": adr}
         argv = {"headers": headers, "follow_redirects": True, "cookies": cookies}
         if credentials:

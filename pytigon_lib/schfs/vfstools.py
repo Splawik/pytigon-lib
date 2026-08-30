@@ -105,7 +105,9 @@ def open_and_create_dir(filename: str, mode: str, for_vfs: bool = False) -> Any:
                 os.makedirs(dirname)
         return open_file(filename, mode, for_vfs)
     except Exception as e:
-        raise OSError(f"Failed to create directory or open file '{filename}': {e}") from e
+        raise OSError(
+            f"Failed to create directory or open file '{filename}': {e}"
+        ) from e
 
 
 def get_unique_filename(base_name: str | None = None, ext: str | None = None) -> str:
@@ -186,7 +188,12 @@ def _clear_content(data: bytes) -> bytes:
     Useful for comparing text-based file contents where formatting
     differences (spaces, newlines, tabs) should be ignored.
     """
-    return data.replace(b" ", b"").replace(b"\n", b"").replace(b"\t", b"").replace(b"\r", b"")
+    return (
+        data.replace(b" ", b"")
+        .replace(b"\n", b"")
+        .replace(b"\t", b"")
+        .replace(b"\r", b"")
+    )
 
 
 def _cmp_txt_str_content(data1: bytes, data2: bytes) -> bool:
@@ -253,7 +260,9 @@ def extractall(
         if zipinfo_name.endswith(("/", "\\")):
             os.makedirs(os.path.join(path, zipinfo_name), exist_ok=True)
         else:
-            if exclude and any(re.match(pattern, zipinfo_name, re.I) for pattern in exclude):
+            if exclude and any(
+                re.match(pattern, zipinfo_name, re.I) for pattern in exclude
+            ):
                 continue
 
             out_name = os.path.join(path, zipinfo_name)
@@ -261,7 +270,9 @@ def extractall(
                 logger.warning("Skipping unsafe zip entry: %s", zipinfo_name)
                 continue
 
-            if backup_zip is not None and (not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts):
+            if backup_zip is not None and (
+                not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts
+            ):
                 if os.path.exists(out_name):
                     new_data = zip_file.read(zipinfo_name, pwd)
                     with open(out_name, "rb") as f:
@@ -294,7 +305,9 @@ class ZipWriter:
         self.filename = filename
         self.basepath = basepath.rstrip("/\\")
         self.base_len = len(self.basepath)
-        self.zip_file = zipfile.ZipFile(filename, "w", zipfile.ZIP_BZIP2, compresslevel=9)
+        self.zip_file = zipfile.ZipFile(
+            filename, "w", zipfile.ZIP_BZIP2, compresslevel=9
+        )
         self.exclude = exclude or []
         self.sha256_tab: list[tuple[str, str, int]] | None = [] if sha256 else None
 
@@ -370,7 +383,9 @@ class ZipWriter:
         else:
             self.add_folder_to_zip(file, base_path_in_zip=base_path_in_zip)
 
-    def add_folder_to_zip(self, folder: str, base_path_in_zip: str | None = None) -> None:
+    def add_folder_to_zip(
+        self, folder: str, base_path_in_zip: str | None = None
+    ) -> None:
         """Recursively add *folder* contents to the archive."""
         try:
             entries = os.listdir(folder)
@@ -482,14 +497,20 @@ def convert_file(
                 "rt",
                 for_vfs_input,
             )
-            input_format = input_format or filename_or_stream_in.rsplit(".", 1)[-1].lower()
+            input_format = (
+                input_format or filename_or_stream_in.rsplit(".", 1)[-1].lower()
+            )
         else:
             fin = filename_or_stream_in
 
         # ---- open output ----
         if isinstance(filename_or_stream_out, str):
-            fout: Any = open_file(automount(filename_or_stream_out), "wb", for_vfs_output)
-            output_format = output_format or filename_or_stream_out.rsplit(".", 1)[-1].lower()
+            fout: Any = open_file(
+                automount(filename_or_stream_out), "wb", for_vfs_output
+            )
+            output_format = (
+                output_format or filename_or_stream_out.rsplit(".", 1)[-1].lower()
+            )
         else:
             fout = filename_or_stream_out
 
@@ -528,7 +549,9 @@ def convert_file(
 
             dc = PdfDc(
                 output_stream=fout,
-                notify_callback=(notify_callback_pdf if output_format == "xpdf" else None),
+                notify_callback=(
+                    notify_callback_pdf if output_format == "xpdf" else None
+                ),
             )
             dc.set_paging(True)
 

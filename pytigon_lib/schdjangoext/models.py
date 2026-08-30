@@ -107,9 +107,7 @@ class JSONModel(models.Model):
                 def __init__(self, *args: Any, **kwargs: Any):
                     super().__init__(*args, **kwargs)
                     for key, value in data.items():
-                        self.fields[f"json_{key}"] = forms.CharField(
-                            label=key, initial=value
-                        )
+                        self.fields[f"json_{key}"] = forms.CharField(label=key, initial=value)
 
             return view.get_form(form_class2)
         return view.get_form(form_class)
@@ -118,9 +116,7 @@ class JSONModel(models.Model):
         """Return the derived object."""
         return self
 
-    def set_field_value(
-        self, field_name: str, attr_name: str, value: Any
-    ) -> Any | None:
+    def set_field_value(self, field_name: str, attr_name: str, value: Any) -> Any | None:
         """Set a field's attribute value."""
         for f in self._meta.fields:
             if f.name == field_name:
@@ -214,9 +210,7 @@ class AssociatedModel(models.Model):
                 return parent.get_associated_obj()
         return None
 
-    def init_new(
-        self, request: Any, view: Any, value: str | None = None
-    ) -> dict[str, Any]:
+    def init_new(self, request: Any, view: Any, value: str | None = None) -> dict[str, Any]:
         """Initialize a new associated model instance."""
         if value:
             x = value.split("__")
@@ -236,9 +230,7 @@ class AssociatedModel(models.Model):
         }
 
     @classmethod
-    def filter(
-        cls, value: str | None, view: Any = None, request: Any = None
-    ) -> models.QuerySet:
+    def filter(cls, value: str | None, view: Any = None, request: Any = None) -> models.QuerySet:
         """Filter the associated model instances."""
         if value:
             x = value.split("__")
@@ -249,9 +241,7 @@ class AssociatedModel(models.Model):
                 app, tbl, id = x
                 grp = "default"
             if app:
-                return cls.objects.filter(
-                    application=app, table=tbl, parent_id=id, group=grp
-                )
+                return cls.objects.filter(application=app, table=tbl, parent_id=id, group=grp)
         return cls.objects.all()
 
 
@@ -307,9 +297,7 @@ def standard_table_action(
 
     if action == "paste":
         data2 = data.get("data", [])
-        allowed_fields = {
-            f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")
-        }
+        allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
         for obj in data2:
             obj2 = cls()
             parent_pk = list_view.kwargs.get("parent_pk")
@@ -364,8 +352,7 @@ def extend_class(main: type[Any], base: type[Any]) -> None:
     works correctly.
     """
     if not any(
-        cmd in sys.argv
-        for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb"]
+        cmd in sys.argv for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb"]
     ):
         if base not in main.__bases__:
             main.__bases__ = (base,) + main.__bases__
@@ -374,8 +361,7 @@ def extend_class(main: type[Any], base: type[Any]) -> None:
 # During migration commands, OverwritableCallable must be a simple no-op
 # wrapper to avoid interfering with Django's migration autodetector.
 if any(
-    cmd in sys.argv
-    for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb", "migrate"]
+    cmd in sys.argv for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb", "migrate"]
 ):
 
     def OverwritableCallable(func: Any) -> Any:

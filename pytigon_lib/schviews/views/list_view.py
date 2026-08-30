@@ -52,19 +52,13 @@ def _create_list_view(parent_rows):
         def _context_for_tree(self):
             try:
                 parent_pk = int(self.kwargs["filter"])
-                parent = (
-                    self.model.objects.get(pk=parent_pk) if parent_pk > 0 else None
-                )
+                parent = self.model.objects.get(pk=parent_pk) if parent_pk > 0 else None
             except (ValueError, self.model.DoesNotExist):
                 parent_pk = None
                 parent = None
             try:
                 base_parent_pk = int(self.kwargs["base_filter"])
-                base_parent = (
-                    self.model.objects.get(pk=base_parent_pk)
-                    if base_parent_pk > 0
-                    else None
-                )
+                base_parent = self.model.objects.get(pk=base_parent_pk) if base_parent_pk > 0 else None
             except (ValueError, KeyError, self.model.DoesNotExist):
                 base_parent_pk = None
                 base_parent = None
@@ -109,9 +103,7 @@ def _create_list_view(parent_rows):
                             parent_id = int(self.kwargs["base_filter"])
                             parent = self.model.objects.get(id=parent_id)
                         elif self.kwargs.get("parent_pk"):
-                            parent = self.model.objects.get(
-                                id=int(self.kwargs["parent_pk"])
-                            )
+                            parent = self.model.objects.get(id=int(self.kwargs["parent_pk"]))
                 except self.model.DoesNotExist:
                     parent = None
 
@@ -127,9 +119,7 @@ def _create_list_view(parent_rows):
                             if isinstance(request.body, str):
                                 data = json_loads(request.body.strip())
                             else:
-                                data = json_loads(
-                                    request.body.decode("utf-8").strip()
-                                )
+                                data = json_loads(request.body.decode("utf-8").strip())
                         except ValueError:
                             raise Http404("Invalid data format")
 
@@ -148,16 +138,12 @@ def _create_list_view(parent_rows):
                 if c["parent_pk"] is not None and c["parent_pk"] < 0:
                     parent_old = c["parent_pk"]
                     try:
-                        parent = self.model.objects.get(
-                            id=-1 * parent_old
-                        ).parent.id
+                        parent = self.model.objects.get(id=-1 * parent_old).parent.id
                     except (self.model.DoesNotExist, AttributeError):
                         parent = 0
 
                     path2 = ("/" + str(parent) + "/").join(
-                        request.get_full_path().rsplit(
-                            "/" + str(parent_old) + "/", 1
-                        )
+                        request.get_full_path().rsplit("/" + str(parent_old) + "/", 1)
                     )
                     return HttpResponseRedirect(path2)
 
@@ -174,9 +160,7 @@ def _create_list_view(parent_rows):
             form_name = None
             if "target" in self.kwargs and "__" in self.kwargs["target"]:
                 template_name = self.kwargs["target"].split("__")[-1]
-                form_name = (
-                    f"_FilterForm{self.model._meta.object_name}_{template_name}"
-                )
+                form_name = f"_FilterForm{self.model._meta.object_name}_{template_name}"
                 if not hasattr(views_module, form_name):
                     form_name = None
             if not form_name:
@@ -246,18 +230,14 @@ def _create_list_view(parent_rows):
             if "tree" in self.kwargs["vtype"]:
                 filter = self.kwargs["filter"]
                 c = self._context_for_tree()
-                if hasattr(self.model, "filter") and not (
-                    isinstance(filter, str) and filter.isdigit()
-                ):
+                if hasattr(self.model, "filter") and not (isinstance(filter, str) and filter.isdigit()):
                     ret = self.model.filter(filter, self, self.request)
                 else:
                     if self.queryset:
                         ret = self.queryset
                     else:
                         if is_rules_active():
-                            ret = filter_queryset_by_rules(
-                                self.request.user, "view", self.model
-                            )
+                            ret = filter_queryset_by_rules(self.request.user, "view", self.model)
                         else:
                             ret = self.model.objects.all()
                     if "pk" not in self.request.GET:
@@ -270,11 +250,7 @@ def _create_list_view(parent_rows):
                             ret = ret.filter(parent=None)
 
                 if "pk" not in self.request.GET:
-                    if (
-                        (not filter or filter == "-")
-                        and c["base_parent_pk"]
-                        and c["base_parent_pk"] > 0
-                    ):
+                    if (not filter or filter == "-") and c["base_parent_pk"] and c["base_parent_pk"] > 0:
                         ret = ret.filter(parent=c["base_parent_pk"])
                 ret = filter_by_permissions(self, self.model, ret, self.request)
             else:
@@ -294,16 +270,12 @@ def _create_list_view(parent_rows):
                                 ret = self.model.filter(filter, self, self.request)
                             else:
                                 if is_rules_active():
-                                    ret = filter_queryset_by_rules(
-                                        self.request.user, "view", self.model
-                                    )
+                                    ret = filter_queryset_by_rules(self.request.user, "view", self.model)
                                 else:
                                     ret = self.model.objects.all()
                         else:
                             if is_rules_active():
-                                ret = filter_queryset_by_rules(
-                                    self.request.user, "view", self.model
-                                )
+                                ret = filter_queryset_by_rules(self.request.user, "view", self.model)
                             else:
                                 ret = self.model.objects.all()
                 ret = filter_by_permissions(self, self.model, ret, self.request)
@@ -316,16 +288,10 @@ def _create_list_view(parent_rows):
 
             if hasattr(self.model, "search"):
                 ret = self.model.search(ret, self.search)
-            else: 
+            else:
                 if self.search:
-                    fields = [
-                        f
-                        for f in self.model._meta.fields
-                        if isinstance(f, django.db.models.CharField)
-                    ]
-                    queries = [
-                        Q(**{f.name + "__icontains": self.search}) for f in fields
-                    ]
+                    fields = [f for f in self.model._meta.fields if isinstance(f, django.db.models.CharField)]
+                    queries = [Q(**{f.name + "__icontains": self.search}) for f in fields]
                     qs = Q()
                     for query in queries:
                         qs = qs | query
@@ -341,14 +307,22 @@ def _create_list_view(parent_rows):
                         ret = ret.order_by("-id")
 
             if "pk" in self.request.GET:
-                ret = ret.filter(pk=self.request.GET["pk"])
+                pk_str = self.request.GET["pk"]
+                if "," in pk_str:
+                    x = pk_str.split(",")
+                    pk_list = (int(item) for item in x)
+                    ret = ret.filter(pk__in=pk_list)
+                else:
+                    ret = ret.filter(pk=int(pk_str))
                 return ret
+
             if self.form and not self.rel_field:
                 if self.form_valid:
                     return self.form.process(self.request, ret)
                 if hasattr(self.form, "process_empty_or_invalid"):
                     return self.form.process_empty_or_invalid(self.request, ret)
                 return ret
+
             return ret
 
     return url, ListView
