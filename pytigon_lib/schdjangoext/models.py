@@ -2,6 +2,7 @@
 
 import sys
 from typing import Any
+import json
 
 from django import forms
 from django.conf import settings
@@ -186,9 +187,7 @@ class AssociatedModel(models.Model):
         cached = ASSOCIATED_MODEL_CACHE.get(key, _SENTINEL)
         if cached is not _SENTINEL:
             return cached
-        model_obj = ContentType.objects.filter(
-            app_label=self.application.lower(), model=self.table.lower()
-        ).first()
+        model_obj = ContentType.objects.filter(app_label=self.application.lower(), model=self.table.lower()).first()
         if model_obj:
             model_class = model_obj.model_class()
             if model_class is not None:
@@ -282,7 +281,7 @@ def standard_table_action(
     if not action or action not in operations:
         return None
 
-    if action == "copy":
+    if action == "copy2":
         pks_str = request.GET.get("pks", "")
         if pks_str:
             try:
@@ -290,12 +289,45 @@ def standard_table_action(
             except (ValueError, TypeError):
                 pk_list = []
             if pk_list:
-                return serializers.serialize(
-                    "json", list_view.get_queryset().filter(pk__in=pk_list)
-                )
+                return serializers.serialize("json", list_view.get_queryset().filter(pk__in=pk_list))
         return serializers.serialize("json", list_view.get_queryset())
 
-    if action == "paste":
+    if action == "copy":
+        pks_str = request.GET.get("pks", "")
+        base_queryset = list_view.get_queryset()  # QuerySet dla SChTable
+        model_class = base_queryset.model  # SChTable
+
+        # 1. Filtrujemy główne rekordy (SChTable) na podstawie przekazanych PK
+        if pks_str:
+            try:
+                pk_list = [int(pos) for pos in pks_str.split(",") if pos]
+            except (ValueError, TypeError):
+                pk_list = []
+            if pk_list:
+                main_queryset = base_queryset.filter(pk__in=pk_list)
+            else:
+                main_queryset = base_queryset
+        else:
+            main_queryset = base_queryset
+
+        # 2. Prefetchujemy powiązane SChField – jedno dodatkowe zapytanie
+        #    Nazwa relacji to domyślnie 'schfield_set' (nazwa_modelu_set)
+        main_queryset = main_queryset.prefetch_related("schfield_set")
+
+        # 3. Serializujemy główne obiekty (SChTable) do formatu Python
+        main_data = serializers.serialize("python", main_queryset)
+
+        # 4. Dla każdego głównego obiektu dodajemy pole 'schfield_set' z danymi powiązanych pól
+        for obj, data in zip(main_queryset, main_data):
+            # Pobieramy powiązane SChField dla tego obiektu (już prefetched)
+            related_fields = obj.schfield_set.all()  # lub obj.schfield_set (jeśli użyto prefetch)
+            # Serializujemy je i zapisujemy w polu 'fields' pod kluczem 'schfield_set'
+            data["fields"]["schfield_set"] = serializers.serialize("python", related_fields)
+
+        # 5. Zwracamy gotowy JSON
+        return json.dumps(main_data)
+
+    if action == "paste2":
         data2 = data.get("data", [])
         allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
         for obj in data2:
@@ -312,6 +344,74 @@ def standard_table_action(
                     setattr(obj2, key, value)
             obj2.save()
         return {"success": 1}
+
+    if action == "paste":
+        data2 = data.get("data", [])
+        cls = list_view.get_queryset().model  # SChTable
+
+        # Dozwolone pola głównego modelu (bez id/pk)
+        allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
+
+        # Znajdź model powiązany przez relację 'schfield_set'
+        related_model = None
+        for rel in cls._meta.related_objects:
+            if rel.get_accessor_name() == "schfield_set":
+                related_model = rel.related_model
+                break
+        if related_model is None:
+            raise ValueError("Nie znaleziono relacji 'schfield_set' w modelu SChTable")
+
+        allowed_fields_related = {f.name for f in related_model._meta.get_fields() if f.name not in ("id", "pk")}
+
+        created_count = 0
+
+        for obj_data in data2:
+            # 1. Tworzymy główny obiekt SChTable
+            main_obj = cls()
+            main_fields = obj_data.get("fields", {})
+
+            for key, value in main_fields.items():
+                if key in ("id", "pk"):
+                    continue
+                if key not in allowed_fields:
+                    continue
+
+                field = cls._meta.get_field(key)
+                # Jeśli to ForeignKey, przypisz przez pole _id
+                if field.is_relation and field.many_to_one:
+                    setattr(main_obj, f"{key}_id", value)
+                else:
+                    setattr(main_obj, key, value)
+
+            main_obj.save()
+            created_count += 1
+
+            # 2. Tworzymy powiązane SChField (zagnieżdżone w 'schfield_set')
+            related_objects_data = main_fields.get("schfield_set", [])
+            for rel_obj_data in related_objects_data:
+                rel_obj = related_model()
+                rel_fields = rel_obj_data.get("fields", {})
+
+                for key, value in rel_fields.items():
+                    if key in ("id", "pk"):
+                        continue
+                    if key not in allowed_fields_related:
+                        continue
+
+                    # Jeśli to pole 'parent' – ustawiamy na nowo utworzonego rodzica
+                    if key == "parent":
+                        setattr(rel_obj, "parent_id", main_obj.pk)
+                    else:
+                        # Inne ForeignKey obsługujemy przez _id
+                        field = related_model._meta.get_field(key)
+                        if field.is_relation and field.many_to_one:
+                            setattr(rel_obj, f"{key}_id", value)
+                        else:
+                            setattr(rel_obj, key, value)
+
+                rel_obj.save()
+
+        return {"success": 1, "created": created_count}
 
     if action == "delete":
         pks_str = request.GET.get("pks", "")
@@ -351,18 +451,14 @@ def extend_class(main: type[Any], base: type[Any]) -> None:
     the class hierarchy is left unchanged to ensure migration autodetection
     works correctly.
     """
-    if not any(
-        cmd in sys.argv for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb"]
-    ):
+    if not any(cmd in sys.argv for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb"]):
         if base not in main.__bases__:
             main.__bases__ = (base,) + main.__bases__
 
 
 # During migration commands, OverwritableCallable must be a simple no-op
 # wrapper to avoid interfering with Django's migration autodetector.
-if any(
-    cmd in sys.argv for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb", "migrate"]
-):
+if any(cmd in sys.argv for cmd in ["makemigrations", "makeallmigrations", "exporttolocaldb", "migrate"]):
 
     def OverwritableCallable(func: Any) -> Any:
         """Dummy decorator for migration commands."""
