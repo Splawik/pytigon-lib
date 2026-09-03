@@ -257,6 +257,7 @@ def standard_table_action(
     request: Any,
     data: dict[str, Any],
     operations: dict[str, Any],
+    subtree: bool = False,
 ) -> dict[str, Any] | None:
     """Handle standard table actions: copy, paste, and delete.
 
@@ -281,7 +282,7 @@ def standard_table_action(
     if not action or action not in operations:
         return None
 
-    if action == "copy2":
+    if action == "copy" and not subtree:
         pks_str = request.GET.get("pks", "")
         if pks_str:
             try:
@@ -292,7 +293,7 @@ def standard_table_action(
                 return serializers.serialize("json", list_view.get_queryset().filter(pk__in=pk_list))
         return serializers.serialize("json", list_view.get_queryset())
 
-    if action == "copy":
+    if action == "copy" and subtree:
         pks_str = request.GET.get("pks", "")
         base_queryset = list_view.get_queryset()  # QuerySet dla SChTable
         model_class = base_queryset.model  # SChTable
@@ -310,24 +311,22 @@ def standard_table_action(
         else:
             main_queryset = base_queryset
 
-        # 2. Prefetchujemy powiązane SChField – jedno dodatkowe zapytanie
-        #    Nazwa relacji to domyślnie 'schfield_set' (nazwa_modelu_set)
-        main_queryset = main_queryset.prefetch_related("schfield_set")
+        for rel_obj in model_class._meta.related_objects:
+            accessor_name = rel_obj.get_accessor_name()
 
-        # 3. Serializujemy główne obiekty (SChTable) do formatu Python
+            main_queryset = main_queryset.prefetch_related(accessor_name)
+
         main_data = serializers.serialize("python", main_queryset)
 
-        # 4. Dla każdego głównego obiektu dodajemy pole 'schfield_set' z danymi powiązanych pól
-        for obj, data in zip(main_queryset, main_data):
-            # Pobieramy powiązane SChField dla tego obiektu (już prefetched)
-            related_fields = obj.schfield_set.all()  # lub obj.schfield_set (jeśli użyto prefetch)
-            # Serializujemy je i zapisujemy w polu 'fields' pod kluczem 'schfield_set'
-            data["fields"]["schfield_set"] = serializers.serialize("python", related_fields)
+        for rel_obj in model_class._meta.related_objects:
+            accessor_name = rel_obj.get_accessor_name()
+            for obj, data in zip(main_queryset, main_data):
+                related_fields = getattr(obj, accessor_name).all()
+                data["fields"][accessor_name] = serializers.serialize("python", related_fields)
 
-        # 5. Zwracamy gotowy JSON
         return json.dumps(main_data)
 
-    if action == "paste2":
+    if action == "paste" and not subtree:
         data2 = data.get("data", [])
         allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
         for obj in data2:
@@ -345,28 +344,26 @@ def standard_table_action(
             obj2.save()
         return {"success": 1}
 
-    if action == "paste":
+    if action == "paste" and subtree:
         data2 = data.get("data", [])
         cls = list_view.get_queryset().model  # SChTable
 
         # Dozwolone pola głównego modelu (bez id/pk)
         allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
 
-        # Znajdź model powiązany przez relację 'schfield_set'
-        related_model = None
-        for rel in cls._meta.related_objects:
-            if rel.get_accessor_name() == "schfield_set":
-                related_model = rel.related_model
-                break
-        if related_model is None:
-            raise ValueError("Nie znaleziono relacji 'schfield_set' w modelu SChTable")
+        # related_model = None
+        # for rel in cls._meta.related_objects:
+        #    if rel.get_accessor_name() == "schfield_set":
+        #        related_model = rel.related_model
+        #        break
+        # if related_model is None:
+        #    raise ValueError("Nie znaleziono relacji 'schfield_set' w modelu SChTable")
 
-        allowed_fields_related = {f.name for f in related_model._meta.get_fields() if f.name not in ("id", "pk")}
+        # allowed_fields_related = {f.name for f in related_model._meta.get_fields() if f.name not in ("id", "pk")}
 
         created_count = 0
 
         for obj_data in data2:
-            # 1. Tworzymy główny obiekt SChTable
             main_obj = cls()
             main_fields = obj_data.get("fields", {})
 
@@ -377,7 +374,6 @@ def standard_table_action(
                     continue
 
                 field = cls._meta.get_field(key)
-                # Jeśli to ForeignKey, przypisz przez pole _id
                 if field.is_relation and field.many_to_one:
                     setattr(main_obj, f"{key}_id", value)
                 else:
@@ -386,30 +382,26 @@ def standard_table_action(
             main_obj.save()
             created_count += 1
 
-            # 2. Tworzymy powiązane SChField (zagnieżdżone w 'schfield_set')
-            related_objects_data = main_fields.get("schfield_set", [])
-            for rel_obj_data in related_objects_data:
-                rel_obj = related_model()
-                rel_fields = rel_obj_data.get("fields", {})
+            for rel_obj in cls._meta.related_objects:
+                accessor_name = rel_obj.get_accessor_name()
+                related_model = rel_obj.related_model
+                related_objects_data = main_fields.get(accessor_name, [])
+                for rel_obj_data in related_objects_data:
+                    rel_obj = related_model()
+                    rel_fields = rel_obj_data.get("fields", {})
 
-                for key, value in rel_fields.items():
-                    if key in ("id", "pk"):
-                        continue
-                    if key not in allowed_fields_related:
-                        continue
-
-                    # Jeśli to pole 'parent' – ustawiamy na nowo utworzonego rodzica
-                    if key == "parent":
-                        setattr(rel_obj, "parent_id", main_obj.pk)
-                    else:
-                        # Inne ForeignKey obsługujemy przez _id
-                        field = related_model._meta.get_field(key)
-                        if field.is_relation and field.many_to_one:
-                            setattr(rel_obj, f"{key}_id", value)
+                    for key, value in rel_fields.items():
+                        if key in ("id", "pk"):
+                            continue
+                        if key == "parent":
+                            setattr(rel_obj, "parent_id", main_obj.pk)
                         else:
-                            setattr(rel_obj, key, value)
-
-                rel_obj.save()
+                            field = related_model._meta.get_field(key)
+                            if field.is_relation and field.many_to_one:
+                                setattr(rel_obj, f"{key}_id", value)
+                            else:
+                                setattr(rel_obj, key, value)
+                    rel_obj.save()
 
         return {"success": 1, "created": created_count}
 

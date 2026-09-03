@@ -252,7 +252,10 @@ def duplicate_row(request, app, tab, pk, field=None):
 
     obj.id = None
     obj.save()
-    return HttpResponse("YES")
+    return HttpResponse(
+        '<head><meta name="TARGET" content="refresh_page" /></head><body>YES</body>'
+    )
+    # return HttpResponse("YES")
 
 
 class LocalizationTemplateResponse(TemplateResponse):
