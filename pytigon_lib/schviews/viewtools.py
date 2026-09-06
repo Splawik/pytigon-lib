@@ -176,9 +176,7 @@ def change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=Non
     if field:
         field_value = getattr(obj, field)
         if field_value is None:
-            LOGGER.warning(
-                "change_pos: field '%s' is None for object pk=%s.", field, pk
-            )
+            LOGGER.warning("change_pos: field '%s' is None for object pk=%s.", field, pk)
             return HttpResponse("NO")
         query = model.objects.filter(**{field: field_value})
     else:
@@ -217,9 +215,7 @@ def change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=Non
     obj.save()
     obj2.save()
 
-    return HttpResponse(
-        '<head><meta name="TARGET" content="refresh_page" /></head><body>YES</body>'
-    )
+    return HttpResponse('<head><meta name="TARGET" content="refresh_page" /></head><body>YES</body>')
 
 
 def duplicate_row(request, app, tab, pk, field=None):
@@ -252,9 +248,7 @@ def duplicate_row(request, app, tab, pk, field=None):
 
     obj.id = None
     obj.save()
-    return HttpResponse(
-        '<head><meta name="TARGET" content="refresh_page" /></head><body>YES</body>'
-    )
+    return HttpResponse('<head><meta name="TARGET" content="refresh_page" /></head><body>YES</body>')
     # return HttpResponse("YES")
 
 
@@ -414,15 +408,11 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
 
         # -- OpenDocument (ODS / ODT / ODP) --------------------------------
         if doc_type in _ODF_TYPES:
-            return _make_extension_template_list(
-                context, template, doc_type, "schsys/table." + doc_type
-            )
+            return _make_extension_template_list(context, template, doc_type, "schsys/table." + doc_type)
 
         # -- Office Open XML (XLSX / DOCX / PPTX) -------------------------
         if doc_type in _OOXML_TYPES:
-            return _make_extension_template_list(
-                context, template, doc_type, "schsys/table." + doc_type
-            )
+            return _make_extension_template_list(context, template, doc_type, "schsys/table." + doc_type)
 
         # -- HTML or unknown -- return the original template unchanged -----
         return template
@@ -534,9 +524,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
 
     def _render_ooxml(self):
         """Render the template as an Office Open XML (XLSX/DOCX/PPTX) file."""
-        self["Content-Type"] = (
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        self["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         context = self.resolve_context(self.context_data)
         file_out, file_in = render_ooxml(self.template_name, Context(context))
         if file_out:
@@ -561,17 +549,12 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         content = "" + t.render(context)
 
         if doc_type == "hdoc":
-            self["Content-Type"] = (
-                "application/vnd.openxmlformats-officedocument."
-                "wordprocessingml.document"
-            )
+            self["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             from pytigon_lib.schhtml.docxdc import DocxDc as Dc
 
             file_name = os.path.basename(self.template_name[0]).replace("html", "docx")
         else:
-            self["Content-Type"] = (
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            self["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             from pytigon_lib.schhtml.xlsxdc import XlsxDc as Dc
 
             file_name = os.path.basename(self.template_name[0]).replace("html", "xlsx")
@@ -965,9 +948,7 @@ def dict_to_txt(template_name):
         def wrapper(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             ctx = RequestContext(request, v)
-            return render_to_response_ext(
-                request, template_name, ctx.flatten(), doc_type="txt"
-            )
+            return render_to_response_ext(request, template_name, ctx.flatten(), doc_type="txt")
 
         return wrapper
 
@@ -989,9 +970,7 @@ def dict_to_hdoc(template_name):
         def wrapper(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             ctx = RequestContext(request, v)
-            return render_to_response_ext(
-                request, template_name, ctx.flatten(), doc_type="hdoc"
-            )
+            return render_to_response_ext(request, template_name, ctx.flatten(), doc_type="hdoc")
 
         return wrapper
 
@@ -1013,9 +992,7 @@ def dict_to_hxls(template_name):
         def wrapper(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             ctx = RequestContext(request, v)
-            return render_to_response_ext(
-                request, template_name, ctx.flatten(), doc_type="hxls"
-            )
+            return render_to_response_ext(request, template_name, ctx.flatten(), doc_type="hxls")
 
         return wrapper
 
@@ -1037,9 +1014,7 @@ def dict_to_pdf(template_name):
         def wrapper(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             ctx = RequestContext(request, v)
-            return render_to_response_ext(
-                request, template_name, ctx.flatten(), doc_type="pdf"
-            )
+            return render_to_response_ext(request, template_name, ctx.flatten(), doc_type="pdf")
 
         return wrapper
 
@@ -1061,9 +1036,7 @@ def dict_to_spdf(template_name):
         def wrapper(request, *args, **kwargs):
             v = func(request, *args, **kwargs)
             ctx = RequestContext(request, v)
-            return render_to_response_ext(
-                request, template_name, ctx.flatten(), doc_type="spdf"
-            )
+            return render_to_response_ext(request, template_name, ctx.flatten(), doc_type="spdf")
 
         return wrapper
 
