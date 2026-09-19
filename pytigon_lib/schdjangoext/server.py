@@ -1,7 +1,8 @@
 """Django-channels-based server management.
 
 Provides utilities for starting and stopping a Django-channels
-server (via Daphne) or a WSGI server (via Waitress) in a subprocess.
+server (via Daphne/Granian) or a WSGI server (via Granian/Daphne)
+in a subprocess.
 """
 
 import datetime
@@ -38,15 +39,9 @@ def log_action(protocol, action, details):
                 f"[{details.get('time_taken', 0):.2f}, {details.get('client', '?')}]\n"
             )
         elif protocol == "websocket" and action == "connected":
-            msg += (
-                f"WebSocket CONNECT {details.get('path', '?')} "
-                f"[{details.get('client', '?')}]\n"
-            )
+            msg += f"WebSocket CONNECT {details.get('path', '?')} [{details.get('client', '?')}]\n"
         elif protocol == "websocket" and action == "disconnected":
-            msg += (
-                f"WebSocket DISCONNECT {details.get('path', '?')} "
-                f"[{details.get('client', '?')}]\n"
-            )
+            msg += f"WebSocket DISCONNECT {details.get('path', '?')} [{details.get('client', '?')}]\n"
     except Exception:
         msg += f"Unrecognized: protocol={protocol} action={action} details={details}\n"
 
@@ -60,30 +55,71 @@ def _run(addr, port, prod, params=None):
         addr: Bind address.
         port: TCP port.
         prod: If True, use production server profile.
-        params: Optional dict; may contain ``"wsgi"`` to use Waitress
-            instead of Daphne.
+        params: Optional dict; may contain ``"wsgi"`` to use Granian
+            (WSGI interface) instead of Daphne (ASGI interface).
     """
     try:
         if params and "wsgi" in params:
-            from waitress.runner import run
+            use_granian = True
+            try:
+                from granian import Granian
+            except ImportError:
+                use_granian = False
+            if use_granian:
+                django.setup()
+                Granian(
+                    "wsgi:application",
+                    interface="wsgi",
+                    address=addr,
+                    port=int(port),
+                ).serve()
+            else:
+                from channels.routing import get_default_application
+                from daphne.endpoints import build_endpoint_description_strings
+                from daphne.server import Server
 
-            django.setup()
-            run(["embeded", f"--listen={addr}:{port}", "wsgi:application"])
+                django.setup()
+                endpoints = build_endpoint_description_strings(host=addr, port=int(port))
+                server = Server(
+                    get_default_application(),
+                    endpoints=endpoints,
+                    signal_handlers=False,
+                    action_logger=log_action,
+                    http_timeout=60,
+                )
+                server.run()
         else:
-            from channels.routing import get_default_application
-            from daphne.endpoints import build_endpoint_description_strings
-            from daphne.server import Server
+            use_granian = True
+            try:
+                from granian import Granian
+            except ImportError:
+                use_granian = False
+            if use_granian:
+                from channels.routing import get_default_application
 
-            django.setup()
-            endpoints = build_endpoint_description_strings(host=addr, port=int(port))
-            server = Server(
-                get_default_application(),
-                endpoints=endpoints,
-                signal_handlers=False,
-                action_logger=log_action,
-                http_timeout=60,
-            )
-            server.run()
+                django.setup()
+                print("A1")
+                Granian(
+                    get_default_application(),
+                    interface="asgi",
+                    address=addr,
+                    port=int(port),
+                ).serve()
+            else:
+                from channels.routing import get_default_application
+                from daphne.endpoints import build_endpoint_description_strings
+                from daphne.server import Server
+
+                django.setup()
+                endpoints = build_endpoint_description_strings(host=addr, port=int(port))
+                server = Server(
+                    get_default_application(),
+                    endpoints=endpoints,
+                    signal_handlers=False,
+                    action_logger=log_action,
+                    http_timeout=60,
+                )
+                server.run()
     except KeyboardInterrupt:
         return
     except Exception as e:

@@ -17,12 +17,13 @@ author: Sławomir Chołaj (slawomir.cholaj@gmail.com)
 license: LGPL 3.0
 """
 
-__version__ = "0.260910"
+__version__ = "0.260919"
 
 import importlib.util
 import logging
 import os
 import sys
+import site
 from pathlib import Path
 
 from pytigon_lib.schtools.env import get_environ
@@ -102,13 +103,18 @@ def init_paths(prj_name=None, env_path=None):
             os.path.join(cfg["DATA_PATH"], "plugins"),
         ]
         if prj_name:
+            path = site.getusersitepackages()
+            path_obj = Path(path)
+
             additional_paths.extend(
                 [
                     os.path.join(cfg["DATA_PATH"], prj_name, "syslib"),
-                    os.path.join(cfg["PRJ_PATH"], prj_name, "prjlib"),
-                    os.path.join(cfg["DATA_PATH"], prj_name, "prjlib"),
+                    os.path.join(cfg["PRJ_PATH"], prj_name, "prjlib", *path_obj.parts[-3:]),
+                    os.path.join(cfg["DATA_PATH"], prj_name, "prjlib", *path_obj.parts[-3:]),
                 ]
             )
+            os.environ["PYTHONUSERBASE"] = os.path.join(cfg["DATA_PATH"], prj_name, "prjlib")
+            os.environ["PIP_BREAK_SYSTEM_PACKAGES"] = "1"
 
         for path in additional_paths:
             if os.path.exists(path):
