@@ -61,7 +61,9 @@ def init_paths(prj_name=None, env_path=None):
         cfg = get_main_paths(prj_name)
 
         # Remove duplicate and relative paths from sys.path
-        sys.path = list(dict.fromkeys(pos for pos in sys.path if not pos.startswith(".")))
+        sys.path = list(
+            dict.fromkeys(pos for pos in sys.path if not pos.startswith("."))
+        )
 
         from pytigon_lib.schtools.platform_info import platform_name
 
@@ -71,14 +73,18 @@ def init_paths(prj_name=None, env_path=None):
         pytigon_base_path = importlib.util.find_spec("pytigon")
         ext_lib_path = None
         if pytigon_base_path:
-            ext_lib_path = os.path.abspath(os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib"))
+            ext_lib_path = os.path.abspath(
+                os.path.join(Path(pytigon_base_path.origin).parent, "ext_lib")
+            )
 
         # Platform-specific path adjustments
         if pname == "Android":
             bundled_path = os.path.abspath(os.path.join(base_path, "..", "_android"))
         else:
             if pname == "Windows":
-                bundled_path = os.path.abspath(os.path.join(base_path, "..", "python", "lib", "site-packages"))
+                bundled_path = os.path.abspath(
+                    os.path.join(base_path, "..", "python", "lib", "site-packages")
+                )
             else:
                 bundled_path = os.path.abspath(
                     os.path.join(
@@ -105,16 +111,29 @@ def init_paths(prj_name=None, env_path=None):
         if prj_name:
             path = site.getusersitepackages()
             path_obj = Path(path)
+            prjlib = os.path.join(
+                cfg["DATA_PATH"], prj_name, "prjlib", *path_obj.parts[-3:]
+            )
 
             additional_paths.extend(
                 [
                     os.path.join(cfg["DATA_PATH"], prj_name, "syslib"),
-                    os.path.join(cfg["PRJ_PATH"], prj_name, "prjlib", *path_obj.parts[-3:]),
-                    os.path.join(cfg["DATA_PATH"], prj_name, "prjlib", *path_obj.parts[-3:]),
+                    os.path.join(
+                        cfg["PRJ_PATH"], prj_name, "prjlib", *path_obj.parts[-3:]
+                    ),
+                    prjlib,
                 ]
             )
-            os.environ["PYTHONUSERBASE"] = os.path.join(cfg["DATA_PATH"], prj_name, "prjlib")
+            os.environ["PYTHONUSERBASE"] = os.path.join(
+                cfg["DATA_PATH"], prj_name, "prjlib"
+            )
             os.environ["PIP_BREAK_SYSTEM_PACKAGES"] = "1"
+            if "PYTHONPATH" in os.environ:
+                os.environ["PYTHONPATH"] = (
+                    prjlib + os.pathsep + os.environ["PYTHONPATH"]
+                )
+            else:
+                os.environ["PYTHONPATH"] = prjlib
 
         for path in additional_paths:
             if os.path.exists(path):

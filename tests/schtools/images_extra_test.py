@@ -70,6 +70,18 @@ class TestSvgToPngExtra:
         with pytest.raises(ValueError, match="Error during SVG to PNG conversion"):
             svg_to_png(b"not valid svg", 100, 100, "simple")
 
+    def test_svg_to_png_gradient_fill(self):
+        svg_str = (
+            b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">'
+            b'<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">'
+            b'<stop offset="0" stop-color="red"/>'
+            b'<stop offset="1" stop-color="blue"/></linearGradient></defs>'
+            b'<rect width="100" height="100" fill="url(#g)"/></svg>'
+        )
+        png_bytes = svg_to_png(svg_str, 100, 100, "simple_min")
+        assert isinstance(png_bytes, bytes)
+        assert Image.open(io.BytesIO(png_bytes)).size[0] > 0
+
 
 class TestMse:
     def test_mse_identical_images(self):

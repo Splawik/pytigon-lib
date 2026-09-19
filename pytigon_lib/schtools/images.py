@@ -33,6 +33,41 @@ def _get_svg2rlg():
     return _SVGLIB_MODULE
 
 
+def _strip_direct_draw(node):
+    """Recursively drop gradient ``DirectDraw`` shapes from a drawing.
+
+    reportlab >= 5 renders bitmaps exclusively through ``rlPyCairo``, whose
+    canvas exposes no PDF path/clip API. svglib represents gradient fills as
+    ``DirectDraw`` nodes that call ``canvas.beginPath()`` and then ``clipPath``
+    / ``linearGradient``; on ``rlPyCairo`` ``beginPath()`` returns ``None``,
+    which makes rendering fail with ``'NoneType' object has no attribute
+    'moveTo'``. Removing those overlay nodes keeps the underlying shapes
+    (with their solid fills and strokes) and lets the drawing render.
+    """
+    from reportlab.graphics.shapes import DirectDraw
+
+    contents = getattr(node, "contents", None)
+    if not contents:
+        return
+    node.contents = [item for item in contents if not isinstance(item, DirectDraw)]
+    for item in node.contents:
+        _strip_direct_draw(item)
+
+
+def _drawing_to_png(drawing):
+    """Render a reportlab drawing to PNG bytes.
+
+    Tries the regular renderer first. If it fails (for example because the
+    active ``rlPyCairo`` backend cannot draw SVG gradients), retries once with
+    the unsupported gradient nodes stripped.
+    """
+    try:
+        return drawing.asString("png")
+    except Exception:
+        _strip_direct_draw(drawing)
+        return drawing.asString("png")
+
+
 def spec_resize(image, width=0, height=0):
     """Resize an image using 9-slice scaling (scale-9 grid).
 
@@ -144,7 +179,7 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
             drawing.height *= scale_y
             drawing.scale(scale_x, scale_y)
 
-            return drawing.asString("png")
+            return _drawing_to_png(drawing)
 
         else:  # image_type == "frame"
             if width or height:
@@ -154,7 +189,7 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
                     width = int(drawing.width * height / drawing.height)
 
                 Image = _get_image()
-                img = Image.open(io.BytesIO(drawing.asString("png")))
+                img = Image.open(io.BytesIO(_drawing_to_png(drawing)))
                 img2 = spec_resize(img, width, height)
 
                 output = io.BytesIO()
@@ -162,7 +197,7 @@ def svg_to_png(svg_str, width=0, height=0, image_type="simple"):
                 return output.getvalue()
 
             else:
-                return drawing.asString("png")
+                return _drawing_to_png(drawing)
 
     except Exception as e:
         raise ValueError(f"Error during SVG to PNG conversion: {e}") from e
