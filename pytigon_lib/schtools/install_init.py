@@ -57,7 +57,7 @@ def upgrade_test(zip_path, out_path):
     return False
 
 
-def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
+def pip_install(pip_str, prj, confirm=False, upgrade=False):
     """Install Python packages to a target directory using pip.
 
     Args:
@@ -75,27 +75,28 @@ def pip_install(pip_str, prjlib, confirm=False, upgrade=False):
     exit_code, output_tab, err_tab = py_run(
         [
             "-m",
-            "pip",
-            "--disable-pip-version-check",
+            "pytigon.ptig",
+            "pip_" + prj,
             "install",
-            f"--target={prjlib}",
         ]
         + (["--upgrade"] if upgrade else [])
         + packages
     )
-    success = False
+    success = True
     if output_tab:
         for pos in output_tab:
             if pos:
                 print("pip info: ", pos)
-            if "Successfully installed" in pos:
-                success = True
+            if "Error" in pos:
+                success = False
     if err_tab:
         for pos in err_tab:
             if pos:
                 print("pip error: ", pos)
+                if "ERROR:" in pos:
+                    success = False
 
-    return success if confirm else False
+    return success if confirm else True
 
 
 def build_all(path):
@@ -130,7 +131,6 @@ def upgrade_local_libs():
     """Upgrade locally installed pip packages based on project install.ini."""
     from django.conf import settings
 
-    prjlib = os.path.join(settings.DATA_PATH, settings.PRJ_NAME, "prjlib")
     config_file = os.path.join(settings.PRJ_PATH, settings.PRJ_NAME, "install.ini")
     if os.path.exists(config_file):
         config = configparser.ConfigParser()
@@ -138,7 +138,7 @@ def upgrade_local_libs():
         if "DEFAULT" in config:
             pip_str = config["DEFAULT"].get("PIP", "")
             if pip_str:
-                pip_install(pip_str, prjlib, confirm=True, upgrade=True)
+                pip_install(pip_str, settings.PRJ_NAME, confirm=True, upgrade=True)
 
 
 # System management commands that trigger special initialization behavior.
@@ -250,24 +250,18 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                     print("python: pytigon: init: ", path)
                     if not os.path.exists(db_path):
                         print("python: pytigon: init: create:", db_path)
-                        exit_code, output_tab, err_tab = py_manage(
-                            ["makeallmigrations"], False
-                        )
+                        exit_code, output_tab, err_tab = py_manage(["makeallmigrations"], False)
                         if err_tab:
                             print(err_tab)
                         exit_code, output_tab, err_tab = py_manage(["migrate"], False)
                         if err_tab:
                             print(err_tab)
-                        exit_code, output_tab, err_tab = py_manage(
-                            ["createautouser"], False
-                        )
+                        exit_code, output_tab, err_tab = py_manage(["createautouser"], False)
                         if err_tab:
                             print(err_tab)
                         if app == "schdevtools":
                             print("python: pytigon: import_projects!")
-                            exit_code, output_tab, err_tab = py_manage(
-                                ["import_projects"], False
-                            )
+                            exit_code, output_tab, err_tab = py_manage(["import_projects"], False)
                             print("python: pytigon: projects imported!")
                             if err_tab:
                                 print(err_tab)
@@ -304,9 +298,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             _mkdir(p)
 
     prjlib = os.path.join(_data_path, prj, "prjlib")
-    if not os.path.exists(prjlib) or not os.path.exists(
-        os.path.join(prjlib, "install.txt")
-    ):
+    if not os.path.exists(prjlib) or not os.path.exists(os.path.join(prjlib, "install.txt")):
         ok = True
         if not os.path.exists(prjlib):
             os.mkdir(prjlib)
@@ -317,7 +309,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             if "DEFAULT" in config:
                 pip_str = config["DEFAULT"].get("PIP", "")
                 if pip_str:
-                    x = pip_install(pip_str, prjlib, confirm=True)
+                    x = pip_install(pip_str, prj, confirm=True)
                     if not x:
                         ok = False
         x = build_all(os.path.join(_prj_path, prj))
