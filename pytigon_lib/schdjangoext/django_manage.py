@@ -24,10 +24,6 @@ def cmd(arg, from_main=False):
         else:
             argv = ["manage.py"] + ([arg] if isinstance(arg, str) else arg)
 
-        import settings_app
-        from pytigon_lib import init_paths
-
-        init_paths(settings_app.PRJ_NAME)
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
         execute_from_command_line(argv)
     except Exception as e:
