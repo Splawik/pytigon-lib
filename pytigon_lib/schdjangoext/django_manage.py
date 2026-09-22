@@ -1,7 +1,8 @@
 import logging
 import os
 import sys
-
+import site
+import importlib
 from django.core.management import execute_from_command_line
 
 _logger = logging.getLogger(__name__)
@@ -23,6 +24,17 @@ def cmd(arg, from_main=False):
             argv = arg
         else:
             argv = ["manage.py"] + ([arg] if isinstance(arg, str) else arg)
+
+        from settings_app import PRJ_NAME
+
+        from pytigon_lib.schtools.main_paths import get_main_paths
+
+        main_paths = get_main_paths(PRJ_NAME)
+        data_path = main_paths["DATA_PATH"]
+        os.environ["PYTHONUSERBASE"] = os.path.join(data_path, PRJ_NAME, "prjlib")
+        importlib.reload(site)
+        prjlib = site.getusersitepackages()
+        sys.path.insert(0, prjlib)
 
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
         execute_from_command_line(argv)
