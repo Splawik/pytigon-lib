@@ -177,6 +177,32 @@ def _release_lock(lock):
             pass
 
 
+def pip_install(data_path, _data_path, prj_path, _prj_path, prj):
+    prjlib = os.path.join(_data_path, prj, "prjlib")
+    if not os.path.exists(prjlib) or not os.path.exists(
+        os.path.join(prjlib, "install.txt")
+    ):
+        ok = True
+        if not os.path.exists(prjlib):
+            os.mkdir(prjlib)
+        config_file = os.path.join(prj_path, prj, "install.ini")
+        if os.path.exists(config_file):
+            config = configparser.ConfigParser()
+            config.read(config_file)
+            if "DEFAULT" in config:
+                pip_str = config["DEFAULT"].get("PIP", "")
+                if pip_str:
+                    x = pip_install(pip_str, prj, confirm=True)
+                    if not x:
+                        ok = False
+        x = build_all(os.path.join(_prj_path, prj))
+        if not x:
+            ok = False
+        if ok:
+            with open(os.path.join(prjlib, "install.txt"), "w") as f:
+                f.write("OK")
+
+
 def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     """Initialize a project: extract archives, run migrations, install deps.
 
@@ -245,23 +271,31 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             for app in prjs:
                 path = os.path.join(_prj_path, app)
                 if os.path.isdir(path):
+                    pip_install(data_path, _data_path, prj_path, _prj_path, app)
+
                     db_path = os.path.join(os.path.join(_data_path, app), f"{app}.db")
                     os.chdir(path)
                     print("python: pytigon: init: ", path)
                     if not os.path.exists(db_path):
                         print("python: pytigon: init: create:", db_path)
-                        exit_code, output_tab, err_tab = py_manage(["makeallmigrations"], False)
+                        exit_code, output_tab, err_tab = py_manage(
+                            ["makeallmigrations"], False
+                        )
                         if err_tab:
                             print(err_tab)
                         exit_code, output_tab, err_tab = py_manage(["migrate"], False)
                         if err_tab:
                             print(err_tab)
-                        exit_code, output_tab, err_tab = py_manage(["createautouser"], False)
+                        exit_code, output_tab, err_tab = py_manage(
+                            ["createautouser"], False
+                        )
                         if err_tab:
                             print(err_tab)
                         if app == "schdevtools":
                             print("python: pytigon: import_projects!")
-                            exit_code, output_tab, err_tab = py_manage(["import_projects"], False)
+                            exit_code, output_tab, err_tab = py_manage(
+                                ["import_projects"], False
+                            )
                             print("python: pytigon: projects imported!")
                             if err_tab:
                                 print(err_tab)
@@ -297,27 +331,30 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         for p in paths:
             _mkdir(p)
 
+    pip_install(data_path, _data_path, prj_path, _prj_path, prj)
     prjlib = os.path.join(_data_path, prj, "prjlib")
-    if not os.path.exists(prjlib) or not os.path.exists(os.path.join(prjlib, "install.txt")):
-        ok = True
-        if not os.path.exists(prjlib):
-            os.mkdir(prjlib)
-        config_file = os.path.join(prj_path, prj, "install.ini")
-        if os.path.exists(config_file):
-            config = configparser.ConfigParser()
-            config.read(config_file)
-            if "DEFAULT" in config:
-                pip_str = config["DEFAULT"].get("PIP", "")
-                if pip_str:
-                    x = pip_install(pip_str, prj, confirm=True)
-                    if not x:
-                        ok = False
-        x = build_all(os.path.join(_prj_path, prj))
-        if not x:
-            ok = False
-        if ok:
-            with open(os.path.join(prjlib, "install.txt"), "w") as f:
-                f.write("OK")
+    # if not os.path.exists(prjlib) or not os.path.exists(
+    #     os.path.join(prjlib, "install.txt")
+    # ):
+    #     ok = True
+    #     if not os.path.exists(prjlib):
+    #         os.mkdir(prjlib)
+    #     config_file = os.path.join(prj_path, prj, "install.ini")
+    #     if os.path.exists(config_file):
+    #         config = configparser.ConfigParser()
+    #         config.read(config_file)
+    #         if "DEFAULT" in config:
+    #             pip_str = config["DEFAULT"].get("PIP", "")
+    #             if pip_str:
+    #                 x = pip_install(pip_str, prj, confirm=True)
+    #                 if not x:
+    #                     ok = False
+    #     x = build_all(os.path.join(_prj_path, prj))
+    #     if not x:
+    #         ok = False
+    #     if ok:
+    #         with open(os.path.join(prjlib, "install.txt"), "w") as f:
+    #             f.write("OK")
 
     if os.path.exists(prjlib):
         if prjlib not in sys.path:
