@@ -20,7 +20,8 @@ def cmd(arg, from_main=False):
     Raises:
         SystemExit: If the command execution fails.
     """
-    try:
+    # try:
+    if True:
         if from_main:
             argv = arg
         else:
@@ -44,12 +45,12 @@ def cmd(arg, from_main=False):
 
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
         execute_from_command_line(argv)
-    except Exception as e:
-        import traceback
+    # except Exception as e:
+    #    import traceback#
 
-        _logger.error("Error executing command: %s", e)
-        traceback.print_exc()
-        sys.exit(1)
+    #    _logger.error("Error executing command: %s", e)
+    #    traceback.print_exc()
+    #    sys.exit(1)
 
 
 def syncdb():
