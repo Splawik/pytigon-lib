@@ -294,19 +294,19 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                                 print(err_tab)
         finally:
             os.chdir(tmp)
-
+    print("G1")
     if upgrade:
         zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")
         if not os.path.exists(_data_path):
             os.makedirs(_data_path)
         if os.path.exists(zip_file2):
             extractall(zipfile.ZipFile(zip_file2), _data_path, exclude=[r".*\.db"])
-
+    print("G2")
     if not is_static_path:
         p2 = os.path.join(os.path.join(_root_path, "static"), "app")
         if os.path.exists(p2):
             shutil.copytree(p2, _static_app_path)
-
+    print("G3")
     _paths = [
         "",
         "cache",
@@ -323,10 +323,10 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
     if paths:
         for p in paths:
             _mkdir(p)
-
+    print("G4")
     _pip_install(data_path, _data_path, prj_path, _prj_path, prj)
     prjlib = os.path.join(_data_path, prj, "prjlib")
-
+    print("G5")
     if os.path.exists(prjlib):
         if prjlib not in sys.path:
             sys.path.append(prjlib)
@@ -336,5 +336,5 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         os.makedirs(syslib)
         with open(os.path.join(syslib, "__init__.py"), "w") as f:
             f.write(" ")
-
+    print("G6")
     _release_lock(lock)
