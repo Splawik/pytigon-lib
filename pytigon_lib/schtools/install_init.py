@@ -10,6 +10,7 @@ import zipfile
 from pytigon_lib.schfs import extractall
 from pytigon_lib.schtools.process import py_manage, py_run
 from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
+from pytigon_lib import init_paths
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +271,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                 path = os.path.join(_prj_path, app)
                 if os.path.isdir(path):
                     _pip_install(data_path, _data_path, prj_path, _prj_path, app)
-
+                    init_paths(app)
                     db_path = os.path.join(os.path.join(_data_path, app), f"{app}.db")
                     os.chdir(path)
                     print("python: pytigon: init: ", path)
@@ -325,28 +326,6 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
 
     _pip_install(data_path, _data_path, prj_path, _prj_path, prj)
     prjlib = os.path.join(_data_path, prj, "prjlib")
-    # if not os.path.exists(prjlib) or not os.path.exists(
-    #     os.path.join(prjlib, "install.txt")
-    # ):
-    #     ok = True
-    #     if not os.path.exists(prjlib):
-    #         os.mkdir(prjlib)
-    #     config_file = os.path.join(prj_path, prj, "install.ini")
-    #     if os.path.exists(config_file):
-    #         config = configparser.ConfigParser()
-    #         config.read(config_file)
-    #         if "DEFAULT" in config:
-    #             pip_str = config["DEFAULT"].get("PIP", "")
-    #             if pip_str:
-    #                 x = pip_install(pip_str, prj, confirm=True)
-    #                 if not x:
-    #                     ok = False
-    #     x = build_all(os.path.join(_prj_path, prj))
-    #     if not x:
-    #         ok = False
-    #     if ok:
-    #         with open(os.path.join(prjlib, "install.txt"), "w") as f:
-    #             f.write("OK")
 
     if os.path.exists(prjlib):
         if prjlib not in sys.path:
