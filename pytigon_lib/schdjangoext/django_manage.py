@@ -31,12 +31,15 @@ def cmd(arg, from_main=False):
         config = configparser.ConfigParser()
         config.read("install.ini")
         prj_name = config.get("DEFAULT", "PRJ_NAME", fallback="")
+        print("P1: ", prj_name)
         if prj_name:
             main_paths = get_main_paths(prj_name)
             data_path = main_paths["DATA_PATH"]
+            print("P2: ", os.path.join(data_path, prj_name, "prjlib"))
             os.environ["PYTHONUSERBASE"] = os.path.join(data_path, prj_name, "prjlib")
             importlib.reload(site)
             prjlib = site.getusersitepackages()
+            print("P3: ", prjlib)
             sys.path.insert(0, prjlib)
 
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_app")
