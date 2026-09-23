@@ -238,9 +238,9 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         ):
             upgrade = True
             print("Upgrade data")
-
     if not is_data_path:
-        zip_file2 = os.path.join(os.path.join(_root_path, "install"), ".pytigon.zip")
+        import pytigon_standard_prj
+        zip_file2 = os.path.join(pytigon_standard_prj.__path__[0], "install", ".pytigon.zip")
         if not os.path.exists(_data_path):
             os.makedirs(_data_path)
         if os.path.exists(zip_file2) and is_dev:
@@ -270,6 +270,9 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             for app in prjs:
                 path = os.path.join(_prj_path, app)
                 if os.path.isdir(path):
+                    pip_install_path = os.path.join(data_path, app, "prjlib")
+                    if not os.path.exists(pip_install_path):
+                        os.makedirs(pip_install_path, exist_ok=True)
                     _pip_install(data_path, _data_path, prj_path, _prj_path, app)
                     init_paths(app)
                     db_path = os.path.join(os.path.join(_data_path, app), f"{app}.db")
