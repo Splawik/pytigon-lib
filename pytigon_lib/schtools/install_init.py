@@ -100,7 +100,7 @@ def pip_install(pip_str, prj, confirm=False, upgrade=False):
     return success if confirm else True
 
 
-def build_all(path):
+def build_all(prj, data_path, path):
     """Execute all ``*_build.py`` scripts found under a directory tree.
 
     Each script is expected to define a ``build(path=...)`` function.
@@ -114,15 +114,35 @@ def build_all(path):
         True if all builds succeeded, False if any failed.
     """
     ret = True
+    test_zig = True
     for root, dirs, files in os.walk(path):
         for name in files:
             if name.endswith("_build.py"):
+                if test_zig:
+                    try:
+                        import ziglang  # noqa: F401
+
+                        test_zig = False
+                    except (ModuleNotFoundError, ImportError, OSError):
+                        py_run(
+                            [
+                                "-m",
+                                "pip",
+                                "install",
+                                "ziglang",
+                                "--break-system-packages",
+                            ]
+                        )
                 p = os.path.join(root, name)
                 with open(p) as f:
                     buf = f.read()
                     local_ns = _safe_exec(buf, extra_globals=globals())
                     if "build" in local_ns:
-                        x = local_ns["build"](path=p.replace("_build.py", ".nim"))
+                        x = local_ns["build"](
+                            prj=prj,
+                            data_path=data_path,
+                            path=p.replace("_build.py", ".nim"),
+                        )
                         if not x:
                             ret = False
     return ret
@@ -180,7 +200,9 @@ def _release_lock(lock):
 
 def _pip_install(data_path, _data_path, prj_path, _prj_path, prj):
     prjlib = os.path.join(_data_path, prj, "prjlib")
-    if not os.path.exists(prjlib) or not os.path.exists(os.path.join(prjlib, "install.txt")):
+    if not os.path.exists(prjlib) or not os.path.exists(
+        os.path.join(prjlib, "install.txt")
+    ):
         ok = True
         if not os.path.exists(prjlib):
             os.mkdir(prjlib)
@@ -194,7 +216,7 @@ def _pip_install(data_path, _data_path, prj_path, _prj_path, prj):
                     x = pip_install(pip_str, prj, confirm=True)
                     if not x:
                         ok = False
-        x = build_all(os.path.join(_prj_path, prj))
+        x = build_all(prj, data_path, os.path.join(_prj_path, prj))
         if not x:
             ok = False
         if ok:
@@ -240,7 +262,10 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             print("Upgrade data")
     if not is_data_path:
         import pytigon_standard_prj
-        zip_file2 = os.path.join(pytigon_standard_prj.__path__[0], "install", ".pytigon.zip")
+
+        zip_file2 = os.path.join(
+            pytigon_standard_prj.__path__[0], "install", ".pytigon.zip"
+        )
         if not os.path.exists(_data_path):
             os.makedirs(_data_path)
         if os.path.exists(zip_file2) and is_dev:
@@ -280,18 +305,24 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
                     print("python: pytigon: init: ", path)
                     if not os.path.exists(db_path):
                         print("python: pytigon: init: create:", db_path)
-                        exit_code, output_tab, err_tab = py_manage(["makeallmigrations"], False)
+                        exit_code, output_tab, err_tab = py_manage(
+                            ["makeallmigrations"], False
+                        )
                         if err_tab:
                             print(err_tab)
                         exit_code, output_tab, err_tab = py_manage(["migrate"], False)
                         if err_tab:
                             print(err_tab)
-                        exit_code, output_tab, err_tab = py_manage(["createautouser"], False)
+                        exit_code, output_tab, err_tab = py_manage(
+                            ["createautouser"], False
+                        )
                         if err_tab:
                             print(err_tab)
                         if app == "schdevtools":
                             print("python: pytigon: import_projects!")
-                            exit_code, output_tab, err_tab = py_manage(["import_projects"], False)
+                            exit_code, output_tab, err_tab = py_manage(
+                                ["import_projects"], False
+                            )
                             print("python: pytigon: projects imported!")
                             if err_tab:
                                 print(err_tab)
@@ -337,4 +368,5 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
         os.makedirs(syslib)
         with open(os.path.join(syslib, "__init__.py"), "w") as f:
             f.write(" ")
+
     _release_lock(lock)
