@@ -109,6 +109,8 @@ class HtmlProxyParser(Parser):
 class Td:
     """Represents a table data cell."""
 
+    __slots__ = ("attrs", "children", "data")
+
     def __init__(self, data, attrs=None, children=None):
         self.data = data
         self.attrs = attrs if attrs is not None else {}

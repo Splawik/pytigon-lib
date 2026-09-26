@@ -385,13 +385,92 @@ def stream_from_html(
     return result
 
 
-def tdata_from_html(html, http):
-    """Extract table data from HTML."""
-    dc = PdfDc(calc_only=True, width=-1, height=-1)
+OPTIMIZE = None
+_OPTIMIZE_CHECKED = False
+
+
+def _get_optimizer():
+    """Return the optional table optimizer or ``None`` when unavailable.
+
+    The PyArrow backend is preferred; when PyArrow is not installed the pure
+    Python backend is used.  When neither is available the original, slower
+    table is kept.  An explicitly assigned ``OPTIMIZE`` callable is honored.
+    """
+    global OPTIMIZE, _OPTIMIZE_CHECKED
+    if OPTIMIZE is not None and OPTIMIZE is not False:
+        return OPTIMIZE
+    if _OPTIMIZE_CHECKED:
+        return None
+    _OPTIMIZE_CHECKED = True
+
+    try:
+        from pytigon_lib.schhtml.optimize_max import optimize_table
+    except Exception:
+        try:
+            from pytigon_lib.schhtml.optimize import optimize_table
+        except Exception:
+            OPTIMIZE = False
+            return None
+
+    OPTIMIZE = optimize_table
+    return OPTIMIZE
+
+
+def _optimize_table(tab):
+    """Best effort optimization; never raises and never loses data."""
+    if not tab:
+        return tab
+
+    optimizer = _get_optimizer()
+    if optimizer is None:
+        return tab
+
+    try:
+        optimized = optimizer(tab)
+    except Exception:
+        optimized = None
+
+    if optimized is None:
+        try:
+            from pytigon_lib.schhtml.optimize import optimize_table
+
+            optimized = optimize_table(tab)
+        except Exception:
+            return tab
+
+    return optimized if optimized is not None and len(optimized) > 0 else tab
+
+
+def _extract_tdata_tab(html, http):
+    """Parse *html* and return the raw ``tdata_tab`` table registrations.
+
+    Parsing runs in measurement-only mode on a plain :class:`BaseDc`, so the
+    PDF/font stack (fpdf, fontTools) is never touched.  The cell structure
+    (``data``/``attrs``/``children``) is still produced by the regular ctrl
+    tag parser, so the result stays identical to the old implementation.
+    """
+    dc = BaseDc(calc_only=True, width=-1, height=-1)
     p = HtmlViewerParser(dc=dc, parse_only=True)
     p.set_http_object(http)
     p.feed(html)
-    ctrls = p.tdata_tab
     p.close()
+    return p.tdata_tab
+
+
+def tdata_from_html(html, http, optimize=True):
+    """Extract table data from HTML.
+
+    When *optimize* is true the returned table is wrapped in a memory efficient
+    container (see :mod:`pytigon_lib.schhtml.optimize`).  The access interface
+    ``table[row][col].data`` / ``.attrs`` / ``.children`` is unchanged; when no
+    optimizer is available the plain table is returned instead.
+
+    Unlike the previous implementation this does not create a PDF device
+    context, so no fonts are loaded through fpdf/fontTools.
+    """
+    ctrls = _extract_tdata_tab(html, http)
     tab = next((pos[0] for pos in ctrls if pos[1] == "ctrl-table"), None)
+    if optimize and tab:
+        tab = _optimize_table(tab)
+
     return tab if tab and len(tab) > 0 else None

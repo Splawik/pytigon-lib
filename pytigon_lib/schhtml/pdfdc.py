@@ -9,6 +9,46 @@ from pytigon_lib.schtools.main_paths import get_main_paths
 IMAGE = None
 FPDF = None
 
+# Font files loaded on demand per (family, style).  Styles use the fpdf
+# canonical order (uppercase, sorted) so "IB" and "BI" map to the same key.
+_FONT_FILES = {
+    ("sans-serif", ""): "DejaVuSansCondensed.ttf",
+    ("sans-serif", "B"): "DejaVuSansCondensed-Bold.ttf",
+    ("sans-serif", "I"): "DejaVuSansCondensed-Oblique.ttf",
+    ("sans-serif", "BI"): "DejaVuSansCondensed-BoldOblique.ttf",
+    ("serif", ""): "DejaVuSerifCondensed.ttf",
+    ("serif", "B"): "DejaVuSerifCondensed-Bold.ttf",
+    ("serif", "I"): "DejaVuSerifCondensed-Italic.ttf",
+    ("serif", "BI"): "DejaVuSerifCondensed-BoldItalic.ttf",
+    ("monospace", ""): "DejaVuSansMono.ttf",
+    ("monospace", "B"): "DejaVuSansMono-Bold.ttf",
+    ("monospace", "I"): "DejaVuSansMono-Oblique.ttf",
+    ("monospace", "BI"): "DejaVuSansMono-BoldOblique.ttf",
+}
+
+
+def _release_font_caches():
+    """Drop fpdf's global ``SubsetMap`` memoization caches.
+
+    fpdf2 decorates ``SubsetMap.pick`` and ``SubsetMap.get_glyph`` with
+    ``@cache``, so every ``TTFFont`` ever touched is pinned by the class-level
+    cache together with its fully decompiled ``glyf`` table (all ``Glyph``
+    objects).  ``output()`` clears those caches, but measurement-only contexts
+    (``calc_only``/SPDF) never call it, which leaks a whole font set per
+    context.  Clearing the caches releases them.
+    """
+    try:
+        from fpdf.fonts import SubsetMap
+    except Exception:
+        return
+    for name in ("pick", "get_glyph"):
+        cache_clear = getattr(getattr(SubsetMap, name, None), "cache_clear", None)
+        if cache_clear is not None:
+            try:
+                cache_clear()
+            except Exception:
+                pass
+
 
 class PDFSurface:
     """Handles PDF surface creation and font management."""
@@ -30,7 +70,6 @@ class PDFSurface:
         self.height = height
         self.pdf = FPDF.FPDF(unit="pt", orientation="L" if width > height else "P")
 
-        self._add_fonts()
         self.fonts_map = {
             "sans-serif": "sans-serif",
             "serif": "serif",
@@ -38,31 +77,40 @@ class PDFSurface:
             "cursive": "sans-serif",
             "fantasy": "sans-serif",
         }
+        self._loaded_fonts = set()
 
+        self._ensure_font("sans-serif", "")
         self.pdf.set_font("sans-serif", "", 11)
 
-    def _add_fonts(self):
-        """Add necessary fonts to the PDF."""
-        fonts = [
-            ("sans-serif", "", "DejaVuSansCondensed.ttf"),
-            ("sans-serif", "B", "DejaVuSansCondensed-Bold.ttf"),
-            ("sans-serif", "I", "DejaVuSansCondensed-Oblique.ttf"),
-            ("sans-serif", "BI", "DejaVuSansCondensed-BoldOblique.ttf"),
-            ("serif", "", "DejaVuSerifCondensed.ttf"),
-            ("serif", "B", "DejaVuSerifCondensed-Bold.ttf"),
-            ("serif", "I", "DejaVuSerifCondensed-Italic.ttf"),
-            ("serif", "BI", "DejaVuSerifCondensed-BoldItalic.ttf"),
-            ("monospace", "", "DejaVuSansMono.ttf"),
-            ("monospace", "B", "DejaVuSansMono-Bold.ttf"),
-            ("monospace", "I", "DejaVuSansMono-Oblique.ttf"),
-            ("monospace", "BI", "DejaVuSansMono-BoldOblique.ttf"),
-        ]
-        for family, style, filename in fonts:
+    def _ensure_font(self, family, style):
+        """Add a single font on demand, falling back to the base family.
+
+        Only the fonts actually used by the document are added, so fpdf does
+        not decompile the ``glyf`` table of all twelve fonts up front.
+        """
+        style = "".join(sorted((style or "").upper()))
+        for key in (
+            (family, style),
+            (family, ""),
+            ("sans-serif", style),
+            ("sans-serif", ""),
+        ):
+            if key in self._loaded_fonts:
+                return
+            filename = _FONT_FILES.get(key)
+            if filename is None:
+                continue
+            self._loaded_fonts.add(key)
             try:
-                self.pdf.add_font(family, style, Path(filename))
+                self.pdf.add_font(key[0], key[1], Path(filename))
+                return
             except (FileNotFoundError, OSError, RuntimeError):
-                # Skip fonts that cannot be loaded; fall back to default
-                pass
+                continue
+
+    def _add_fonts(self):
+        """Add all known fonts eagerly (kept for backwards compatibility)."""
+        for family, style in _FONT_FILES:
+            self._ensure_font(family, style)
 
     def get_dc(self):
         """Return the PDF drawing context."""
@@ -155,6 +203,11 @@ class PdfDc(BaseDc):
         if not self.calc_only:
             self.surf.save()
 
+        # Breaks the fpdf ``SubsetMap`` @cache retention.  For a real PDF the
+        # caches were already cleared by ``output()``; for calc_only/SPDF (which
+        # never call ``output()``) this is what prevents the font/Glyph leak.
+        _release_font_caches()
+
     def set_scale(self, scale):
         """Set the scale for the drawing context."""
         self.scale = scale
@@ -239,6 +292,7 @@ class PdfDc(BaseDc):
             style2 += "B"
 
         font_name = self.surf.fonts_map.get(style_tab[1], "sans-serif")
+        self.surf._ensure_font(font_name, style2)
         self.dc.set_font(
             font_name,
             style2,

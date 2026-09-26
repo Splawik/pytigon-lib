@@ -46,6 +46,10 @@ Functions:
 
     dict_to_json / dict_to_xml:
         Decorators that render the returned dictionary as JSON / XML.
+
+    dict_to_parquet / dict_to_arrow:
+        Decorators that render the returned dictionary as a Parquet / Arrow IPC
+        download (falling back to JSON when PyArrow is not installed).
 """
 
 import functools
@@ -1086,5 +1090,74 @@ def dict_to_xml(func):
             serializers.serialize("xml", v),
             content_type="application/xhtml+xml",
         )
+
+    return wrapper
+
+
+def dict_to_parquet(func):
+    """Decorator: render the returned dict/list as a Parquet download.
+
+    The decorated function must return a dict (single row) or a list of dicts.
+    When PyArrow is not installed the value is returned as JSON instead, so the
+    endpoint keeps working without the optional dependency.
+
+    Args:
+        func (callable): The view function.
+
+    Returns:
+        callable: The wrapped function.
+    """
+    from pytigon_lib.schdjangoext.arrow_tools import (
+        arrow_to_parquet_bytes,
+        data_to_arrow,
+        has_arrow,
+    )
+
+    @functools.wraps(func)
+    def wrapper(request, *args, **kwargs):
+        v = func(request, *args, **kwargs)
+        if not has_arrow():
+            return HttpResponse(schjson.json_dumps(v), content_type="application/json")
+        table = data_to_arrow(v)
+        response = HttpResponse(
+            arrow_to_parquet_bytes(table),
+            content_type="application/vnd.apache.parquet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="data.parquet"'
+        return response
+
+    return wrapper
+
+
+def dict_to_arrow(func):
+    """Decorator: render the returned dict/list as an Arrow IPC download.
+
+    The decorated function must return a dict (single row) or a list of dicts.
+    When PyArrow is not installed the value is returned as JSON instead.
+
+    Args:
+        func (callable): The view function.
+
+    Returns:
+        callable: The wrapped function.
+    """
+    from pytigon_lib.schdjangoext.arrow_tools import (
+        arrow_to_ipc_bytes,
+        data_to_arrow,
+        has_arrow,
+    )
+
+    @functools.wraps(func)
+    def wrapper(request, *args, **kwargs):
+        v = func(request, *args, **kwargs)
+        if not has_arrow():
+            return HttpResponse(schjson.json_dumps(v), content_type="application/json")
+        table = data_to_arrow(v)
+        response = HttpResponse(
+            arrow_to_ipc_bytes(table),
+            content_type="application/vnd.apache.arrow.stream",
+        )
+        response["Content-Disposition"] = 'attachment; filename="data.arrow"'
+        return response
 
     return wrapper
