@@ -96,8 +96,21 @@ class TrRef:
 class TableTag(BaseHtmlAtomParser):
     def __init__(self, parent, parser, tag, attrs):
         BaseHtmlAtomParser.__init__(self, parent, parser, tag, attrs)
-        self.child_tags = ["tr", "caption", "li", "ctr*"]
+        # thead/tbody/tfoot and colgroup/col are handled transparently, so
+        # that they neither break the row collection nor the column sizing.
+        self.child_tags = [
+            "tr",
+            "caption",
+            "li",
+            "ctr*",
+            "thead",
+            "tbody",
+            "tfoot",
+            "colgroup",
+            "col",
+        ]
         self.caption = None
+        self.col_widths = []
         if self.parent.__class__ in (BodyTag,):
             self.subtab = False
         else:
@@ -168,6 +181,16 @@ class TableTag(BaseHtmlAtomParser):
         if not self.sizes_ok:
             if not self.sizes:
                 self.sizes = [[-1, -1, -1]] * self.col_count
+            # Apply explicit widths declared via <colgroup>/<col>.
+            for i, width in enumerate(self.col_widths):
+                if i >= self.col_count or width is None:
+                    continue
+                try:
+                    w = int(str(width).replace("px", "").strip())
+                except (ValueError, TypeError):
+                    continue
+                if w >= 0:
+                    self.sizes[i] = [w, w, w]
             for i in range(0, self.col_count):
                 if self.sizes[i][0] < 0:
                     (opt, min, max) = (0, 0, 0)
@@ -701,3 +724,31 @@ register_tag_map("caption", CaptionTag)
 register_tag_map("tr", TrTag)
 register_tag_map("td", TdTag)
 register_tag_map("th", TdTag)
+
+
+class ColTag(BaseHtmlElemParser):
+    """Handles the <col> element inside a table.
+
+    Collects an explicit column width (and ``span``) into the enclosing
+    :class:`TableTag` so that it is applied during column sizing.
+    """
+
+    def __init__(self, parent, parser, tag, attrs):
+        BaseHtmlElemParser.__init__(self, parent, parser, tag, attrs)
+        self.width = attrs.get("width")
+        try:
+            self.span = int(attrs.get("span", 1))
+        except (ValueError, TypeError):
+            self.span = 1
+        if self.span < 1:
+            self.span = 1
+
+    def close(self):
+        widths = getattr(self.parent, "col_widths", None)
+        if widths is None:
+            return
+        for _ in range(self.span):
+            widths.append(self.width)
+
+
+register_tag_map("col", ColTag)
