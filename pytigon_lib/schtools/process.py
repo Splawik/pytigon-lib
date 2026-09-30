@@ -124,7 +124,11 @@ def _manage(path: str, cmd: list[str]):
     original_cwd = os.getcwd()
     frozen_modules = FrozenModules()
 
-    prev_loop = asyncio.get_event_loop_policy().get_event_loop()
+    try:
+        prev_loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # No loop is associated with this thread; nothing to restore later.
+        prev_loop = None
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 

@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 try:
     from pytigon_lib.schdjangoext.oauth_for_graphql import (
         OAuth2ProtectedGraph,

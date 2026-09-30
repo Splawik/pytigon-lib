@@ -90,20 +90,22 @@ class ArrowNotAvailable(RuntimeError):
 
 
 _PYARROW = None
-_PYARROW_CHECKED = False
 
 
 def pyarrow_module():
-    """Return the imported ``pyarrow`` module, or ``None`` when unavailable."""
-    global _PYARROW, _PYARROW_CHECKED
-    if not _PYARROW_CHECKED:
-        _PYARROW_CHECKED = True
-        try:
-            import pyarrow
-        except Exception:
-            _PYARROW = None
-        else:
-            _PYARROW = pyarrow
+    """Return the imported ``pyarrow`` module, or ``None`` when unavailable.
+
+    Only a *successful* import is cached: a transient failure (for example a
+    half-installed package) must not disable PyArrow for the whole process.
+    """
+    global _PYARROW
+    if _PYARROW is not None:
+        return _PYARROW
+    try:
+        import pyarrow
+    except Exception:
+        return None
+    _PYARROW = pyarrow
     return _PYARROW
 
 

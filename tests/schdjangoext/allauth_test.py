@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 try:
     from pytigon_lib.schdjangoext.allauth import SocialAccountAdapter
     _IMPORT_OK = True

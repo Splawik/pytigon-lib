@@ -1,10 +1,9 @@
 """Tests for :mod:`pytigon_lib.schtools.wiki`."""
 
 import pytest
+from django.conf import settings
 
 from pytigon_lib.schtools.wiki import make_href, wiki_from_str, wikify
-
-from django.conf import settings
 
 
 class TestWikiFromStr:

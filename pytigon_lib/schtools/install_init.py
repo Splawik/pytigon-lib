@@ -7,10 +7,10 @@ import shutil
 import sys
 import zipfile
 
+from pytigon_lib import init_paths
 from pytigon_lib.schfs import extractall
 from pytigon_lib.schtools.process import py_manage, py_run
 from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
-from pytigon_lib import init_paths
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ def build_all(prj, data_path, path):
             if name.endswith("_build.py"):
                 if test_zig:
                     try:
-                        import ziglang  # noqa: F401
+                        import ziglang  # noqa: F401 - availability probe
 
                         test_zig = False
                     except (ModuleNotFoundError, ImportError, OSError):
@@ -134,7 +134,7 @@ def build_all(prj, data_path, path):
                             ]
                         )
                 p = os.path.join(root, name)
-                with open(p) as f:
+                with open(p, encoding="utf-8") as f:
                     buf = f.read()
                     local_ns = _safe_exec(buf, extra_globals=globals())
                     if "build" in local_ns:
@@ -205,7 +205,7 @@ def _pip_install(data_path, _data_path, prj_path, _prj_path, prj):
     ):
         ok = True
         if not os.path.exists(prjlib):
-            os.mkdir(prjlib)
+            os.mkdir(prjlib, exist_ok=True)
         config_file = os.path.join(prj_path, prj, "install.ini")
         if os.path.exists(config_file):
             config = configparser.ConfigParser()

@@ -1,6 +1,5 @@
 """Common utility functions: string handling, introspection, encoding, dict operations."""
 
-import inspect
 import os
 import platform
 import sys
@@ -12,6 +11,9 @@ from collections.abc import Mapping as MappingABC
 def split2(txt, sep):
     """Split a string into two parts at the first occurrence of *sep*.
 
+    Equivalent to ``txt.partition(sep)`` without the separator. Kept as a
+    named helper because callers outside this package still use it.
+
     Args:
         txt: The string to split.
         sep: The separator to search for.
@@ -20,10 +22,8 @@ def split2(txt, sep):
         A tuple ``(before_sep, after_sep)``. If *sep* is not found,
         the second element is an empty string.
     """
-    idx = txt.find(sep)
-    if idx >= 0:
-        return txt[:idx], txt[idx + len(sep) :]
-    return txt, ""
+    before, _sep, after = txt.partition(sep)
+    return before, after
 
 
 def extend_fun_to(obj):
@@ -158,29 +158,27 @@ def norm_indent(text):
 def get_request():
     """Walk the call stack to find the current Django request object.
 
-    Searches for local variables named ``request`` in frames that also
-    have a ``session`` attribute.
+    Looks for a local variable named ``request`` whose value exposes a
+    ``session`` attribute. The frame chain is walked directly with
+    ``sys._getframe()``; ``inspect.stack()`` would build a ``FrameInfo`` (with
+    source context and linecache lookups) for every frame on the stack, which
+    is far too expensive for a template-rendering hot path.
 
     Returns:
         The request object, or None if not found.
     """
-    frame = None
     try:
-        for frame_info in inspect.stack()[1:]:
-            frame = frame_info.frame
-            code = frame.f_code
-            varnames = code.co_varnames
-            if (varnames[:1] == ("request",) and "request" in frame.f_locals) or (
-                varnames[:2] == ("self", "request") and "request" in frame.f_locals
-            ):
-                request = frame.f_locals["request"]
-            else:
-                continue
-            if hasattr(request, "session"):
+        frame = sys._getframe(1)
+    except ValueError:  # pragma: no cover - no frame beyond the top
+        return None
+    try:
+        while frame is not None:
+            request = frame.f_locals.get("request")
+            if request is not None and hasattr(request, "session"):
                 return request
+            frame = frame.f_back
     finally:
-        if frame:
-            del frame
+        del frame
     return None
 
 

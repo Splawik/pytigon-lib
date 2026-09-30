@@ -5,13 +5,13 @@ import pytest
 from lxml import etree
 
 from pytigon_lib.schspreadsheet.odf_process import (
+    OFFICE_URN,
+    TABLE_URN,
+    TEXT_URN,
     OdfDocTransform,
     attr_get,
     inner_html,
     transform_str,
-    OFFICE_URN,
-    TABLE_URN,
-    TEXT_URN,
 )
 
 

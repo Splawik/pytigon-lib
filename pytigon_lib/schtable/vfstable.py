@@ -343,6 +343,7 @@ def vfstable_view(request, folder, value=None):
 
 def vfsopen(request, file):
     """Handle requests to open a file."""
+    file2 = ""
     try:
         file2 = bdecode(file)
         with default_storage.fs.open(automount(file2), "rb") as fh:
@@ -413,8 +414,11 @@ def vfssave(request, file):
                     file3 = file2.replace(f".{x[-1]}", "")
                     convert_file(file2, file3)
             buf = "OK"
-        except Exception as e:
-            buf = f"ERROR: {e}"
+        except Exception:
+            # The exception text can contain internal paths; log it instead of
+            # sending it to the client.
+            _logger.exception("Error saving file '%s'", file)
+            buf = "ERROR"
     return HttpResponse(buf)
 
 
@@ -426,8 +430,9 @@ def vfsview(request, file):
             return vfsconvert(request, file, "html")
         with default_storage.fs.open(automount(file2), "r") as f:
             buf = f.read()
-    except Exception as e:
-        buf = f"ERROR: {e}"
+    except Exception:
+        _logger.exception("Error viewing file '%s'", file)
+        buf = "ERROR"
     return HttpResponse(buf)
 
 

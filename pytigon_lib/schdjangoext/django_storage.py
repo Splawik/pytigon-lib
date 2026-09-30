@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 from django.conf import settings
-from django.core.files import File
+from django.core.exceptions import SuspiciousFileOperation
 from django.core.files.base import File
 from django.core.files.storage import FileSystemStorage, Storage
 from django.core.files.utils import validate_file_name
@@ -27,9 +27,9 @@ class OSFS_EXT(FsspecSimpleFS):
 class ThumbnailFileSystemStorage(FileSystemStorage):
     def __init__(self, location=None, base_url=None, *args, **kwargs):
         if location is None:
-            location = settings.THUMBNAIL_MEDIA_ROOT or None
+            location = getattr(settings, "THUMBNAIL_MEDIA_ROOT", None) or None
         if base_url is None:
-            base_url = settings.THUMBNAIL_MEDIA_URL or None
+            base_url = getattr(settings, "THUMBNAIL_MEDIA_URL", None) or None
         super().__init__(location, base_url, *args, **kwargs)
 
     def url(self, name):
@@ -111,9 +111,11 @@ class FSStorage(Storage):
         if parent:
             self.fs.makedirs(parent, exist_ok=True)
 
-        # Exclusive mode prevents accidental overwrites if a name collision occurs
-        # after Django has selected an available name.
-        with self.fs.open(name, "xb") as destination:
+        # Let Django's Storage.save() pick a free name (via get_available_name)
+        # and then write it in truncating mode. Exclusive "xb" would instead
+        # turn a name collision into FileExistsError, which Django cannot
+        # recover from.
+        with self.fs.open(name, "wb") as destination:
             for chunk in content.chunks():
                 destination.write(chunk)
 
@@ -169,6 +171,11 @@ class FSStorage(Storage):
         name = self._clean_name(name)
 
         if getattr(self.fs, "protocol", None) in ("file", ("file", "local")):
+            # _strip_protocol is fsspec's private helper; the public API for
+            # turning a path into a plain filesystem path is unstrip_protocol.
+            unstrip = getattr(self.fs, "unstrip_protocol", None)
+            if unstrip is not None:
+                return unstrip(name)
             return self.fs._strip_protocol(name)
 
         raise NotImplementedError(
@@ -211,8 +218,3 @@ class FSStorage(Storage):
         if timezone.is_naive(result) and settings.USE_TZ:
             return timezone.make_aware(result, timezone.get_current_timezone())
         return result
-
-
-# Imported lazily to avoid importing Django exceptions before the storage module
-# is configured in projects that inspect this file without initialising Django.
-from django.core.exceptions import SuspiciousFileOperation  # noqa: E402

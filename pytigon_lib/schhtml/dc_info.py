@@ -38,7 +38,7 @@ class BaseDcInfo(BaseDcInfoCommon):
         line = ""
         line_ok = ""
         dy = 0
-        txt_tab = txt.dc.split(" ")
+        txt_tab = txt.split(" ")
         for pos in txt_tab:
             if line == "":
                 line = pos

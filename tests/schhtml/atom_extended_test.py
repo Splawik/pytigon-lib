@@ -2,11 +2,11 @@
 import pytest
 
 from pytigon_lib.schhtml.atom import (
+    DECODE_SYM,
     Atom,
     BrAtom,
     NullAtom,
     unescape,
-    DECODE_SYM,
 )
 
 

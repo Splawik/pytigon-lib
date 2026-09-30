@@ -1,22 +1,22 @@
 """Module contains classes for defining HTTP client."""
 
 import base64
+import json
 import logging
 import mimetypes
 import os
 import threading
-import json
 from collections import OrderedDict
 from contextlib import ExitStack
 from threading import Thread
+from urllib.parse import urljoin
 
 import httpx
 from django.conf import settings
-from django.contrib.staticfiles import finders
 from django.core.wsgi import get_wsgi_application
 from django.test import Client
 
-from pytigon_lib.schfs import get_vfs, open_file
+from pytigon_lib.schfs import open_file
 from pytigon_lib.schfs.vfstools import norm_path
 from pytigon_lib.schhttptools.asgi_bridge import websocket
 from pytigon_lib.schtools.platform_info import platform_name
@@ -41,6 +41,14 @@ HTTP_IDLE_FUNC = None
 IN_PAINT = 0
 
 
+class EmptyResponseError(RuntimeError):
+    """Raised when a request produced no response object at all.
+
+    Returning ``None`` instead used to defer the failure to an unrelated
+    ``AttributeError`` inside :meth:`HttpResponse.process_response`.
+    """
+
+
 def decode(bstr, dec="utf-8"):
     """Decode bytes to string."""
     return bstr.decode(dec) if isinstance(bstr, bytes) else bstr
@@ -59,7 +67,11 @@ def init_embeded_django():
         from channels.routing import get_default_application
 
         ASGI_APPLICATION = get_default_application()
-    settings.ALLOWED_HOSTS.append("testserver")
+    # Guard: init_embeded_django() can be called more than once in a process
+    # (re-import, test harness), and appending every time grows the list
+    # without bound.
+    if "testserver" not in settings.ALLOWED_HOSTS:
+        settings.ALLOWED_HOSTS.append("testserver")
 
 
 def set_http_error_func(func):
@@ -168,19 +180,41 @@ def asgi_or_wsgi_get_or_post(
         "body": response.getvalue(),
         "more_body": False,
     }
-    if response.status_code in (301, 302) and redirect_count < 10:
-        return asgi_or_wsgi_get_or_post(
-            application,
-            response.headers["Location"],
-            headers,
-            params,
-            post,
-            ret,
-            user_agent,
-            redirect_count + 1,
-            json_data,
-        )
+    if response.status_code in (301, 302, 303, 307, 308) and redirect_count < 10:
+        location = response.headers.get("Location")
+        if location:
+            # The Location header is often relative; re-join it with the
+            # requested URL so the follow-up request is well formed.
+            return asgi_or_wsgi_get_or_post(
+                application,
+                urljoin(response.url, location),
+                headers,
+                params,
+                post,
+                ret,
+                user_agent,
+                redirect_count + 1,
+                json_data,
+            )
     ret.append(result)
+
+
+#: Module-level httpx client: reusing one Client keeps the connection pool (and
+#: the TLS session) alive instead of paying a new handshake per request.
+HTTPX_CLIENT = None
+
+
+def _get_httpx_client():
+    """Return the shared httpx.Client, creating it on first use."""
+    global HTTPX_CLIENT
+    if HTTPX_CLIENT is None or getattr(HTTPX_CLIENT, "is_closed", False):
+        HTTPX_CLIENT = httpx.Client(
+            limits=httpx.Limits(
+                max_connections=32, max_keepalive_connections=16, keepalive_expiry=30.0
+            ),
+            follow_redirects=False,
+        )
+    return HTTPX_CLIENT
 
 
 def requests_request(method, url, argv, ret=None):
@@ -188,7 +222,7 @@ def requests_request(method, url, argv, ret=None):
     if ret is None:
         ret = []
     try:
-        ret2 = httpx.request(method, url, **argv)
+        ret2 = _get_httpx_client().request(method, url, **argv)
         ret.append(ret2)
     except Exception as e:
         ret.append(e)
@@ -214,7 +248,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                 ret,
                 user_agent,
                 0,
-                True if "json" in argv else False,
+                "json" in argv,
             )
         else:
             t = Thread(
@@ -228,7 +262,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                     ret,
                     user_agent,
                     0,
-                    True if "json" in argv else False,
+                    "json" in argv,
                 ),
                 daemon=True,
             )
@@ -246,7 +280,9 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
                 t.join()
         if ret and isinstance(ret[0], Exception):
             raise ret[0]
-        return RetHttp(url, ret[0] if ret else None)
+        if not ret:
+            raise EmptyResponseError(f"No response produced for {method} {url}")
+        return RetHttp(url, ret[0])
     else:
         if app:
             if platform_name() == "Emscripten" or FORCE_WSGI:
@@ -266,7 +302,11 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
             requests_request(method, url, argv, ret)
         if ret and isinstance(ret[0], Exception):
             raise ret[0]
-        return ret[0] if ret else None
+        if not ret:
+            # Returning None here would surface later as an AttributeError
+            # deep inside HttpResponse.process_response().
+            raise EmptyResponseError(f"No response produced for {method} {url}")
+        return ret[0]
 
 
 class HttpResponse:
@@ -308,8 +348,12 @@ class HttpResponse:
         ):
             if HTTP_ERROR_FUNC:
                 BLOCK = True
-                HTTP_ERROR_FUNC(parent, self.content)
-                BLOCK = False
+                try:
+                    HTTP_ERROR_FUNC(parent, self.content)
+                finally:
+                    # Without this, an exception raised by HTTP_ERROR_FUNC
+                    # left BLOCK stuck True and the request loop spinning.
+                    BLOCK = False
             else:
                 with open(os.path.join(settings.DATA_PATH, "last_error.html"), "wb") as f:
                     f.write(self.content)
@@ -463,10 +507,7 @@ class HttpClient:
 
                     return HttpResponse(adr, content=content, response=ret_http, ret_content_type=mt)
             except (OSError, FileNotFoundError):
-                LOGGER.error(
-                    "Static file load error: %s",
-                    get_vfs().getsyspath(path) if for_vfs else path,
-                )
+                LOGGER.exception("Static file load error: %s", path)
                 return HttpResponse(adr, 400, content=b"", ret_content_type="text/html")
         if adr.startswith("file://"):
             file_name = adr[7:]
@@ -486,15 +527,15 @@ class HttpClient:
         if credentials:
             argv["auth"] = credentials
         method = "post" if post_request else "get"
-        if post_request:
-            if json_data:
-                argv["json"] = parm
-            else:
-                argv["data"] = parm
-            if "csrftoken" in cookies:
-                headers["X-CSRFToken"] = cookies["csrftoken"].split(";", 1)[0]
-            if upload:
-                with ExitStack() as stack:
+        with ExitStack() as stack:
+            if post_request:
+                if json_data:
+                    argv["json"] = parm
+                else:
+                    argv["data"] = parm
+                if "csrftoken" in cookies:
+                    headers["X-CSRFToken"] = cookies["csrftoken"].split(";", 1)[0]
+                if upload:
                     files = {
                         key: stack.enter_context(open(value[1:], "rb"))
                         for key, value in parm.items()
@@ -503,16 +544,22 @@ class HttpClient:
                     for key in files:
                         del parm[key]
                     if direct_access:
-                        if "data" not in argv:
-                            argv["data"] = {}
-                        for key, value in files.items():
-                            argv["data"][key] = value
+                        # The direct-access branch talks to the ASGI bridge,
+                        # which takes plain form data. Raw open file objects
+                        # cannot be encoded into that body (and would be closed
+                        # by the ExitStack before the request is sent), so the
+                        # bytes are read in here instead.
+                        if files:
+                            argv["data"] = dict(parm)
+                            for key, fileobj in files.items():
+                                argv["data"][key] = fileobj.read()
+                        else:
+                            argv["data"] = parm
                     else:
                         argv["files"] = files
-                    response = request(method, adr, direct_access, argv, self.app, user_agent)
-        else:
-            argv["data"] = parm
-        response = request(method, adr, direct_access, argv, self.app, user_agent)
+            else:
+                argv["data"] = parm
+            response = request(method, adr, direct_access, argv, self.app, user_agent)
         http_response = HttpResponse(adr, response=response)
         http_response.process_response(self, parent, post_request)
         return http_response
@@ -546,5 +593,5 @@ async def local_websocket(path, input_queue, output):
     if cookies:
         headers.append((b"cookie", cookies.encode("utf-8")))
     if "csrftoken" in COOKIES_EMBEDED:
-        headers.append(("X-CSRFToken", COOKIES_EMBEDED["csrftoken"].split(";", 1)[0]))
+        headers.append((b"X-CSRFToken", COOKIES_EMBEDED["csrftoken"].split(";", 1)[0].encode("utf-8")))
     return await websocket(ASGI_APPLICATION, path, headers, input_queue, output)

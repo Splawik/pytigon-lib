@@ -27,7 +27,7 @@ try:
 except ImportError:
     import xml.etree.ElementTree as etree
 
-    from naivehtmlparser import NaiveHTMLParser
+    from .naivehtmlparser import NaiveHTMLParser
 
     _LXML_AVAILABLE = False
 
@@ -228,6 +228,21 @@ def content_tostring(elem: etree.Element) -> str:
     return "".join(parts)
 
 
+#: Cache for the compiled patterns used by :meth:`Elem.super_strip`. re caches
+#: internally too, but only after re.sub is reached; compiling once here keeps
+#: the hot path free of the pattern lookup entirely.
+_SUPER_STRIP_PATTERNS: dict = {}
+
+
+def _cached_re(pattern: str):
+    """Return (and memoize) the compiled regex for *pattern*."""
+    compiled = _SUPER_STRIP_PATTERNS.get(pattern)
+    if compiled is None:
+        compiled = re.compile(pattern)
+        _SUPER_STRIP_PATTERNS[pattern] = compiled
+    return compiled
+
+
 class Elem:
     """Wrapper around an ElementTree element with string conversion.
 
@@ -289,8 +304,8 @@ class Elem:
         if not s:
             return ""
         # Collapse runs of spaces, tabs, and literal '\n' sequences
-        s = re.sub(r"[\t ]+", " ", s)
-        s = re.sub(r"(\\n\s*)+", " ", s)
+        s = _cached_re(r"[\t ]+").sub(" ", s)
+        s = _cached_re(r"(\\n\s*)+").sub(" ", s)
         return s.strip()
 
     def tostream(

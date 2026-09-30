@@ -6,61 +6,31 @@ from pytigon_lib.schtools import schjson
 
 __COLMAP__ = {
     "AutoField": "string",
-    "SOIntCol": "long",
     "CharField": "string",
     "TextField": "string",
     "BooleanField": "bool",
-    "SOFloatCol": "double",
-    "SOKeyCol": "long",
-    "SOForeignKey": "x",
-    "SOEnumCol": "string",
-    "SODateTimeCol": "date",
+    "HiddenForeignKey": None,
+    "ForeignKey": "x",
     "DateField": "date",
-    "SODecimalCol": "double",
-    "SOCurrencyCol": "double",
-    "SOBLOBCol": "string",
-    "SOPickleCol": "string",
-    "SOStringLikeCol": "string",
 }
 
 __COLINIT__ = {
     "AutoField": None,
-    "SOIntCol": "0",
     "CharField": "",
     "TextField": "",
     "BooleanField": True,
-    "SOFloatCol": 0.0,
-    "SOKeyCol": None,
     "HiddenForeignKey": None,
     "ForeignKey": None,
-    "SOEnumCol": "",
-    "SODateTimeCol": "2000-01-01",
     "DateField": "2000-01-01",
-    "SODecimalCol": 0.0,
-    "SOCurrencyCol": 0.0,
-    "SOBLOBCol": "",
-    "SOPickleCol": "",
-    "SOStringLikeCol": "",
 }
 
 __COLSIZE__ = {
     "AutoField": 9,
-    "SOIntCol": 9,
     "CharField": 0,
     "TextField": 0,
     "BooleanField": 1,
-    "SOFloatCol": 12,
-    "SOKeyCol": 25,
     "ForeignKey": 25,
     "HiddenForeignKey": 25,
-    "SOEnumCol": 25,
-    "SODateTimeCol": 18,
-    "SODateCol": 10,
-    "SODecimalCol": 12,
-    "SOCurrencyCol": 12,
-    "SOBLOBCol": 9,
-    "SOPickleCol": 10,
-    "SOStringLikeCol": 0,
     "DateField": 10,
 }
 
@@ -101,7 +71,7 @@ class DbTable(table.Table):
         return bool(value) if value else None
 
     def conw_x(self, value):
-        return value.GetStringRepr() if value else "0"
+        return str(value) if value else "0"
 
     def _get_col_names(self):
         return [col.verbose_name or col.name for col in self.model_class._meta.fields]
@@ -131,6 +101,11 @@ class DbTable(table.Table):
     def _get_col_length(self):
         col_lengths = []
         for col in self.model_class._meta.fields:
+            # The first entry of the row is the record id handled by Table
+            # itself, so the primary key column is skipped explicitly instead of
+            # relying on it being the first field.
+            if getattr(col, "primary_key", False):
+                continue
             size = __COLSIZE__.get(col.__class__.__name__, 25)
             if size == 0:
                 if col.choices:
@@ -138,7 +113,7 @@ class DbTable(table.Table):
                 else:
                     size = col.max_length or 25
             col_lengths.append(size)
-        return col_lengths[1:]
+        return col_lengths
 
     def _set_sort(self, objects, sort):
         sortobj = objects
@@ -173,18 +148,19 @@ class DbTable(table.Table):
         for rec in data:
             row = []
             for field in self.model_class._meta.fields:
-                value = field.value_from_object(rec)
+                # NB: must not shadow the ``value`` search-filter parameter.
+                cell = field.value_from_object(rec)
                 if field.choices:
                     choice_map = choice_maps[field.name]
-                    value = (
-                        f"{value}:{choice_map.get(value, '')}"
-                        if value in choice_map
+                    cell = (
+                        f"{cell}:{choice_map.get(cell, '')}"
+                        if cell in choice_map
                         else ""
                     )
                 elif isinstance(field, ForeignKey):
                     value2 = getattr(rec, field.name)
-                    value = f"{value2.id}:{value2}" if value2 else "0"
-                row.append(value)
+                    cell = f"{value2.id}:{value2}" if value2 else "0"
+                row.append(cell)
             tab.append(row)
         return tab
 
@@ -195,8 +171,12 @@ class DbTable(table.Table):
         except self.model_class.DoesNotExist:
             return ""
 
-    def count(self, v):
-        return self.model_class.objects.count()
+    def count(self, v=None):
+        # Must apply the same search filter as page(), otherwise pagination
+        # totals are wrong for filtered listings.
+        return self.model_class.simple_query(v).count() if v and hasattr(
+            self.model_class, "simple_query"
+        ) else self.model_class.objects.count()
 
     def insert_rec(self, rec):
         obj = self.model_class()
@@ -206,7 +186,7 @@ class DbTable(table.Table):
                 value = value.split(":")[0]
             if isinstance(field, ForeignKey):
                 value = (
-                    field.rel.to.objects.get(id=int(value.split(":")[0]))
+                    field.related_model.objects.get(id=int(value.split(":")[0]))
                     if value
                     else None
                 )
@@ -222,7 +202,7 @@ class DbTable(table.Table):
                     value = value.split(":")[0]
                 if isinstance(field, ForeignKey):
                     value = (
-                        field.rel.to.objects.get(id=int(value.split(":")[0]))
+                        field.related_model.objects.get(id=int(value.split(":")[0]))
                         if value
                         else None
                     )

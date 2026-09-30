@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from pytigon_lib.schhtml.cairodc import CairoDc, CairoDcInfo, get_PdfCairoDc
 

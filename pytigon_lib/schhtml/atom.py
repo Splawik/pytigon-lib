@@ -4,9 +4,12 @@ This module provides classes for representing text atoms, lines of atoms,
 and lists of atoms that can be laid out and rendered on a device context.
 """
 
+import html
+
 from pytigon_lib.schhtml.htmltools import superstrip
 
-# HTML entity decoding table (order matters: &amp; must come after &gt; and &lt;)
+# HTML entity decoding is delegated to the stdlib, which handles the full set
+# of named entities plus numeric references such as "&#8212;".
 DECODE_SYM = (
     ("&gt;", ">"),
     ("&lt;", "<"),
@@ -24,9 +27,7 @@ def unescape(text):
     Returns:
         String with HTML entities replaced by their character equivalents.
     """
-    for symbol, replacement in DECODE_SYM:
-        text = text.replace(symbol, replacement)
-    return text
+    return html.unescape(text)
 
 
 class Atom:

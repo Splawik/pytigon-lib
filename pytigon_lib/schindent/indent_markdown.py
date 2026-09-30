@@ -340,7 +340,7 @@ class IndentMarkdownProcessor:
         Returns:
             Parsed object, or the original string if not JSON.
         """
-        if s and s[0] == "{":
+        if s and s[0] in "{[":
             return json.loads(s)
         return s
 
@@ -445,8 +445,10 @@ class IndentMarkdownProcessor:
             if not in_func:
                 if stripped.startswith("%"):
                     config = stripped[1:]
-                    # Check if this opens a block (ends with ':')
-                    last_char = config.split("#")[0].strip()[-1] if "#" in config else config.strip()[-1]
+                    # Check if this opens a block (ends with ':').
+                    # A bare "%" leaves an empty config, so guard the [-1].
+                    config_text = config.split("#")[0].strip()
+                    last_char = config_text[-1] if config_text else ""
 
                     if last_char == ":":
                         in_func = True

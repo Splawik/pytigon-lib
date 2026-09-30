@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from pytigon_lib.schfs import get_vfs, open_file, get_temp_filename, get_unique_filename, open_and_create_dir
+from pytigon_lib.schfs import get_temp_filename, get_unique_filename, get_vfs, open_and_create_dir, open_file
 
 
 class TestGetVfs:

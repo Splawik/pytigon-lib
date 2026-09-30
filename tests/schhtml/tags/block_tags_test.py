@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pytigon_lib.schhtml.basehtmltags import tag_class_map, register_tag_map
+from pytigon_lib.schhtml.basehtmltags import register_tag_map, tag_class_map
 from pytigon_lib.schhtml.tags.block_tags import BodyTag, FormTag
 
 

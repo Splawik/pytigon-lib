@@ -1,14 +1,14 @@
 """Module contains many additional db models."""
 
+import json
 import sys
 from typing import Any
-import json
 
 from django import forms
 from django.conf import settings
 from django.contrib import admin
 from django.core import serializers
-from django.db import models
+from django.db import models, transaction
 
 try:
     from django.contrib.contenttypes.models import ContentType
@@ -57,6 +57,10 @@ class JSONModel(models.Model):
         on regular attribute access. Returns None for missing json_ attributes
         to preserve existing behavior.
         """
+        if name.startswith("__") and name.endswith("__"):
+            # Never proxy dunders (e.g. __deepcopy__, __getstate__, __reduce__):
+            # copy/pickle rely on getting a real AttributeError here.
+            raise AttributeError(name)
         if name.startswith("json_"):
             try:
                 jsondata = object.__getattribute__(self, "jsondata")
@@ -135,7 +139,28 @@ class TreeModel(JSONModel):
 
 ASSOCIATED_MODEL_CACHE: dict[str, Any] = {}
 
-_SENTINEL = object()
+
+def clear_associated_model_cache() -> None:
+    """Drop the associated-model cache.
+
+    Call this after repopulating the Django app registry in-process (for
+    example after importing a project) so cached model classes are re-resolved.
+    """
+    ASSOCIATED_MODEL_CACHE.clear()
+
+
+def _is_registered(app_label: str, model_name: str, model_class: Any) -> bool:
+    """Return True when *model_class* is still the class the registry knows.
+
+    A cheap identity check that makes the associated-model cache self-invalidating
+    across app reloads without rebuilding the whole model list.
+    """
+    from django.apps import apps
+
+    try:
+        return apps.get_registered_model(app_label, model_name) is model_class
+    except LookupError:
+        return False
 
 
 class AssociatedModel(models.Model):
@@ -179,15 +204,24 @@ class AssociatedModel(models.Model):
     )
 
     def get_associated_model(self) -> type[models.Model] | None:
-        """Retrieve the associated model class."""
+        """Retrieve the associated model class.
+
+        Cached entries are validated against the live apps registry, so an
+        app reload (which installs brand new model classes) can never be
+        served a stale class from the module-level cache.
+        """
         global ASSOCIATED_MODEL_CACHE
         if ContentType is None:
             return None
-        key = f"{self.application.lower()}/{self.table.lower()}"
-        cached = ASSOCIATED_MODEL_CACHE.get(key, _SENTINEL)
-        if cached is not _SENTINEL:
+        app_label = self.application.lower()
+        model_name = self.table.lower()
+        key = f"{app_label}/{model_name}"
+
+        cached = ASSOCIATED_MODEL_CACHE.get(key)
+        if cached is not None and _is_registered(app_label, model_name, cached):
             return cached
-        model_obj = ContentType.objects.filter(app_label=self.application.lower(), model=self.table.lower()).first()
+
+        model_obj = ContentType.objects.filter(app_label=app_label, model=model_name).first()
         if model_obj:
             model_class = model_obj.model_class()
             if model_class is not None:
@@ -311,37 +345,47 @@ def standard_table_action(
         else:
             main_queryset = base_queryset
 
-        for rel_obj in model_class._meta.related_objects:
-            accessor_name = rel_obj.get_accessor_name()
+        accessors = [
+            rel.get_accessor_name() for rel in model_class._meta.related_objects
+        ]
+        if accessors:
+            main_queryset = main_queryset.prefetch_related(*accessors)
 
-            main_queryset = main_queryset.prefetch_related(accessor_name)
-
-        main_data = serializers.serialize("python", main_queryset)
-
-        for rel_obj in model_class._meta.related_objects:
-            accessor_name = rel_obj.get_accessor_name()
-            for obj, data in zip(main_queryset, main_data):
+        # Single pass over the queryset: the original code serialized the whole
+        # queryset into a list and then re-evaluated it (and every related
+        # manager) per row, which is a full N+1 on top of double materialising.
+        # The prefetches above are what make the per-accessor lookup cheap.
+        main_data = []
+        for obj in main_queryset.iterator(chunk_size=200):
+            (data,) = serializers.serialize("python", [obj])
+            for accessor_name in accessors:
                 related_fields = getattr(obj, accessor_name).all()
-                data["fields"][accessor_name] = serializers.serialize("python", related_fields)
+                data["fields"][accessor_name] = serializers.serialize(
+                    "python", related_fields.iterator(chunk_size=200)
+                )
+            main_data.append(data)
 
         return json.dumps(main_data)
 
     if action == "paste" and not subtree:
         data2 = data.get("data", [])
         allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
-        for obj in data2:
-            obj2 = cls()
-            parent_pk = list_view.kwargs.get("parent_pk")
-            for key, value in obj.get("fields", {}).items():
-                if key in ("id", "pk"):
-                    continue
-                if key not in allowed_fields:
-                    continue
-                if key == "parent" and parent_pk is not None:
-                    setattr(obj2, "parent_id", parent_pk)
-                else:
-                    setattr(obj2, key, value)
-            obj2.save()
+        # A failure half-way through would otherwise leave partially pasted rows
+        # behind, so the whole batch commits or rolls back as one.
+        with transaction.atomic():
+            for obj in data2:
+                obj2 = cls()
+                parent_pk = list_view.kwargs.get("parent_pk")
+                for key, value in obj.get("fields", {}).items():
+                    if key in ("id", "pk"):
+                        continue
+                    if key not in allowed_fields:
+                        continue
+                    if key == "parent" and parent_pk is not None:
+                        setattr(obj2, "parent_id", parent_pk)
+                    else:
+                        setattr(obj2, key, value)
+                obj2.save()
         return {"success": 1}
 
     if action == "paste" and subtree:
@@ -363,45 +407,48 @@ def standard_table_action(
 
         created_count = 0
 
-        for obj_data in data2:
-            main_obj = cls()
-            main_fields = obj_data.get("fields", {})
+        # Parent rows and their children are written together: a failure part
+        # way through would otherwise leave orphaned children behind.
+        with transaction.atomic():
+            for obj_data in data2:
+                main_obj = cls()
+                main_fields = obj_data.get("fields", {})
 
-            for key, value in main_fields.items():
-                if key in ("id", "pk"):
-                    continue
-                if key not in allowed_fields:
-                    continue
+                for key, value in main_fields.items():
+                    if key in ("id", "pk"):
+                        continue
+                    if key not in allowed_fields:
+                        continue
 
-                field = cls._meta.get_field(key)
-                if field.is_relation and field.many_to_one:
-                    setattr(main_obj, f"{key}_id", value)
-                else:
-                    setattr(main_obj, key, value)
+                    field = cls._meta.get_field(key)
+                    if field.is_relation and field.many_to_one:
+                        setattr(main_obj, f"{key}_id", value)
+                    else:
+                        setattr(main_obj, key, value)
 
-            main_obj.save()
-            created_count += 1
+                main_obj.save()
+                created_count += 1
 
-            for rel_obj in cls._meta.related_objects:
-                accessor_name = rel_obj.get_accessor_name()
-                related_model = rel_obj.related_model
-                related_objects_data = main_fields.get(accessor_name, [])
-                for rel_obj_data in related_objects_data:
-                    rel_obj = related_model()
-                    rel_fields = rel_obj_data.get("fields", {})
+                for relation in cls._meta.related_objects:
+                    accessor_name = relation.get_accessor_name()
+                    related_model = relation.related_model
+                    related_objects_data = main_fields.get(accessor_name, [])
+                    for rel_obj_data in related_objects_data:
+                        new_rel_obj = related_model()
+                        rel_fields = rel_obj_data.get("fields", {})
 
-                    for key, value in rel_fields.items():
-                        if key in ("id", "pk"):
-                            continue
-                        if key == "parent":
-                            setattr(rel_obj, "parent_id", main_obj.pk)
-                        else:
-                            field = related_model._meta.get_field(key)
-                            if field.is_relation and field.many_to_one:
-                                setattr(rel_obj, f"{key}_id", value)
+                        for key, value in rel_fields.items():
+                            if key in ("id", "pk"):
+                                continue
+                            if key == "parent":
+                                setattr(new_rel_obj, "parent_id", main_obj.pk)
                             else:
-                                setattr(rel_obj, key, value)
-                    rel_obj.save()
+                                field = related_model._meta.get_field(key)
+                                if field.is_relation and field.many_to_one:
+                                    setattr(new_rel_obj, f"{key}_id", value)
+                                else:
+                                    setattr(new_rel_obj, key, value)
+                        new_rel_obj.save()
 
         return {"success": 1, "created": created_count}
 

@@ -2,8 +2,8 @@
 from unittest.mock import MagicMock, patch
 
 from pytigon_lib.schhtml.tags.atom_tags import (
-    AtomTag,
     Atag,
+    AtomTag,
     BrTag,
     HrTag,
     ImgDraw,

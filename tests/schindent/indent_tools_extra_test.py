@@ -5,15 +5,15 @@ import io
 import pytest
 
 from pytigon_lib.schindent.indent_tools import (
+    IndentHtmlParser,
+    NormParser,
     _convert_strings,
     convert_js,
     count_leading_spaces,
     file_norm_tab,
     indent_html,
-    IndentHtmlParser,
     norm_html,
     norm_tab,
-    NormParser,
     reformat_js,
 )
 

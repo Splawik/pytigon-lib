@@ -183,7 +183,7 @@ class TestCommunicationByCacheReceiver:
 
         mock = MagicMock()
         mock.get.side_effect = (
-            lambda key, default=None: {"process_events_recv-id_count": 2}.get(key, None)
+            lambda key, default=None: {"process_events_recv-id_count": 2}.get(key)
         )
         with patch("pytigon_lib.schtasks.publish.cache", mock):
             receiver = CommunicationByCacheReceiver("recv-id")
@@ -200,7 +200,7 @@ class TestCommunicationByCacheReceiver:
         mock.get.side_effect = lambda key, default=None: {
             "process_events_recv-id_count": 1,
             "process_events_recv-id_value_0": "$$$END$$$",
-        }.get(key, None)
+        }.get(key)
         with patch("pytigon_lib.schtasks.publish.cache", mock):
             receiver = CommunicationByCacheReceiver("recv-id")
             receiver.started = True

@@ -16,7 +16,7 @@ class TestSofficeConvertExtra:
         tmpdir = "/fake/tmpdir"
         converted = os.path.join(tmpdir, "test.pdf")
         fake_result = MagicMock(returncode=0, stdout="", stderr="")
-        with patch("os.path.isfile", side_effect=lambda p: p == in_path or p == converted), \
+        with patch("os.path.isfile", side_effect=lambda p: p in (in_path, converted)), \
              patch("tempfile.gettempdir", return_value=tmpdir), \
              patch("subprocess.run", return_value=fake_result) as mock_run, \
              patch("shutil.move"):
@@ -30,7 +30,7 @@ class TestSofficeConvertExtra:
         tmpdir = "/fake/tmpdir"
         converted = os.path.join(tmpdir, "in.pdf")
         fake_result = MagicMock(returncode=0, stdout="", stderr="")
-        with patch("os.path.isfile", side_effect=lambda p: p == in_path or p == converted), \
+        with patch("os.path.isfile", side_effect=lambda p: p in (in_path, converted)), \
              patch("tempfile.gettempdir", return_value=tmpdir), \
              patch("subprocess.run", return_value=fake_result) as mock_run, \
              patch("shutil.move") as mock_move:
@@ -71,7 +71,7 @@ class TestSofficeConvertExtra:
             base = os.path.basename(in_path).replace(".ods", ".csv")
             converted = os.path.join(tmpdir, base)
             with patch("subprocess.run", return_value=run_mock), patch(
-                "os.path.isfile", side_effect=lambda p: p == in_path or p == converted
+                "os.path.isfile", side_effect=lambda p: p in (in_path, converted)
             ), patch("shutil.move") as mock_move:
                 soffice_convert(in_path, "/tmp/out.csv", "csv")
                 mock_move.assert_called_once()
@@ -88,7 +88,7 @@ class TestSofficeConvertExtra:
             base = os.path.basename(in_path).replace(".odt", ".txt")
             converted = os.path.join(tmpdir, base)
             with patch("subprocess.run", return_value=run_mock), patch(
-                "os.path.isfile", side_effect=lambda p: p == in_path or p == converted
+                "os.path.isfile", side_effect=lambda p: p in (in_path, converted)
             ), patch("shutil.move") as mock_move:
                 soffice_convert(in_path, "/tmp/out.txt", "txt")
                 mock_move.assert_called_once_with(converted, "/tmp/out.txt")
@@ -108,7 +108,7 @@ class TestSofficeConvertExtra:
         tmpdir = "/fake/tmpdir"
         converted = os.path.join(tmpdir, "in.pdf")
         fake_result = MagicMock(returncode=0, stdout="", stderr="")
-        with patch("os.path.isfile", side_effect=lambda p: p == in_path or p == converted), \
+        with patch("os.path.isfile", side_effect=lambda p: p in (in_path, converted)), \
              patch("tempfile.gettempdir", return_value=tmpdir), \
              patch("subprocess.run", return_value=fake_result) as mock_run, \
              patch("shutil.move"):
@@ -121,7 +121,7 @@ class TestSofficeConvertExtra:
         tmpdir = "/fake/tmpdir"
         converted = os.path.join(tmpdir, "in.pdf")
         fake_result = MagicMock(returncode=0, stdout="", stderr="")
-        with patch("os.path.isfile", side_effect=lambda p: p == in_path or p == converted), \
+        with patch("os.path.isfile", side_effect=lambda p: p in (in_path, converted)), \
              patch("tempfile.gettempdir", return_value=tmpdir), \
              patch("subprocess.run", return_value=fake_result) as mock_run, \
              patch("shutil.move"):
@@ -145,7 +145,7 @@ class TestSofficeConvertExtra:
             converted = os.path.join(tmpdir, base)
             with patch("subprocess.run", return_value=run_mock), patch(
                 "os.path.isfile",
-                side_effect=lambda p: p == in_path or p == converted,
+                side_effect=lambda p: p in (in_path, converted),
             ), patch("shutil.move") as mock_move:
                 soffice_convert(in_path, "/tmp/out.odt", "odt:writer8")
                 mock_move.assert_called_once_with(converted, "/tmp/out.odt")

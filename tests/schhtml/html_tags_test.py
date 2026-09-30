@@ -1,20 +1,21 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from pytigon_lib.schhtml.basehtmltags import (
-    tag_class_map,
-    register_tag_map,
-    TagPreprocesor,
-    TAG_PREPROCESS_MAP,
-    get_tag_preprocess_map,
-    HTML_TAGS,
-    BLOCK_TAGS,
     ATOM_TAGS,
+    BLOCK_TAGS,
+    CSS_TAG,
+    EXTRA_TAGS,
+    HTML_TAGS,
+    PAGE_TAGS,
     PAR_TAGS,
     TABLE_TAGS,
-    PAGE_TAGS,
-    EXTRA_TAGS,
-    CSS_TAG,
+    TAG_PREPROCESS_MAP,
+    TagPreprocesor,
+    get_tag_preprocess_map,
+    register_tag_map,
+    tag_class_map,
 )
 
 

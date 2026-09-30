@@ -4,9 +4,13 @@ Provides classes for parsing both standard CSS and indentation-based CSS,
 and resolving styles for HTML elements in the render tree.
 """
 
+import copy
+import logging
 import re
 
 from .htmltools import superstrip
+
+logger = logging.getLogger(__name__)
 
 
 def comment_remover(text):
@@ -36,7 +40,10 @@ class CssPos:
     def __init__(self, line, attrs):
         self.tag = superstrip(line[-1])
         self.parents = {}
-        self.attrs = attrs if len(line) == 1 else {}
+        # Deep-copy: several CssPos instances are built from the same attrs
+        # dict and extend() mutates it in place, which would otherwise leak one
+        # selector's attributes into every other selector.
+        self.attrs = copy.deepcopy(attrs) if len(line) == 1 else {}
         if len(line) > 1:
             parent = CssPos(line[:-1], attrs)
             self.parents[parent.key()] = parent
@@ -71,11 +78,17 @@ class CssPos:
         ret_attrs = self.attrs.copy()
         if obj:
             self._get_dict_from_parent(obj.get_tag(), ret_attrs, obj)
-            if obj.get_cls():
-                self._get_dict_from_parent("." + obj.get_cls(), ret_attrs, obj)
-                self._get_dict_from_parent(
-                    obj.get_tag() + "." + obj.get_cls(), ret_attrs, obj
-                )
+            # An element may carry several classes; each of them is a valid CSS
+            # selector, so all of them must be tried.
+            if hasattr(obj, "get_classes"):
+                classes = obj.get_classes()
+            elif obj.get_cls():
+                classes = [obj.get_cls()]
+            else:
+                classes = []
+            for cls in classes:
+                self._get_dict_from_parent("." + cls, ret_attrs, obj)
+                self._get_dict_from_parent(obj.get_tag() + "." + cls, ret_attrs, obj)
             if obj.get_id():
                 self._get_dict_from_parent("#" + obj.get_id(), ret_attrs, obj)
                 self._get_dict_from_parent(
@@ -84,16 +97,17 @@ class CssPos:
         return ret_attrs
 
     def test_print(self, indent):
-        """Print the CSS position for testing purposes."""
+        """Log the CSS position for debugging."""
         tab = indent * " "
-        print(f"{tab}{self.key()}:")
-        print(f"{tab}attrs:")
+        lines = [f"{tab}{self.key()}:", f"{tab}attrs:"]
         for key, value in self.attrs.items():
-            print(f"{tab}    {key}: {value}")
-        print(f"{tab}parents:")
+            lines.append(f"{tab}    {key}: {value}")
+        lines.append(f"{tab}parents:")
         for key, parent in self.parents.items():
-            print(f"{tab}    key:")
-            parent.test_print(indent + 8)
+            lines.append(f"{tab}    {key}:")
+            lines.extend(parent.test_print(indent + 8))
+        logger.debug("\n".join(lines))
+        return lines
 
 
 class Css:
@@ -165,7 +179,7 @@ class Css:
             self._handle_section(section)
 
     def test_print(self):
-        """Print the CSS for testing purposes."""
+        """Log the parsed CSS for debugging."""
         tmp = CssPos([""], {})
         tmp.parents = self.csspos_dict
         tmp.test_print(0)

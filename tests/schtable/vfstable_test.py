@@ -3,11 +3,10 @@
 import datetime
 import os
 import tempfile
-from unittest.mock import MagicMock, patch, PropertyMock
-
-import pytest
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import django
+import pytest
 
 if not django.conf.settings.configured:
     django.conf.settings.configure(
@@ -136,7 +135,7 @@ class TestVfsTableInit:
         assert vt.folder == "/data/docs"
         assert vt.col_names == ["ID", "Name", "Size", "Created"]
         assert vt.col_types == ["int", "str", "int", "datetime"]
-        assert vt.col_length == [10, 10, 10]
+        assert vt.col_length == [28, 12, 18]
         assert vt.auto_cols == []
 
     def test_init_normalizes_path(self):
@@ -182,7 +181,21 @@ class TestVfsTableTimeToColor:
 
 class TestVfsTableGetTable:
     def test_get_table_empty_dir(self):
+        # A non-root folder always yields the ".." parent-navigation row, even
+        # when the directory listing itself is empty, so the user can go up.
         vt = VfsTable("/testdir")
+        mock_fs = MagicMock()
+        mock_fs.listdir.return_value = []
+        mock_fs.isdir.return_value = False
+        with patch("pytigon_lib.schtable.vfstable.default_storage") as mock_storage:
+            mock_storage.fs = mock_fs
+            result = vt._get_table()
+            assert len(result) == 1
+            assert result[0][1][0] == ".."
+            assert result[0][4]["edit"][0] == "tableurl"
+
+    def test_get_table_empty_root_dir(self):
+        vt = VfsTable("/")
         mock_fs = MagicMock()
         mock_fs.listdir.return_value = []
         mock_fs.isdir.return_value = False
@@ -405,8 +418,9 @@ class TestVfsTableViewFunction:
 
 class TestVfsOpenFunction:
     def test_opens_file(self):
-        from django.test import RequestFactory
         import binascii
+
+        from django.test import RequestFactory
         mock_fs = MagicMock()
         mock_open = MagicMock()
         mock_open.__enter__ = MagicMock(return_value=MagicMock())
@@ -500,8 +514,9 @@ class TestVfsOpenFunction:
 
 class TestVfsOpenPage:
     def test_open_page(self):
-        from django.test import RequestFactory
         import binascii
+
+        from django.test import RequestFactory
         mock_fs = MagicMock()
         mock_file = MagicMock()
         mock_file.read = MagicMock(return_value=b"page data")

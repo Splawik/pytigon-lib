@@ -414,28 +414,27 @@ class BaseDc:
         :type zip_name: str
         :return: None
         """
-        zf = zipfile.ZipFile(zip_name, mode="r")
-        parm = json_loads(zf.read("set.dat").decode("utf-8"))
-        count = parm[0]
-        self.pages = []
-        self.width = parm[1]
-        self.height = parm[2]
-        self.base_font_size = parm[3]
-        self.paging = parm[4]
-        self._maxwidth = parm[5]
-        self._maxheight = parm[6]
-        if self.dc_info:
-            self.dc_info.styles = parm[7]
-        for i in range(1, count + 1):
-            rec = []
-            data = zf.read(f"page_{i}").decode("utf-8")
-            for line in data.split("\n"):
-                if len(line) > 1:
-                    buf = json_loads(line)
-                    rec.append(buf)
-            self.pages.append(rec)
-            # self.rec = rec
-        zf.close()
+        with zipfile.ZipFile(zip_name, mode="r") as zf:
+            parm = json_loads(zf.read("set.dat").decode("utf-8"))
+            count = parm[0]
+            self.pages = []
+            self.width = parm[1]
+            self.height = parm[2]
+            self.base_font_size = parm[3]
+            self.paging = parm[4]
+            self._maxwidth = parm[5]
+            self._maxheight = parm[6]
+            if self.dc_info:
+                self.dc_info.styles = parm[7]
+            for i in range(1, count + 1):
+                rec = []
+                data = zf.read(f"page_{i}").decode("utf-8")
+                for line in data.split("\n"):
+                    if len(line) > 1:
+                        buf = json_loads(line)
+                        rec.append(buf)
+                self.pages.append(rec)
+                # self.rec = rec
 
     def _scale_image(self, x, y, dx, dy, scale, image_w, image_h):
         """
@@ -932,9 +931,17 @@ class SubDc:
         """Delegate unknown attributes to the parent device context.
 
         Only called when normal attribute lookup fails, avoiding overhead
-        on every attribute access.
+        on every attribute access.  ``_parent`` is fetched with
+        ``object.__getattribute__`` so a missing/None parent raises
+        ``AttributeError`` instead of recursing through this hook.
         """
-        return getattr(self._parent, attr)
+        try:
+            parent = object.__getattribute__(self, "_parent")
+        except AttributeError:
+            raise AttributeError(attr) from None
+        if parent is None:
+            raise AttributeError(attr)
+        return getattr(parent, attr)
 
     def play_str(self, str):
         """
@@ -1179,9 +1186,17 @@ class NullDc:
         """Delegate unknown attributes to the referenced device context.
 
         Only called when normal attribute lookup fails, avoiding overhead
-        on every attribute access.
+        on every attribute access.  ``_ref_dc`` is fetched with
+        ``object.__getattribute__`` so a missing reference raises
+        ``AttributeError`` instead of recursing through this hook.
         """
-        return getattr(self._ref_dc, attr)
+        try:
+            ref_dc = object.__getattribute__(self, "_ref_dc")
+        except AttributeError:
+            raise AttributeError(attr) from None
+        if ref_dc is None:
+            raise AttributeError(attr)
+        return getattr(ref_dc, attr)
 
     def get_dc_info(self):
         """

@@ -61,6 +61,7 @@ import os.path
 from django.apps import apps
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models import Max, Min
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import Context, RequestContext, loader
@@ -197,27 +198,32 @@ def change_pos(request, app, tab, pk, forward=True, field=None, callback_fun=Non
     if neighbour_id is None:
         return HttpResponse("NO")
 
+    # Swap primary keys (preserved for backward compatibility).
+    # The swap is two writes on rows that other tables reference, so it must be
+    # atomic with both rows locked: a failure between them would leave foreign
+    # keys pointing at the wrong record.
     try:
-        obj2 = model.objects.get(id=neighbour_id)
+        with transaction.atomic():
+            obj = model.objects.select_for_update().get(id=pk)
+            obj2 = model.objects.select_for_update().get(id=neighbour_id)
+            tmp_id = obj.id
+            obj.id = obj2.id
+            obj2.id = tmp_id
+
+            if callback_fun:
+                callback_fun(obj, obj2)
+
+            obj.save()
+            obj2.save()
     except ObjectDoesNotExist:
         LOGGER.warning(
-            "change_pos: neighbour object %s.%s pk=%s disappeared.",
+            "change_pos: object %s.%s pk=%s or neighbour pk=%s disappeared.",
             app,
             tab,
+            pk,
             neighbour_id,
         )
         return HttpResponse("NO")
-
-    # Swap primary keys (preserved for backward compatibility).
-    tmp_id = obj.id
-    obj.id = obj2.id
-    obj2.id = tmp_id
-
-    if callback_fun:
-        callback_fun(obj, obj2)
-
-    obj.save()
-    obj2.save()
 
     return HttpResponse('<head><meta name="TARGET" content="refresh_page" /></head><body>YES</body>')
 
@@ -546,22 +552,33 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
             self.content = b""
         return self
 
+    def _template_name_str(self):
+        """Return the primary template name as a string.
+
+        ``template_name`` may be a single name or a list of candidates; taking
+        ``[0]`` of a plain string would yield its first *character*.
+        """
+        if isinstance(self.template_name, str):
+            return self.template_name
+        return self.template_name[0]
+
     def _render_hdoc(self, doc_type):
         """Render the template as an HTML-based OOXML document (hdoc/hxls)."""
         context = self.resolve_context(self.context_data)
         t = loader.select_template(self.template_name)
         content = "" + t.render(context)
+        tname = self._template_name_str()
 
         if doc_type == "hdoc":
             self["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             from pytigon_lib.schhtml.docxdc import DocxDc as Dc
 
-            file_name = os.path.basename(self.template_name[0]).replace("html", "docx")
+            file_name = os.path.basename(tname).replace("html", "docx")
         else:
             self["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             from pytigon_lib.schhtml.xlsxdc import XlsxDc as Dc
 
-            file_name = os.path.basename(self.template_name[0]).replace("html", "xlsx")
+            file_name = os.path.basename(tname).replace("html", "xlsx")
 
         from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
 
@@ -587,12 +604,7 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         ext = ".pdf" if stream_type == "pdf" else ".spdf"
         self["Content-Type"] = mime
 
-        if isinstance(self.template_name, str):
-            tname = self.template_name
-        else:
-            tname = self.template_name[0]
-
-        filename = tname.rsplit("/", 1)[-1].replace(".html", ext)
+        filename = self._template_name_str().rsplit("/", 1)[-1].replace(".html", ext)
         self["Content-Disposition"] = f"attachment; filename={filename}"
 
         pdf_stream = stream_from_html(
@@ -611,13 +623,29 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
         mp.feed(self.content.decode("utf-8"))
         mp.close()
 
-        row_title = mp.tables[-1][0]
-        tab = mp.tables[-1][1:]
+        if not mp.tables:
+            LOGGER.warning("_convert_to_json: no table found in '%s'", self._template_name_str())
+            self.content = schjson.json_dumps({"total": 0, "rows": []})
+            return
+
+        last_table = mp.tables[-1]
+        if not last_table or not last_table[0]:
+            LOGGER.warning("_convert_to_json: empty table in '%s'", self._template_name_str())
+            self.content = schjson.json_dumps({"total": 0, "rows": []})
+            return
+
+        row_title = list(last_table[0])
+        tab = last_table[1:]
 
         if ":" in row_title[0]:
-            x = row_title[0].split(":")
+            x = row_title[0].split(":", 1)
             title = x[0]
-            _per_page, c = x[1].split("/")
+            parts = x[1].split("/") if len(x) > 1 else []
+            if len(parts) == 2:
+                c = int(parts[1]) if parts[1].lstrip("-").isdigit() else len(tab) - 1
+            else:
+                LOGGER.warning("_convert_to_json: cannot parse per-page count from %r", x[1])
+                c = len(tab) - 1
             row_title[0] = title
         else:
             c = len(tab) - 1
@@ -630,6 +658,15 @@ class ExtTemplateResponse(LocalizationTemplateResponse):
 
         tab2 = []
         for row in tab:
+            if len(row) != len(row_title) - 1:
+                # A row with the wrong number of cells would silently shift or
+                # drop every column value with a plain zip().
+                LOGGER.warning(
+                    "_convert_to_json: row has %d cells, expected %d - skipping",
+                    len(row),
+                    len(row_title) - 1,
+                )
+                continue
             d = dict(zip(row_title, row))
             if hasattr(row, "row_id"):
                 d["id"] = row.row_id

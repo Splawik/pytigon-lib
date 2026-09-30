@@ -50,12 +50,12 @@ if BASE_PATH not in sys.path:
 os.chdir(BASE_PATH)
 
 # Initialize paths and settings
-from pytigon_lib import init_paths  # noqa: E402
+from pytigon_lib import init_paths
 
 init_paths()
-from pytigon.schserw import settings as schserw_settings  # noqa: E402
+from pytigon.schserw import settings as schserw_settings
 
-from pytigon_lib.schtools.install_init import init  # noqa: E402
+from pytigon_lib.schtools.install_init import init
 
 if schserw_settings.PRJ_PATH not in sys.path:
     sys.path.append(schserw_settings.PRJ_PATH)

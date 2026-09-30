@@ -657,11 +657,13 @@ class TestBaseDcInfo:
         assert minsize == 12
         assert maxsize > 0
 
-    def test_get_multiline_text_height_raises_attributeerror_due_to_bug(self):
-        """BaseDcInfo.get_multiline_text_height has a bug: txt.dc.split() should be txt.split()."""
+    def test_get_multiline_text_height_splits_text_on_spaces(self):
+        """BaseDcInfo.get_multiline_text_height wraps text on the given width."""
         info = BaseDcInfo(None)
-        with pytest.raises(AttributeError):
-            info.get_multiline_text_height("hello world foo bar", 200, "default")
+        dy, lines = info.get_multiline_text_height("hello world foo bar", 200, "default")
+        # width is 12px per character, so "hello world foo bar" (19 chars) wraps
+        assert lines == ["hello world foo", "bar"]
+        assert dy == 2 * info.get_text_height("", "default")
 
     def test_get_extents(self):
         info = BaseDcInfo(None)

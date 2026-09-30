@@ -109,20 +109,30 @@ class TestUpgradeTest:
 
 
 class TestPipInstall:
-    def test_confirm_false_returns_false_always(self):
+    # ``pip_install`` routes through the pytigon pip wrapper
+    # (``python -m pytigon.ptig pip_<prj> install ...``), so the second argument
+    # is a project name, not a target directory. See pytigon_lib/schtools/install_init.py.
+    PRJ = "schdevtools"
+
+    def test_confirm_false_returns_true_always(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, ["Successfully installed xyz"], [])
-            assert pip_install("somepkg", "/tmp/lib", confirm=False) is False
+            assert pip_install("somepkg", self.PRJ, confirm=False) is True
 
     def test_confirm_true_on_success(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, ["Successfully installed xyz"], [])
-            assert pip_install("somepkg", "/tmp/lib", confirm=True) is True
+            assert pip_install("somepkg", self.PRJ, confirm=True) is True
 
     def test_confirm_true_on_failure(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
-            mock_py_run.return_value = (0, ["Collecting somepkg"], [])
-            assert pip_install("somepkg", "/tmp/lib", confirm=True) is False
+            mock_py_run.return_value = (0, [], ["ERROR: No matching distribution found"])
+            assert pip_install("somepkg", self.PRJ, confirm=True) is False
+
+    def test_error_in_output_marks_failure(self):
+        with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
+            mock_py_run.return_value = (0, ["Error: could not resolve dependency"], [])
+            assert pip_install("somepkg", self.PRJ, confirm=True) is False
 
     def test_success_anywhere_in_output(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
@@ -131,33 +141,34 @@ class TestPipInstall:
                 ["line1", "Successfully installed xyz", "line3"],
                 [],
             )
-            assert pip_install("somepkg", "/tmp/lib", confirm=True) is True
+            assert pip_install("somepkg", self.PRJ, confirm=True) is True
 
     def test_upgrade_flag_passed(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, ["Successfully installed xyz"], [])
-            pip_install("somepkg", "/tmp/lib", confirm=False, upgrade=True)
+            pip_install("somepkg", self.PRJ, confirm=False, upgrade=True)
             args = mock_py_run.call_args[0][0]
             assert "--upgrade" in args
 
     def test_no_upgrade_flag_by_default(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, ["Successfully installed xyz"], [])
-            pip_install("somepkg", "/tmp/lib", confirm=False)
+            pip_install("somepkg", self.PRJ, confirm=False)
             args = mock_py_run.call_args[0][0]
             assert "--upgrade" not in args
 
-    def test_target_flag_passed(self):
+    def test_wraps_pytigon_pip_command(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, ["Successfully installed xyz"], [])
-            pip_install("somepkg", "/custom/lib", confirm=False)
+            pip_install("somepkg", self.PRJ, confirm=False)
             args = mock_py_run.call_args[0][0]
-            assert "--target=/custom/lib" in args
+            assert args[:4] == ["-m", "pytigon.ptig", "pip_schdevtools", "install"]
+            assert args[-1] == "somepkg"
 
     def test_multiple_packages(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, ["Successfully installed a b c"], [])
-            pip_install("a b c", "/tmp/lib", confirm=False)
+            pip_install("a b c", self.PRJ, confirm=False)
             args = mock_py_run.call_args[0][0]
             assert "a" in args
             assert "b" in args
@@ -166,46 +177,55 @@ class TestPipInstall:
     def test_empty_packages(self):
         with patch("pytigon_lib.schtools.install_init.py_run") as mock_py_run:
             mock_py_run.return_value = (0, [], [])
-            pip_install("   ", "/tmp/lib", confirm=False)
+            pip_install("   ", self.PRJ, confirm=False)
             args = mock_py_run.call_args[0][0]
-            assert "--disable-pip-version-check" in args
-            assert "install" in args
+            assert args == ["-m", "pytigon.ptig", "pip_schdevtools", "install"]
 
 
 class TestBuildAll:
+    # ``build_all(prj, data_path, path)`` walks ``path`` and calls each
+    # ``*_build.py`` script's ``build(prj=..., data_path=..., path=...)``.
+    PRJ = "schdevtools"
+    BUILD_SRC = "def build(prj=None, data_path=None, path=None):\n    return True"
+
     def test_no_build_files_returns_true(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
-            assert build_all(tmp) is True
+            assert build_all(self.PRJ, tmp, tmp) is True
 
     def test_successful_build(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             script = os.path.join(tmp, "example_build.py")
             with open(script, "w") as f:
-                f.write("def build(path=None):\n    return True")
-            assert build_all(tmp) is True
+                f.write(self.BUILD_SRC)
+            assert build_all(self.PRJ, tmp, tmp) is True
 
     def test_failed_build_returns_false(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             script = os.path.join(tmp, "example_build.py")
             with open(script, "w") as f:
-                f.write("def build(path=None):\n    return False")
-            assert build_all(tmp) is False
+                f.write("def build(prj=None, data_path=None, path=None):\n    return False")
+            assert build_all(self.PRJ, tmp, tmp) is False
 
     def test_passes_path_argument(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             script = os.path.join(tmp, "example_build.py")
             expected = os.path.join(tmp, "example.nim")
-            s = f"def build(path=None):\n    if path != {expected!r}:\n        return False\n    return True"
+            s = (
+                "def build(prj=None, data_path=None, path=None):\n"
+                f"    if path != {expected!r} or prj != {self.PRJ!r}:\n"
+                "        return False\n"
+                "    return True"
+            )
             with open(script, "w") as f:
                 f.write(s)
-            assert build_all(tmp) is True
+            assert build_all(self.PRJ, tmp, tmp) is True
 
     def test_ignores_non_build_files(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             script = os.path.join(tmp, "other_script.py")
             with open(script, "w") as f:
-                f.write("def build(path=None):\n    return True")
-            assert build_all(tmp) is True
+                f.write(self.BUILD_SRC)
+            assert build_all(self.PRJ, tmp, tmp) is True
 
 
 class TestLockAcquireRelease:

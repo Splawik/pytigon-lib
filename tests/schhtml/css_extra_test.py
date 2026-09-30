@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pytigon_lib.schhtml.css import comment_remover, Css, CssPos
+from pytigon_lib.schhtml.css import Css, CssPos, comment_remover
 
 
 class TestCommentRemoverExtra:

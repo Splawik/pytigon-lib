@@ -1,7 +1,7 @@
 """Tests for :mod:`pytigon_lib.schhtml.css`."""
 import pytest
 
-from pytigon_lib.schhtml.css import comment_remover, CssPos
+from pytigon_lib.schhtml.css import CssPos, comment_remover
 
 
 class TestCommentRemover:

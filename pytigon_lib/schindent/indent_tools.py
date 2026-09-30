@@ -420,18 +420,10 @@ if __name__ == "__main__":
 
     test_dir = os.path.join(os.path.dirname(__file__), "test")
 
-    # Example: normalize HTML to ihtml format
-    if False:
-        input_path = os.path.join(test_dir, "test11.html")
-        output_path = os.path.join(test_dir, "test11.ihtml")
-        with open(input_path) as f_in, open(output_path, "w") as f_out:
-            ret = norm_html(f_in.read())
-            f_out.write(ret)
-
-    # Example: convert ihtml back to formatted HTML
-    if True:
-        input_path = os.path.join(test_dir, "test11.ihtml")
-        output_path = os.path.join(test_dir, "_test11.html")
-        with open(input_path) as f_in, open(output_path, "w") as f_out:
-            ret = indent_html(f_in.read())
-            f_out.write(ret)
+    # Convert ihtml to formatted HTML.
+    input_path = os.path.join(test_dir, "test11.ihtml")
+    output_path = os.path.join(test_dir, "_test11.html")
+    with open(input_path, encoding="utf-8") as f_in, open(
+        output_path, "w", encoding="utf-8"
+    ) as f_out:
+        f_out.write(indent_html(f_in.read()))

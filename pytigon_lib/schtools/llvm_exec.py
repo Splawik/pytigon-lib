@@ -4,12 +4,28 @@ Provides helpers to compile LLVM IR from strings or files and
 retrieve function pointers from the JIT-compiled code.
 """
 
+import threading
+
 import llvmlite.binding as llvm
 
 # Initialize LLVM components once at module load
 # llvm.initialize()
 llvm.initialize_native_target()
 llvm.initialize_native_asmprinter()
+
+# An MCJIT engine is not safe to mutate from several threads at once, so every
+# operation on the shared engine is serialised. The engine is kept as a module
+# global (and re-created lazily) because the JIT-compiled symbols live in it.
+ENGINE = None
+_ENGINE_LOCK = threading.RLock()
+
+
+def _get_engine():
+    """Return the shared execution engine, creating it on first use."""
+    global ENGINE
+    if ENGINE is None:
+        ENGINE = _create_execution_engine()
+    return ENGINE
 
 
 def _create_execution_engine():
@@ -46,8 +62,8 @@ def _compile_ir(engine, llvm_ir):
     return mod
 
 
-# Global execution engine instance (shared across all compilations)
-ENGINE = _create_execution_engine()
+# The execution engine is created lazily, on first use, and every operation
+# on it is guarded by _ENGINE_LOCK.
 
 
 def compile_str_to_module(llvm_ir):
@@ -65,13 +81,15 @@ def compile_str_to_module(llvm_ir):
     """
     if isinstance(llvm_ir, str):
         try:
-            return _compile_ir(ENGINE, llvm_ir)
+            with _ENGINE_LOCK:
+                return _compile_ir(_get_engine(), llvm_ir)
         except Exception as e:
             raise RuntimeError(f"Error compiling LLVM IR: {e}") from e
     elif isinstance(llvm_ir, (list, tuple)):
         for ir in llvm_ir:
             try:
-                _compile_ir(ENGINE, ir)
+                with _ENGINE_LOCK:
+                    _compile_ir(_get_engine(), ir)
             except Exception as e:
                 raise RuntimeError(f"Error compiling LLVM IR: {e}") from e
     else:
@@ -93,14 +111,14 @@ def compile_file_to_module(llvm_ir_path):
     """
     if isinstance(llvm_ir_path, str):
         try:
-            with open(llvm_ir_path) as f:
+            with open(llvm_ir_path, encoding="utf-8") as f:
                 return compile_str_to_module(f.read())
         except OSError as e:
             raise RuntimeError(f"Error reading file {llvm_ir_path}: {e}") from e
     elif isinstance(llvm_ir_path, (list, tuple)):
         for path in llvm_ir_path:
             try:
-                with open(path) as f:
+                with open(path, encoding="utf-8") as f:
                     compile_str_to_module(f.read())
             except OSError as e:
                 raise RuntimeError(f"Error reading file {path}: {e}") from e
@@ -121,7 +139,8 @@ def get_function(name):
         RuntimeError: If the function cannot be found.
     """
     try:
-        func_ptr = ENGINE.get_function_address(name)
+        with _ENGINE_LOCK:
+            func_ptr = _get_engine().get_function_address(name)
         return func_ptr
     except Exception as e:
         raise RuntimeError(f"Error getting function address for '{name}': {e}") from e

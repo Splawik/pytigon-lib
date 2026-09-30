@@ -16,6 +16,7 @@ import io
 import logging
 import os
 import os.path
+import warnings
 from collections.abc import Callable, Generator
 from typing import Any, TextIO
 
@@ -121,10 +122,13 @@ def _build_translator(lang: str) -> tuple[Callable[[str], str], list[str]]:
     locale_path = os.path.join(base_path, "locale")
     collected_words: list[str] = []
 
-    # Try to load gettext translation
+    # Try to load gettext translation.
+    # NB: deliberately *not* calling t.install(): that monkey-patches the
+    # builtins ``_`` for the whole process, which a library (and especially a
+    # template compiler) must never do. ``translator_fn`` below calls
+    # ``t.gettext`` directly instead.
     try:
         t = gettext.translation("django", locale_path, languages=[lang])
-        t.install()
     except Exception:
         t = None
 
@@ -1036,8 +1040,20 @@ class IhtmlToHtml:
 
 # ---- Public API ----
 
-# Backward-compatible alias for external callers
-ConwertToHtml = IhtmlToHtml
+
+def ConwertToHtml(*args, **kwargs):
+    """Deprecated alias for :class:`IhtmlToHtml` (misspelled name).
+
+    Emits a :class:`DeprecationWarning` and forwards every argument unchanged,
+    so existing callers keep working.
+    """
+    warnings.warn(
+        "ConwertToHtml is misspelled; use IhtmlToHtml instead. "
+        "The alias will be removed in a future release.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return IhtmlToHtml(*args, **kwargs)
 
 
 def ihtml_to_html_base(file_name: str | None = None, input_str: str | None = None, lang: str = "en") -> str:
@@ -1146,6 +1162,17 @@ def _py_to_js_wrapper(script: str, append_exports=False) -> str:
         return code
 
 
-# Backward-compatible alias for external callers.
-# Used by: schmanage/schbuilder/views.py, schdevtools/schbuilder/views.py
-py_to_js = _py_to_js_wrapper
+def py_to_js(*args, **kwargs):
+    """Deprecated alias for :func:`_py_to_js_wrapper`.
+
+    Kept for callers in schmanage/schbuilder/views.py and
+    schdevtools/schbuilder/views.py; forwards every argument unchanged.
+    """
+    warnings.warn(
+        "py_to_js is a misspelled alias; use the compiler entry point in "
+        "pytigon_lib.schindent.py_to_js instead. "
+        "The alias will be removed in a future release.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _py_to_js_wrapper(*args, **kwargs)

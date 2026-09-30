@@ -21,14 +21,6 @@ def test_get_scope_and_content_http_post():
 
 
 @pytest.mark.asyncio
-async def test_get_or_post():
-    mock_app = AsyncMock()
-    headers = [("X-Test-Header", "test-value")]
-    response = await get_or_post(mock_app, "/test", headers)
-    assert isinstance(response, dict)
-
-
-@pytest.mark.asyncio
 async def test_websocket():
     mock_app = AsyncMock()
     mock_output = MagicMock()

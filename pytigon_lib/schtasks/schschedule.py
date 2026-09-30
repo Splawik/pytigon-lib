@@ -2,12 +2,47 @@ import asyncio
 import datetime
 import logging
 import types
+from datetime import UTC
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from twisted.internet import reactor
 from twisted.web import server, xmlrpc
 
 LOGGER = logging.getLogger("pytigon_task")
-INIT_TIME = datetime.datetime.now()
+#: Timezone-aware process start; see ``_now()`` for the local-time equivalent.
+INIT_TIME = datetime.datetime.now(UTC)
+
+
+def _now(tz="local"):
+    """Return the current time, honouring *tz*.
+
+    Args:
+        tz: IANA timezone name, or ``"local"`` (default) for the system zone.
+
+    Returns:
+        A timezone-aware :class:`datetime.datetime`.
+    """
+    if tz and tz != "local":
+        try:
+            return datetime.datetime.now(ZoneInfo(tz))
+        except (ZoneInfoNotFoundError, ValueError, KeyError):
+            LOGGER.warning("Unknown timezone %r, falling back to local time", tz)
+    return datetime.datetime.now(UTC).astimezone()
+
+
+def _validate_weekdays(in_weekdays, what="in_weekdays"):
+    """Validate weekday numbers, raising ValueError on an out-of-range entry.
+
+    Without this, the "search at most 7 days" loops in :func:`monthly` and
+    :func:`daily` silently give up and leave the hour unset.
+    """
+    if not in_weekdays:
+        return in_weekdays
+    for pos in in_weekdays:
+        if not isinstance(pos, int) or isinstance(pos, bool) or not 0 <= pos <= 6:
+            raise ValueError(f"{what} must be weekday numbers 0-6 (Monday=0), got {pos!r}")
+    return in_weekdays
+
 
 
 def _add_months(dt, months=1):
@@ -49,11 +84,12 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz="local"):
     """Generate monthly schedule functions."""
     ret = []
     _day = day
+    in_weekdays = _validate_weekdays(in_weekdays)
 
     def make_monthly_fun(_hour, _minute, _second):
         def _monthly(dt=None):
             nonlocal day, _day, _hour, _minute, _second, in_months, in_weekdays, tz
-            dt = dt or INIT_TIME
+            dt = dt or _now(tz)
             x = dt.replace(day=day, hour=_hour, minute=_minute, second=_second)
 
             if x < dt:
@@ -65,6 +101,8 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz="local"):
                 x = _add_months(x, delta)
 
             if in_weekdays and x.weekday() not in in_weekdays:
+                # in_weekdays is validated at registration, so a match is
+                # guaranteed within one week.
                 for _ in range(7):
                     x = x + datetime.timedelta(days=1)
                     if x.weekday() in in_weekdays:
@@ -81,11 +119,12 @@ def monthly(day=1, at=0, in_months=None, in_weekdays=None, tz="local"):
 def daily(at=0, in_weekdays=None, tz="local"):
     """Generate daily schedule functions."""
     ret = []
+    in_weekdays = _validate_weekdays(in_weekdays)
 
     def make_daily_fun(_hour, _minute, _second):
         def _daily(dt=None):
             nonlocal _hour, _minute, _second, in_weekdays, tz
-            dt = dt or INIT_TIME
+            dt = dt or _now(tz)
             x = dt.replace(hour=_hour, minute=_minute, second=_second)
 
             if x < dt:
@@ -105,14 +144,15 @@ def daily(at=0, in_weekdays=None, tz="local"):
     return ret
 
 
-def hourly(period=1, at=0, in_weekdays=None, in_hours=None):
+def hourly(period=1, at=0, in_weekdays=None, in_hours=None, tz="local"):
     """Generate hourly schedule functions."""
     ret = []
+    in_weekdays = _validate_weekdays(in_weekdays)
 
     def make_hourly_fun(_minute, _second):
         def _hourly(dt=None):
             nonlocal period, _minute, _second, in_weekdays, in_hours
-            dt = dt or INIT_TIME
+            dt = dt or _now(tz)
             x = dt.replace(minute=_minute, second=_second)
 
             if x < dt:
@@ -139,14 +179,15 @@ def hourly(period=1, at=0, in_weekdays=None, in_hours=None):
     return ret
 
 
-def in_minute_intervals(period=1, at=0, in_weekdays=None, in_hours=None):
+def in_minute_intervals(period=1, at=0, in_weekdays=None, in_hours=None, tz="local"):
     """Generate minute interval schedule functions."""
     ret = []
+    in_weekdays = _validate_weekdays(in_weekdays)
 
     def make_in_minute_intervals_fun(_second):
         def _in_minute_intervals(dt=None):
             nonlocal period, _second, in_weekdays, in_hours
-            dt = dt or INIT_TIME
+            dt = dt or _now(tz)
             x = dt.replace(second=_second)
 
             if x < dt:
@@ -173,12 +214,13 @@ def in_minute_intervals(period=1, at=0, in_weekdays=None, in_hours=None):
     return ret
 
 
-def in_second_intervals(period=1, in_weekdays=None, in_hours=None):
+def in_second_intervals(period=1, in_weekdays=None, in_hours=None, tz="local"):
     """Generate second interval schedule functions."""
+    in_weekdays = _validate_weekdays(in_weekdays)
 
     def _in_second_intervals(dt=None):
         nonlocal period, in_weekdays, in_hours
-        dt = dt or INIT_TIME
+        dt = dt or _now(tz)
         x = dt + datetime.timedelta(seconds=period)
 
         if in_hours and x.hour not in in_hours:
@@ -240,7 +282,12 @@ class SChScheduler:
         self.rpcserver_activated = False
 
     def __getattr__(self, item):
-        return self.fmap[item]
+        # Must raise AttributeError (not KeyError) for unknown names, otherwise
+        # copy/pickle probing for dunders recurses instead of failing cleanly.
+        try:
+            return self.fmap[item]
+        except KeyError:
+            raise AttributeError(item) from None
 
     def add_task(self, time_functions, task, *argi, **argv):
         """Add a task to the scheduler."""
@@ -285,15 +332,25 @@ class SChScheduler:
         """Clear all tasks."""
         self.tasks.clear()
 
-    async def process(self, dt):
-        """Process tasks that are due."""
+    async def process(self, dt, timeout=None):
+        """Process tasks that are due.
+
+        Args:
+            dt: The current time; tasks scheduled at or before it are run.
+            timeout: Maximum seconds to wait for the started tasks. Pending
+                tasks are cancelled when it expires.
+        """
         if self.tasks:
             processes = []
             for task in self.tasks:
                 if task[4] <= dt:
                     try:
                         task[4] = task[3](task[4])
-                        processes.append(task[0](*task[1], **task[2]))
+                        # asyncio.wait() requires Tasks, not bare coroutines.
+                        result = task[0](*task[1], **task[2])
+                        if asyncio.iscoroutine(result):
+                            result = asyncio.ensure_future(result)
+                        processes.append(result)
                         LOGGER.info(f"Running task: {task[5]}")
                     except Exception as e:
                         LOGGER.exception(f"An error occurred in executing task: {e}")
@@ -301,10 +358,20 @@ class SChScheduler:
             if processes:
                 self.tasks.sort(key=_key)
                 try:
-                    done, pending = await asyncio.wait(processes)
+                    if timeout is not None:
+                        async with asyncio.timeout(timeout):
+                            done, pending = await asyncio.wait(processes)
+                    else:
+                        done, pending = await asyncio.wait(processes)
+                    for future in pending:
+                        future.cancel()
                     _ = [future.result() for future in done]
                 except Exception as e:
                     LOGGER.exception(f"An error occurred in task: {e}")
+                    for process in processes:
+                        if not asyncio.isfuture(process) or not process.done():
+                            continue
+                        process.cancel()
 
     def show_tasks(self):
         """Show all tasks."""
@@ -326,24 +393,37 @@ class SChScheduler:
                 result.append(name)
         return result
 
-    async def _run(self):
+    async def _run(self, timeout=None):
         """Main scheduler loop."""
+        # The task set keeps a strong reference: CPython only holds a weak one
+        # to a running task, so discarding the result can let it be collected
+        # mid-flight and the scheduler silently stop running jobs.
+        running = set()
         while self.tasks or self.rpcserver_activated:
             try:
                 loop = asyncio.get_running_loop()
-                _ = loop.create_task(self.process(datetime.datetime.now()))  # noqa: RUF006
+                task = loop.create_task(self.process(_now(), timeout=timeout))
+                running.add(task)
+                task.add_done_callback(running.discard)
             except Exception as e:
-                LOGGER.exception(f"Problem with scheduler: {e}")
+                LOGGER.exception("Problem with scheduler: %s", e)
             await asyncio.sleep(1)
 
-    def run(self):
-        """Run the scheduler."""
+        if running:
+            await asyncio.gather(*running, return_exceptions=True)
+
+    def run(self, timeout=None):
+        """Run the scheduler.
+
+        Args:
+            timeout: Optional per-cycle task timeout in seconds.
+        """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._run())
+        loop.run_until_complete(self._run(timeout))
 
 
 if __name__ == "__main__":

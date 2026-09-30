@@ -635,6 +635,7 @@ class FsspecMountFS(AbstractFileSystem):
         for child in self._virtual_children(path):
             name = f"{path}/{child}" if path else child
             result[name] = {"name": name, "type": "directory", "size": 0}
+        backend = None
         try:
             backend, relative = self._resolve(path)
             entries = backend.fs.ls(backend.path(relative), detail=True, **kwargs)
@@ -642,6 +643,10 @@ class FsspecMountFS(AbstractFileSystem):
             entries = []
         for entry in entries:
             if isinstance(entry, str):
+                # Only reached when the backend resolved successfully, so
+                # ``backend`` is bound here; the guard keeps that explicit.
+                if backend is None:
+                    continue
                 entry = backend.fs.info(entry)
             name = (
                 f"{path}/{posixpath.basename(str(entry['name']).rstrip('/'))}"
@@ -750,4 +755,10 @@ class FsspecMountFS(AbstractFileSystem):
 
     def getsyspath(self, path):
         backend, path2 = self._resolve(path)
+        # _path() is fsspec's private helper. unstrip_protocol() is the public
+        # API for recovering a plain path from a fully qualified one; fall back
+        # to _path() for backends that predate it.
+        unstrip = getattr(backend.fs, "unstrip_protocol", None)
+        if unstrip is not None:
+            return unstrip(backend.path(path2))
         return backend.fs._path(path2)

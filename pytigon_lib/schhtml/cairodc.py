@@ -1,9 +1,21 @@
 import io
 from math import pi
 
-import cairo
+try:
+    import cairo
+except ImportError:  # pragma: no cover - optional dependency
+    cairo = None
 
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+
+
+def _require_cairo():
+    """Raise a helpful error when the optional ``pycairo`` dependency is absent."""
+    if cairo is None:
+        raise RuntimeError(
+            "The 'cairo' package is required for CairoDc. "
+            "Install pycairo or use a different drawing context."
+        )
 
 
 class CairoDc(BaseDc):
@@ -19,6 +31,7 @@ class CairoDc(BaseDc):
         notify_callback=None,
         record=False,
     ):
+        _require_cairo()
         super().__init__(
             calc_only,
             width,
@@ -309,11 +322,12 @@ class CairoDcInfo(BaseDcInfo):
             png_stream = io.BytesIO(png_data)
             surface = cairo.ImageSurface.create_from_png(png_stream)
             return surface.get_width(), surface.get_height()
-        except (cairo.Error, OSError, ValueError):
+        except (AttributeError, OSError, ValueError):
             return (0, 0)
 
 
 def get_PdfCairoDc(result, width, height):
+    _require_cairo()
     surf = cairo.PDFSurface(result, width, height)
     ctx = cairo.Context(surf)
     return CairoDc(ctx=ctx, calc_only=False, width=width, height=height)

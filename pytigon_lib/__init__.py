@@ -22,8 +22,8 @@ __version__ = "0.260929"
 import importlib.util
 import logging
 import os
-import sys
 import site
+import sys
 from pathlib import Path
 
 from pytigon_lib.schtools.env import get_environ

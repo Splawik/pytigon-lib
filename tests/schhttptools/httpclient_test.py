@@ -21,7 +21,7 @@ class TestDecode:
         assert decode(b"") == ""
 
     def test_polish_bytes(self):
-        assert decode("Zażółć".encode("utf-8")) == "Zażółć"
+        assert decode("Zażółć".encode()) == "Zażółć"
 
     def test_none_passes_through(self):
         result = decode(None)

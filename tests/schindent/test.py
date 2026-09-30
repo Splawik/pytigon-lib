@@ -1,4 +1,4 @@
-import pytigon_lib.schdjangoext.django_mini_init  # noqa: F401
+import pytigon_lib.schdjangoext.django_mini_init
 
 from pytigon_lib.schindent.html2ihtml import convert
 from pytigon_lib.schindent.indent_style import ihtml_to_html_base

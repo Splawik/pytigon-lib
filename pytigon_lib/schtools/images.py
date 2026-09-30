@@ -215,7 +215,9 @@ def mse(image_array1, image_array2):
     """
     np = _get_np()
     err = np.sum((image_array1.astype("float") - image_array2.astype("float")) ** 2)
-    err /= float(image_array1.shape[0] * image_array1.shape[1])
+    # The sum spans every element, so divide by the full element count. Using
+    # only width*height makes the metric 3x too large for an RGB image.
+    err /= float(image_array1.size)
     return err
 
 

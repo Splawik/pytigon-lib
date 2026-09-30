@@ -53,7 +53,7 @@ class TestGetTemplateNames:
 class TestBuildDisposition:
     def test_build_with_file_in(self):
         result = _build_disposition("/templates/x.html", "pdf", file_in="/output/result.ods")
-        assert "attachment; filename=result.ods" == result
+        assert result == "attachment; filename=result.ods"
 
     def test_build_no_file_in_basic(self):
         result = _build_disposition("/templates/myapp/test_pdf.html", "pdf")

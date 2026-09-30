@@ -1,6 +1,13 @@
+import logging
 from functools import cmp_to_key
 
 from pytigon_lib.schtools import schjson
+
+logger = logging.getLogger(__name__)
+
+#: Returned to HTTP clients instead of the raw exception text, which can leak
+#: internal file system paths and SQL fragments.
+GENERIC_ERROR = "Table operation failed"
 
 # Command constants
 CMD_INFO = 1
@@ -57,8 +64,9 @@ class Table:
             for rec in insert:
                 self.insert_rec(rec)
             return "OK"
-        except Exception as e:
-            return schjson.dumps({"error": str(e)})
+        except Exception:
+            logger.exception("Table synchronize failed")
+            return schjson.dumps({"error": GENERIC_ERROR})
 
     def _auto(self, col_name, col_names, rec):
         """Handle auto-column logic and return the result as JSON."""
@@ -69,8 +77,9 @@ class Table:
         try:
             ret = self.exec_command(value)
             return schjson.dumps(ret) if isinstance(ret, dict) else ret
-        except Exception as e:
-            return schjson.dumps({"error": str(e)})
+        except Exception:
+            logger.exception("Table command execution failed")
+            return schjson.dumps({"error": GENERIC_ERROR})
 
     def page(self, nr, sort=None, value=None):
         """Return a page of records."""
@@ -106,6 +115,9 @@ class Table:
 
     def command(self, cmd_dict):
         """Handle a command based on the command dictionary."""
+        if not isinstance(cmd_dict, dict):
+            logger.warning("Ignoring table command of unexpected type: %r", type(cmd_dict))
+            return None
         try:
             cmd = int(cmd_dict.get("cmd", CMD_PAGE))
         except (TypeError, ValueError):
@@ -122,16 +134,24 @@ class Table:
             return self._count(value)
         elif cmd == CMD_SYNC:
             return self._sync(
-                schjson.loads(cmd_dict["update"]),
-                schjson.loads(cmd_dict["insert"]),
-                schjson.loads(cmd_dict["delete"]),
+                schjson.loads(cmd_dict.get("update") or "[]"),
+                schjson.loads(cmd_dict.get("insert") or "[]"),
+                schjson.loads(cmd_dict.get("delete") or "[]"),
             )
         elif cmd == CMD_AUTO:
-            return self._auto(
-                cmd_dict["col_name"], cmd_dict["col_names"], cmd_dict["rec"]
-            )
+            col_name = cmd_dict.get("col_name")
+            col_names = cmd_dict.get("col_names")
+            if not col_name or not col_names:
+                logger.warning("Ignoring table auto command without col_name/col_names")
+                return None
+            return self._auto(col_name, col_names, cmd_dict.get("rec"))
         elif cmd == CMD_RECASSTR:
-            return self._rec_as_str(int(cmd_dict["nr"]))
+            try:
+                nr = int(cmd_dict.get("nr"))
+            except (TypeError, ValueError):
+                logger.warning("Ignoring recasstr command with invalid nr: %r", cmd_dict.get("nr"))
+                return None
+            return self._rec_as_str(nr)
         elif cmd == CMD_EXEC:
             return self._exec(value)
         else:

@@ -1,5 +1,5 @@
-import os
 import io
+import os
 import tempfile
 import zipfile
 from unittest.mock import MagicMock, patch

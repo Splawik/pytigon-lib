@@ -1,10 +1,9 @@
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pytigon_lib.schdjangoext.tools import from_migrations, gettempdir, import_model, make_href
-
-import sys
 
 
 class TestImportModelExtra:

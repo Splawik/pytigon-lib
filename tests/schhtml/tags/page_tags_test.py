@@ -2,7 +2,7 @@
 import io
 from unittest.mock import MagicMock
 
-from pytigon_lib.schhtml.tags.page_tags import Page, NewPage, HeaderFooter
+from pytigon_lib.schhtml.tags.page_tags import HeaderFooter, NewPage, Page
 
 
 class TestPageTag:

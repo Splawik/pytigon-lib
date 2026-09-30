@@ -252,6 +252,11 @@ class OOXmlDocTransform(OdfDocTransform):
             except (ValueError, TypeError, AttributeError):
                 id = -1
             if id >= 0:
+                if id >= len(self.shared_strings):
+                    # The workbook references a shared string that is not in
+                    # sharedStrings.xml; leave the cell untouched instead of
+                    # raising IndexError and losing the whole render.
+                    continue
                 s = self.shared_strings[id]
                 if s:
                     if s.startswith(":="):
@@ -433,14 +438,15 @@ class OOXmlDocTransform(OdfDocTransform):
                             for pos in root.findall(".//{*}comment", namespaces=root.nsmap):
                                 ref = pos.attrib["ref"]
                                 for pos2 in pos.findall(".//{*}text/{*}r/{*}t", namespaces=root.nsmap):
+                                    text = pos2.text or ""
                                     if (
-                                        "{{" in pos2.text
-                                        or "{%" in pos2.text
-                                        or pos2.text.startswith("^")
-                                        or pos2.text.startswith("$")
-                                        or pos2.text.startswith(".")
+                                        "{{" in text
+                                        or "{%" in text
+                                        or text.startswith("^")
+                                        or text.startswith("$")
+                                        or text.startswith(".")
                                     ):
-                                        self.comments[ref] = pos2.text
+                                        self.comments[ref] = text
                                         comment = pos2.getparent().getparent().getparent()
                                         comment_list = comment.getparent()
                                         comment_list.remove(comment)
@@ -488,6 +494,9 @@ class OOXmlDocTransform(OdfDocTransform):
                     except KeyError:
                         break
             else:
+                # Unknown doc_type: close the archive before bailing out,
+                # otherwise the file handle leaks for the process lifetime.
+                self.zip_file.close()
                 return 0
 
             self.zip_file.close()

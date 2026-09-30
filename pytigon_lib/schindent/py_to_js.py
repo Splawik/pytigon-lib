@@ -15,7 +15,11 @@ import traceback
 import pscript
 import pscript.parser2
 from pscript import stdlib
-from pscript.parser1 import JSError, reprs
+
+# Import from the current parser module, not the legacy pscript.parser1:
+# reprs and JSError are the same objects in both, but parser1 is the retired
+# module and is not guaranteed to exist in future pscript releases.
+from pscript.parser2 import JSError, reprs
 
 logger = logging.getLogger(__name__)
 

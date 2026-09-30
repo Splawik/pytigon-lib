@@ -128,36 +128,36 @@ def _render_doc(
     if isinstance(context_instance, dict):
         context_instance = Context(context_instance)
 
-    context = (
-        {"tbl": DefaultTbl()} if "tbl" not in context_instance else context_instance
-    )
-
     try:
-        with context_instance.push(context):
-            if "tbl" not in context_instance:
-                context_instance["tbl"] = DefaultTbl()
+        # Build a fresh context: pushing "tbl" into (and then re-reading) the
+        # caller's Context mutates the object the caller still holds.
+        context = dict(context_instance.flatten()) if context_instance else {}
+        if "tbl" not in context:
+            context["tbl"] = DefaultTbl()
+        context_instance = Context(context)
 
-            if isinstance(template_name, (list, tuple)):
-                name = _find_template(template_name)
-            else:
-                name = _find_template((template_name,))
+        if isinstance(template_name, (list, tuple)):
+            name = _find_template(template_name)
+        else:
+            name = _find_template((template_name,))
 
-            if output_name:
-                name_out = output_name
-            else:
-                name_out = get_temp_filename()
-            doc_class = (
-                OdfDocTemplateTransform
-                if doc_type.lower().startswith("od")
-                else OOXmlDocTemplateTransform
-            )
-            doc = doc_class(name, name_out)
+        if output_name:
+            name_out = output_name
+        else:
+            ext = "ods" if doc_type.lower().startswith("od") else "xlsx"
+            name_out = get_temp_filename(ext=ext)
+        doc_class = (
+            OdfDocTemplateTransform
+            if doc_type.lower().startswith("od")
+            else OOXmlDocTemplateTransform
+        )
+        doc = doc_class(name, name_out)
 
-            if doc.process(context_instance, debug) != 1:
-                os.remove(name_out)
-                return None, name
+        if doc.process(context_instance, debug) != 1:
+            os.remove(name_out)
+            return None, name
 
-            return name_out, name
+        return name_out, name
     except Exception as e:
         raise RuntimeError(f"Failed to render document: {e}")
 
@@ -196,11 +196,15 @@ def _render_doc_to_response(
 ):
     """Render the document and return it as an HttpResponse."""
     try:
-        s = _render_doc(doc_type, template_name, context_instance, debug)
+        s = _render_doc(doc_type, template_name, context_instance, debug=debug)
         if not s[0]:
             return None
 
-        name = s[1].split("_")[1] if "_" in s[1] else s[1]
+        # Derive the download name from the template's basename; a naive
+        # split("_") breaks on any path containing an underscore.
+        name = os.path.basename(s[1])
+        if not name:
+            name = "document"
         response = HttpResponse()
         response["Content-Disposition"] = f"attachment; filename={name}"
         response["Content-Type"] = doc_content_type

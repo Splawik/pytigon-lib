@@ -6,9 +6,9 @@ import pytest
 from pytigon_lib.schhtml.htmltools import (
     _SAFE_URL_SCHEMES,
     _SSRF_BLOCKED_HOSTS,
+    Td,
     _is_safe_url,
     superstrip,
-    Td,
 )
 
 

@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Pytest tests
 import pytest
@@ -8,20 +8,18 @@ from pytigon_lib.schhttptools.rest_client import *
 
 @pytest.fixture
 def mock_httpx():
-    with patch("httpx.post") as mock_post, patch("httpx.delete") as mock_delete:
-        yield mock_post, mock_delete
+    """Intercept the pooled httpx.Client that get_rest_client() builds."""
+    client = MagicMock()
+    client.delete.return_value.status_code = 204
+    client.delete.return_value.json.return_value = {}
+    client.post.return_value.json.return_value = {"access_token": "new_access_token"}
+    client.post.return_value.status_code = 200
+    with patch("pytigon_lib.schhttptools.rest_client.httpx.Client", return_value=client):
+        yield client
 
 
 def test_get_rest_client(mock_httpx):
-    mock_post, mock_delete = mock_httpx
-
-    # Mock token refresh response
-    mock_post.return_value.json.return_value = {"access_token": "new_access_token"}
-    mock_post.return_value.status_code = 200
-
-    # Mock delete response
-    mock_delete.return_value.status_code = 204
-    mock_delete.return_value.json.return_value = {}
+    client_mock = mock_httpx
 
     refresh_token = "test_refresh_token"
     client = get_rest_client("http://127.0.0.1:8000", refresh_token)
@@ -32,8 +30,8 @@ def test_get_rest_client(mock_httpx):
     assert response.json() == {}
 
     # Test post request
-    mock_post.return_value.json.return_value = {"data": {"hight": 20}}
-    mock_post.return_value.status_code = 201
+    client_mock.post.return_value.json.return_value = {"data": {"hight": 20}}
+    client_mock.post.return_value.status_code = 201
 
     response = client(
         httpx.post, "/api/otkernel/1/measurement/", json={"data": {"hight": 20}}
@@ -43,10 +41,10 @@ def test_get_rest_client(mock_httpx):
 
 
 def test_get_rest_client_failure(mock_httpx):
-    mock_post, mock_delete = mock_httpx
+    client_mock = mock_httpx
 
     # Mock token refresh failure
-    mock_post.return_value.raise_for_status.side_effect = httpx.RequestError(
+    client_mock.post.return_value.raise_for_status.side_effect = httpx.HTTPError(
         "Token refresh failed"
     )
 

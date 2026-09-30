@@ -1,10 +1,10 @@
 """Virtual filesystem tools: path normalisation, file I/O, zip handling, and format conversion."""
 
-import email.generator
 import hashlib
 import logging
 import os
 import re
+import secrets
 import zipfile
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -59,13 +59,31 @@ def norm_path(url: str | None) -> str:
     return result.replace("###", "://").replace("%20", " ")
 
 
-def open_file(filename: str, mode: str, for_vfs: bool = False) -> Any:
+#: Encoding used for every text-mode file in this module. Project sources
+#: (.ihtml/.icss/markdown) contain non-ASCII, so the platform locale
+#: must never decide how they are decoded.
+DEFAULT_ENCODING = "utf-8"
+
+#: Modes that carry text rather than bytes.
+TEXT_MODES = ("r", "w", "a", "x", "r+", "w+", "a+", "x+")
+
+
+def _needs_encoding(mode: str) -> bool:
+    """Return True when *mode* is a text mode that accepts an ``encoding``."""
+    if "b" in mode:
+        return False
+    return any(mode.startswith(m) or mode == m for m in TEXT_MODES)
+
+
+def open_file(filename: str, mode: str, for_vfs: bool = False, encoding: str | None = None) -> Any:
     """Open a file from the local filesystem or the virtual filesystem.
 
     Args:
         filename: Path to the file.
         mode: I/O mode (e.g. ``"r"``, ``"wb"``).
         for_vfs: If *True*, open through Django's default storage VFS.
+        encoding: Text encoding; defaults to :data:`DEFAULT_ENCODING` for
+            text modes. Ignored for binary modes.
 
     Returns:
         A file-like object.
@@ -73,21 +91,30 @@ def open_file(filename: str, mode: str, for_vfs: bool = False) -> Any:
     Raises:
         OSError: If the file cannot be opened.
     """
+    if encoding is None and _needs_encoding(mode):
+        encoding = DEFAULT_ENCODING
     try:
         if for_vfs:
+            if encoding is not None:
+                return default_storage.fs.open(filename, mode, encoding=encoding)
             return default_storage.fs.open(filename, mode)
+        if encoding is not None:
+            return open(filename, mode, encoding=encoding)
         return open(filename, mode)
     except Exception as e:
         raise OSError(f"Failed to open file '{filename}': {e}") from e
 
 
-def open_and_create_dir(filename: str, mode: str, for_vfs: bool = False) -> Any:
+def open_and_create_dir(
+    filename: str, mode: str, for_vfs: bool = False, encoding: str | None = None
+) -> Any:
     """Open a file, creating intermediate directories as needed.
 
     Args:
         filename: Path to the file.
         mode: I/O mode (e.g. ``"r"``, ``"wb"``).
         for_vfs: If *True*, create directories through Django's VFS.
+        encoding: Text encoding forwarded to :func:`open_file`.
 
     Returns:
         A file-like object.
@@ -103,7 +130,7 @@ def open_and_create_dir(filename: str, mode: str, for_vfs: bool = False) -> Any:
         else:
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
-        return open_file(filename, mode, for_vfs)
+        return open_file(filename, mode, for_vfs, encoding=encoding)
     except Exception as e:
         raise OSError(
             f"Failed to create directory or open file '{filename}': {e}"
@@ -111,7 +138,7 @@ def open_and_create_dir(filename: str, mode: str, for_vfs: bool = False) -> Any:
 
 
 def get_unique_filename(base_name: str | None = None, ext: str | None = None) -> str:
-    """Generate a unique filename using an email-style MIME boundary.
+    """Generate a unique filename.
 
     Args:
         base_name: Optional descriptive name embedded in the result.
@@ -120,7 +147,9 @@ def get_unique_filename(base_name: str | None = None, ext: str | None = None) ->
     Returns:
         A unique filename string suitable for temporary files.
     """
-    boundary: str = email.generator._make_boundary()
+    # secrets, not email.generator._make_boundary(): the latter is a private
+    # stdlib API backed by random, which makes temp file names predictable.
+    boundary = secrets.token_hex(16)
     if base_name:
         boundary += f"_{base_name}"
     if ext:
@@ -166,7 +195,10 @@ def delete_from_zip(zip_name: str, del_file_names: list[str]) -> bool:
         OSError: If the zip cannot be read, written, or replaced.
     """
     del_file_names = [name.lower() for name in del_file_names]
-    tmpname = get_temp_filename()
+    # Build the replacement in the *same* directory as the archive so the
+    # final os.replace() is a same-filesystem rename.
+    tmpdir = os.path.dirname(os.path.abspath(zip_name))
+    tmpname = os.path.join(tmpdir, get_unique_filename(ext="tmpzip"))
 
     try:
         with zipfile.ZipFile(zip_name, "r") as zin:
@@ -175,11 +207,19 @@ def delete_from_zip(zip_name: str, del_file_names: list[str]) -> bool:
                     if item.filename.lower() not in del_file_names:
                         zout.writestr(item, zin.read(item.filename))
 
-        os.remove(zip_name)
-        os.rename(tmpname, zip_name)
+        # os.replace() is atomic and leaves the original intact if it fails;
+        # the previous remove()+rename() pair lost the archive on a failed
+        # cross-device rename.
+        os.replace(tmpname, zip_name)
         return True
     except Exception as e:
         raise OSError(f"Failed to delete files from zip '{zip_name}': {e}") from e
+    finally:
+        if os.path.exists(tmpname):
+            try:
+                os.unlink(tmpname)
+            except OSError:
+                logger.warning("Failed to remove temporary file: %s", tmpname)
 
 
 def _clear_content(data: bytes) -> bytes:
@@ -292,6 +332,7 @@ class ZipWriter:
         basepath: str = "",
         exclude: list[str] | None = None,
         sha256: bool = False,
+        compression: int | None = None,
     ) -> None:
         """Initialise the writer.
 
@@ -301,12 +342,19 @@ class ZipWriter:
             exclude: List of regex patterns; files whose name matches any
                 pattern are skipped.
             sha256: If *True*, record SHA-256 hashes of every entry.
+            compression: ``zipfile`` compression constant. Defaults to
+                :data:`zipfile.ZIP_DEFLATED`, which needs no optional module;
+                pass :data:`zipfile.ZIP_BZIP2` explicitly to keep the previous
+                behaviour (requires the ``bz2`` module).
         """
         self.filename = filename
         self.basepath = basepath.rstrip("/\\")
         self.base_len = len(self.basepath)
+        if compression is None:
+            compression = zipfile.ZIP_DEFLATED
+        self.compression = compression
         self.zip_file = zipfile.ZipFile(
-            filename, "w", zipfile.ZIP_BZIP2, compresslevel=9
+            filename, "w", compression, compresslevel=9
         )
         self.exclude = exclude or []
         self.sha256_tab: list[tuple[str, str, int]] | None = [] if sha256 else None
@@ -418,7 +466,12 @@ def automount(path: str) -> str:
     if lower.endswith(".zip") or ".zip/" in lower:
         zip_end = lower.find(".zip") + 4
         zip_path = path[:zip_end]
-        syspath = default_storage.fs.getsyspath(zip_path, allow_none=True)
+        # getsyspath() only exists on FsspecMountFS; other adapters must not
+        # raise AttributeError just because the path mentions a zip.
+        getsyspath = getattr(default_storage.fs, "getsyspath", None)
+        if getsyspath is None:
+            return path
+        syspath = getsyspath(zip_path, allow_none=True)
         if syspath:
             zip_name = f"zip://{syspath}"
             try:

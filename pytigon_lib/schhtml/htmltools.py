@@ -1,3 +1,4 @@
+import re
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -40,16 +41,12 @@ def _is_safe_url(url: str) -> bool:
 
 
 def superstrip(s):
-    """Remove extra whitespace from the string."""
-    f = (16, 8, 4, 2)
-    s2 = s.replace("\n", " ").replace("\r", " ").replace("\t", " ")
-    for pos in f:
-        while True:
-            oldlen = len(s2)
-            s2 = s2.replace(" " * pos, " ")
-            if len(s2) == oldlen:
-                break
-    return s2.strip()
+    """Remove extra whitespace from the string.
+
+    A single regex pass collapses every run of whitespace to one space,
+    replacing four nested replace loops that repeatedly rescanned the string.
+    """
+    return re.sub(r"\s+", " ", s).strip()
 
 
 class HtmlModParser(Parser):

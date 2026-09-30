@@ -20,6 +20,8 @@ from ..perms import filter_by_permissions
 
 
 def _create_list_view(parent_rows):
+    # The URL pattern is intentionally one long regex; wrapping it would hurt
+    # readability more than the line length helps.
     url = r"((?P<base_filter>[\w=_,;-]*)/|)(?P<filter>[\w=_,;-]*)/(?P<target>[\w_-]*)/[_]?(?P<vtype>list|sublist|tree|get|gettree|treelist|table_action)/$"  # noqa: E501
 
     class ListView(TemplateVariantListViewMixin, generic.ListView):

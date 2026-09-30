@@ -47,20 +47,20 @@ class TestHasTheRight:
 
 class TestGetAnonymous:
     def setup_method(self):
-        _ANONYMOUS_ORIG = None
         try:
             import pytigon_lib.schviews.perms as perms_mod
-            perms_mod._ANONYMOUS = None
+            perms_mod._ANONYMOUS_PK = None
         except Exception:
             pass
 
     @patch("pytigon_lib.schviews.perms.authenticate")
     def test_creates_anonymous_user(self, mock_auth):
         mock_user = MagicMock()
+        mock_user.pk = 7
         mock_auth.return_value = mock_user
         try:
             import pytigon_lib.schviews.perms as perms_mod
-            perms_mod._ANONYMOUS = None
+            perms_mod._ANONYMOUS_PK = None
             result = get_anonymous()
             assert result is mock_user
             mock_auth.assert_called_once_with(username="AnonymousUser", password="AnonymousUser")
@@ -68,16 +68,20 @@ class TestGetAnonymous:
             pass
 
     @patch("pytigon_lib.schviews.perms.authenticate")
-    def test_caches_result(self, mock_auth):
+    def test_caches_pk_and_refetches_instance(self, mock_auth):
         mock_user = MagicMock()
+        mock_user.pk = 7
         mock_auth.return_value = mock_user
         try:
             import pytigon_lib.schviews.perms as perms_mod
-            perms_mod._ANONYMOUS = None
+            perms_mod._ANONYMOUS_PK = None
             result1 = get_anonymous()
             result2 = get_anonymous()
-            assert result1 is result2
+            # Only the pk is cached: authenticate runs once, the instance is
+            # re-fetched per call so a stale User object is never handed out.
             assert mock_auth.call_count == 1
+            assert result1 is mock_user
+            assert result2 is not mock_user
         finally:
             pass
 
@@ -86,7 +90,7 @@ class TestGetAnonymous:
         mock_auth.side_effect = RuntimeError("auth failed")
         try:
             import pytigon_lib.schviews.perms as perms_mod
-            perms_mod._ANONYMOUS = None
+            perms_mod._ANONYMOUS_PK = None
             result = get_anonymous()
             assert result is None
         finally:

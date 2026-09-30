@@ -6,13 +6,13 @@ import pytest
 from pytigon_lib.schhtml.basehtmltags import (
     BLOCK_TAGS,
     HTML_TAGS,
-    TagPreprocesor,
-    BaseHtmlElemParser,
-    BaseHtmlAtomParser,
     AnyTag,
-    rgb_to_hex,
+    BaseHtmlAtomParser,
+    BaseHtmlElemParser,
+    TagPreprocesor,
     register_tag_map,
     register_tag_preprocess_map,
+    rgb_to_hex,
     tag_class_map,
 )
 

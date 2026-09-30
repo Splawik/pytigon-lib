@@ -2,8 +2,8 @@
 import pytest
 
 from pytigon_lib.schtools.safe_exec import (
-    EvalResult,
     RESTRICTED_BUILTINS,
+    EvalResult,
     safe_eval,
     safe_exec,
 )

@@ -21,7 +21,7 @@ from pytigon_lib.schviews.viewtools import render_to_response
 
 logger = logging.getLogger(__name__)
 
-_ANONYMOUS: Any | None = None
+_ANONYMOUS_PK: Any | None = None
 _ANONYMOUS_LOCK = threading.Lock()
 
 
@@ -77,20 +77,22 @@ def has_the_right(
 
 
 def get_anonymous() -> Any:
-    """Retrieve or create a cached anonymous user instance.
+    """Retrieve the anonymous user.
 
-    Thread-safe: uses double-checked locking to prevent multiple
-    simultaneous authentications of the anonymous user.
+    Only the *primary key* is cached process-wide (thread-safely, with
+    double-checked locking); the ``User`` instance itself is re-fetched per
+    call. Caching the instance would keep a stale object forever, which breaks
+    after a password change, a logout, or an app reload that recreates the row.
 
     Returns:
         The anonymous User instance, or ``None`` if authentication fails.
     """
-    global _ANONYMOUS
-    if _ANONYMOUS is None:
+    global _ANONYMOUS_PK
+    if _ANONYMOUS_PK is None:
         with _ANONYMOUS_LOCK:
-            if _ANONYMOUS is None:
+            if _ANONYMOUS_PK is None:
                 try:
-                    _ANONYMOUS = authenticate(
+                    user = authenticate(
                         username="AnonymousUser", password="AnonymousUser"
                     )
                 except Exception:
@@ -98,7 +100,18 @@ def get_anonymous() -> Any:
                         "Failed to authenticate AnonymousUser; "
                         "permission checks may behave unexpectedly."
                     )
-    return _ANONYMOUS
+                    return None
+                if user is None:
+                    return None
+                _ANONYMOUS_PK = user.pk
+                return user
+    try:
+        from django.contrib.auth import get_user_model
+
+        return get_user_model().objects.filter(pk=_ANONYMOUS_PK).first()
+    except Exception:
+        logger.exception("Failed to load the anonymous user")
+        return None
 
 
 def default_block(request: HttpRequest) -> HttpResponse:

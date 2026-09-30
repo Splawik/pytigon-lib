@@ -9,7 +9,6 @@ import datetime
 import logging
 import multiprocessing
 import socket
-import sys
 import time
 
 import django
@@ -18,7 +17,11 @@ _logger = logging.getLogger(__name__)
 
 
 def log_action(protocol, action, details):
-    """Log HTTP and WebSocket actions to stderr.
+    """Log HTTP and WebSocket actions.
+
+    This is the ``action_logger`` callback handed to the Daphne server, so it
+    goes through :mod:`logging` rather than writing straight to stderr: stderr
+    bypasses the project's log configuration entirely.
 
     Args:
         protocol: ``"http"`` or ``"websocket"``.
@@ -28,24 +31,36 @@ def log_action(protocol, action, details):
             ``client``).
     """
     timestamp = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-    msg = f"[{timestamp}] "
 
     try:
         if protocol == "http" and action == "complete":
-            msg += (
-                f"HTTP {details.get('method', '?')} "
-                f"{details.get('path', '?')} "
-                f"{details.get('status', '?')} "
-                f"[{details.get('time_taken', 0):.2f}, {details.get('client', '?')}]\n"
+            _logger.info(
+                "[%s] HTTP %s %s %s [%.2f, %s]",
+                timestamp,
+                details.get("method", "?"),
+                details.get("path", "?"),
+                details.get("status", "?"),
+                details.get("time_taken", 0),
+                details.get("client", "?"),
             )
         elif protocol == "websocket" and action == "connected":
-            msg += f"WebSocket CONNECT {details.get('path', '?')} [{details.get('client', '?')}]\n"
+            _logger.info(
+                "[%s] WebSocket CONNECT %s [%s]",
+                timestamp,
+                details.get("path", "?"),
+                details.get("client", "?"),
+            )
         elif protocol == "websocket" and action == "disconnected":
-            msg += f"WebSocket DISCONNECT {details.get('path', '?')} [{details.get('client', '?')}]\n"
+            _logger.info(
+                "[%s] WebSocket DISCONNECT %s [%s]",
+                timestamp,
+                details.get("path", "?"),
+                details.get("client", "?"),
+            )
     except Exception:
-        msg += f"Unrecognized: protocol={protocol} action={action} details={details}\n"
-
-    sys.stderr.write(msg)
+        _logger.exception(
+            "Unrecognized: protocol=%s action=%s details=%s", protocol, action, details
+        )
 
 
 def _run(addr, port, prod, params=None):
@@ -98,7 +113,6 @@ def _run(addr, port, prod, params=None):
                 from channels.routing import get_default_application
 
                 django.setup()
-                print("A1")
                 Granian(
                     get_default_application(),
                     interface="asgi",
@@ -122,8 +136,8 @@ def _run(addr, port, prod, params=None):
                 server.run()
     except KeyboardInterrupt:
         return
-    except Exception as e:
-        sys.stderr.write(f"Error starting server: {e}\n")
+    except Exception:
+        _logger.exception("Error starting server")
         raise
 
 

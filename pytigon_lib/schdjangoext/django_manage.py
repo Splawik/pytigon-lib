@@ -1,9 +1,10 @@
+import configparser
+import importlib
 import logging
 import os
-import sys
 import site
-import importlib
-import configparser
+import sys
+
 from django.core.management import execute_from_command_line
 
 _logger = logging.getLogger(__name__)

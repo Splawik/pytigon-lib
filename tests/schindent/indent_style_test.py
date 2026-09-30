@@ -1,8 +1,8 @@
 """Tests for :mod:`pytigon_lib.schindent.indent_style` utility functions."""
 
 import io
-import tempfile
 import os
+import tempfile
 
 import pytest
 

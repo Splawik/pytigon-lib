@@ -1,8 +1,8 @@
 """Module contains classes for rendering HTML content."""
 
 import io
+import logging
 import os
-import traceback
 from tempfile import NamedTemporaryFile
 
 from pytigon_lib.schhtml.basedc import BaseDc, NullDc
@@ -12,6 +12,8 @@ from pytigon_lib.schhtml.html_tags import HtmlTag
 from pytigon_lib.schhtml.htmltools import HtmlModParser
 from pytigon_lib.schhtml.pdfdc import PdfDc
 from pytigon_lib.schhttptools.httpclient import HttpClient
+
+logger = logging.getLogger(__name__)
 
 ALIAS_TAG = {
     "em": "i",
@@ -113,14 +115,10 @@ class HtmlViewerParser(HtmlModParser):
         self.css = Css()
         if init_css_str:
             if init_css_str.startswith("@"):
-                icss_path = os.path.normpath(
-                    os.path.join(os.path.dirname(__file__), "icss", init_css_str[1:])
-                )
-                if not icss_path.startswith(
-                    os.path.normpath(os.path.join(os.path.dirname(__file__), "icss"))
-                ):
+                icss_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "icss", init_css_str[1:]))
+                if not icss_path.startswith(os.path.normpath(os.path.join(os.path.dirname(__file__), "icss"))):
                     raise ValueError(f"Path traversal detected: {init_css_str}")
-                with open(icss_path) as f:
+                with open(icss_path, encoding="utf-8") as f:
                     init_css_str = f.read()
                     css_type = "icss"
             if css_type == self.CSS_TYPE_STANDARD:
@@ -193,6 +191,8 @@ class HtmlViewerParser(HtmlModParser):
                         attrs[s2[0].lower()] = s2[1]
 
             if "class" in attrs:
+                # Keep every class: dropping all but the first one means CSS
+                # rules for the remaining classes can never match.
                 classes = attrs["class"].split(" ")
                 attrs["class"] = classes[0]
                 attrs["classes"] = attrs["class"]
@@ -224,7 +224,7 @@ class HtmlViewerParser(HtmlModParser):
                     self.tag_parser = HtmlTag(None, self, tag.lower(), attrs)
                     self.tag_parser.set_dc(self.dc)
         except Exception:
-            traceback.print_exc()
+            logger.exception("Error handling start tag <%s>", tag)
 
     def handle_startendtag(self, tag, attrs):
         """Handle start-end tag."""
@@ -244,7 +244,7 @@ class HtmlViewerParser(HtmlModParser):
                 tag_parser.finish()
                 self.dc.annotate("end_tag", {"element": tag_parser})
         except Exception:
-            traceback.print_exc()
+            logger.exception("Error handling end tag <%s>", tag)
         if tag.lower() in ("table", "tdata"):
             self.table_lp += 1
 
@@ -254,7 +254,7 @@ class HtmlViewerParser(HtmlModParser):
             if self.tag_parser:
                 self.tag_parser.handle_data(data)
         except Exception:
-            traceback.print_exc()
+            logger.exception("Error handling data")
 
     def close(self):
         """Close the device context."""
@@ -269,21 +269,20 @@ class HtmlViewerParser(HtmlModParser):
         return (max(sizes[0], sizes2[0]), max(sizes[1], sizes2[1]))
 
     def print_obj(self, obj, start=True):
-        """Print object."""
+        """Log the parse tree for debugging."""
         if obj:
             tab = -1
             parent = obj
             while parent:
                 tab += 1
                 parent = parent.parent
-            print(
+            logger.debug(
+                "%s%s %s %s (%s)",
                 "|   " * tab,
                 obj.tag,
                 obj.attrs if start else "/",
                 obj.tag,
-                "(",
                 obj.height,
-                ")",
             )
 
 
@@ -299,25 +298,26 @@ def stream_from_html(
 ):
     """Render HTML string."""
     if RENDERING_LIB and RENDERING_LIB.accept(html, stream_type, base_url, info):
-        return RENDERING_LIB.render(
-            html, output_stream, css, width, height, stream_type, base_url, info
-        )
+        return RENDERING_LIB.render(html, output_stream, css, width, height, stream_type, base_url, info)
 
     if not isinstance(html, str):
         html = html.decode("utf-8")
     html2 = html if "<html" in html else f"<html><body>{html}</body></html>"
 
     width2, height2 = (
-        (height, width)
-        if "orientation:landscape" in html2 or "orientation: landscape" in html2
-        else (width, height)
+        (height, width) if "orientation:landscape" in html2 or "orientation: landscape" in html2 else (width, height)
     )
     result = output_stream if output_stream else io.BytesIO()
 
+    # Every ``NamedTemporaryFile(delete=False)`` created below is registered
+    # here so the ``finally`` clause can unlink it, including when rendering
+    # raises part-way through.
+    temp_files = []
+
     if stream_type == "pdf":
-        result_buf = NamedTemporaryFile(delete=False)
-        pdf_name = result_buf.name
-        result_buf.close()
+        with NamedTemporaryFile(delete=False) as f:
+            pdf_name = f.name
+        temp_files.append(pdf_name)
 
         def notify_callback(event_name, data):
             if event_name == "end":
@@ -333,9 +333,9 @@ def stream_from_html(
         )
 
     elif stream_type == "spdf":
-        result_buf = NamedTemporaryFile(delete=False)
-        pdf_name = result_buf.name
-        result_buf.close()
+        with NamedTemporaryFile(delete=False) as f:
+            pdf_name = f.name
+        temp_files.append(pdf_name)
 
         def notify_callback(event_name, data):
             if event_name == "end":
@@ -343,9 +343,11 @@ def stream_from_html(
                 if dc.output_name:
                     dc.save(dc.output_name)
                 else:
-                    result_buf = NamedTemporaryFile(delete=False)
-                    spdf_name = result_buf.name
-                    result_buf.close()
+                    # NB: must not shadow the outer name, or this temporary
+                    # file becomes unreachable and is never cleaned up.
+                    with NamedTemporaryFile(delete=False) as f:
+                        spdf_name = f.name
+                    temp_files.append(spdf_name)
 
                     dc.save(spdf_name)
                     with open(spdf_name, "rb") as f:
@@ -362,26 +364,31 @@ def stream_from_html(
     else:
         dc = BaseDc(calc_only=False, width=width2, height=height2)
 
-    dc.set_paging(True)
-    p = HtmlViewerParser(dc=dc, calc_only=False, base_url=base_url)
-    p.feed(html2.replace("&nbsp;", "»"))
-    p.close()
-    if stream_type == "pdf":
-        with open(pdf_name, "rb") as f:
-            result.write(f.read())
-        os.unlink(pdf_name)
-    else:
-        with NamedTemporaryFile(delete=False) as f:
-            name = f.name
+    try:
+        dc.set_paging(True)
+        p = HtmlViewerParser(dc=dc, calc_only=False, base_url=base_url)
+        p.feed(html2.replace("&nbsp;", "»"))
+        p.close()
+        if stream_type == "pdf":
+            with open(pdf_name, "rb") as f:
+                result.write(f.read())
+        else:
+            with NamedTemporaryFile(delete=False) as f:
+                name = f.name
+            temp_files.append(name)
 
-        dc.end_page()
-        dc.save(name)
+            dc.end_page()
+            dc.save(name)
 
-        with open(name, "rb") as f:
-            buf = f.read()
-            result.write(buf)
-
-        os.unlink(name)
+            with open(name, "rb") as f:
+                buf = f.read()
+                result.write(buf)
+    finally:
+        for name in temp_files:
+            try:
+                os.unlink(name)
+            except OSError:
+                pass
     return result
 
 
@@ -401,7 +408,6 @@ def _get_optimizer():
         return OPTIMIZE
     if _OPTIMIZE_CHECKED:
         return None
-    _OPTIMIZE_CHECKED = True
 
     try:
         from pytigon_lib.schhtml.optimize_max import optimize_table
@@ -413,6 +419,10 @@ def _get_optimizer():
             return None
 
     OPTIMIZE = optimize_table
+    # Only cache a successful resolution: a transient ImportError (or an
+    # interrupted module import) must not disable the optimizer for the
+    # lifetime of the process.
+    _OPTIMIZE_CHECKED = True
     return OPTIMIZE
 
 

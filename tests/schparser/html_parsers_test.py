@@ -3,10 +3,10 @@ import pytest
 
 from pytigon_lib.schparser.html_parsers import (
     ExtList,
-    SimpleTabParserBase,
-    SimpleTabParser,
-    TreeParser,
     ShtmlParser,
+    SimpleTabParser,
+    SimpleTabParserBase,
+    TreeParser,
 )
 
 

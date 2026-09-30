@@ -1,8 +1,20 @@
 import io
 
-import wx
+try:
+    import wx
+except ImportError:  # pragma: no cover - optional dependency
+    wx = None
 
 from pytigon_lib.schhtml.basedc import BaseDc, BaseDcInfo
+
+
+def _require_wx():
+    """Raise a helpful error when the optional ``wxPython`` dependency is absent."""
+    if wx is None:
+        raise RuntimeError(
+            "The 'wx' package is required for the wx drawing context. "
+            "Install wxPython or use a different drawing context."
+        )
 
 
 class DcDc(BaseDc):
@@ -18,6 +30,7 @@ class DcDc(BaseDc):
         notify_callback=None,
         record=False,
     ):
+        _require_wx()
         super().__init__(
             calc_only,
             width,
@@ -48,12 +61,12 @@ class DcDc(BaseDc):
             else:
                 if output_name:
                     name = output_name.lower()
-                    self.surf = wx.EmptyBitmap(self.width, self.height, 32)
+                    self.surf = wx.Bitmap(self.width, self.height, 32)
                     self.dc = wx.MemoryDC(self.surf)
                     self.dc.Clear()
                     self.type = "jpg" if ".jpg" in name or ".jpeg" in name else "png"
                 else:
-                    self.surf = wx.EmptyBitmap(10, 10, 32)
+                    self.surf = wx.Bitmap(10, 10, 32)
                     self.dc = wx.MemoryDC(self.surf)
 
         self.last_style_tab = None
@@ -307,6 +320,7 @@ class DcDc(BaseDc):
 
 class DcDcinfo(BaseDcInfo):
     def __init__(self, dc):
+        _require_wx()
         super().__init__(dc)
 
     def get_line_dy(self, height):

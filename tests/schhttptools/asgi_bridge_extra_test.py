@@ -5,7 +5,6 @@ import pytest
 
 from pytigon_lib.schhttptools.asgi_bridge import (
     SCOPE_TEMPLATE,
-    get_or_post,
     get_scope_and_content_http_get,
     get_scope_and_content_http_post,
     get_scope_websocket,
@@ -118,22 +117,6 @@ class TestGetScopeWebSocket:
         scope = get_scope_websocket("/ws", headers)
         headers_lower = {k.lower(): v for k, v in scope["headers"]}
         assert b"x-ws" in headers_lower
-
-
-class TestGetOrPostExtra:
-    @pytest.mark.asyncio
-    async def test_get_request(self):
-        app = AsyncMock()
-        response = await get_or_post(app, "/test", [])
-        assert isinstance(response, dict)
-
-    @pytest.mark.asyncio
-    async def test_post_request(self):
-        app = AsyncMock()
-        response = await get_or_post(
-            app, "/submit", [("Content-Type", "text/html")], {"x": "1"}, post=True
-        )
-        assert isinstance(response, dict)
 
 
 class TestWebSocketExtra:

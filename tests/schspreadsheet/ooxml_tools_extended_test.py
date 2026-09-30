@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pytigon_lib.schspreadsheet.ooxml_tools import make_update_filter_fun, make_group_fun
+from pytigon_lib.schspreadsheet.ooxml_tools import make_group_fun, make_update_filter_fun
 
 
 class TestMakeUpdateFilterFun:

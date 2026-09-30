@@ -146,8 +146,11 @@ class TreeParser(Parser):
             self.list.append(["", [], []])
             self._attr_buffer = list(attrs)
         else:
-            # Accumulate attributes from other elements inside <li>
-            self._attr_buffer.extend(attrs)
+            # Accumulate attributes from data-bearing elements inside <li>.
+            # script/style carry no data for the list, and their attributes
+            # would otherwise be merged into the surrounding <li>.
+            if tag not in ("script", "style", "template", "noscript"):
+                self._attr_buffer.extend(attrs)
 
     def handle_endtag(self, tag: str) -> None:
         """Handle closing tags during tree crawling.
@@ -247,9 +250,17 @@ class ShtmlParser(Parser):
             result.append(elem)
             result.append(script_elem)
 
-            # Remove matched element from the document
-            if selector and len(match) > 0:
-                doc.remove(selector)
+            # Remove the matched elements from the document. Iterate the nodes
+            # pyquery already matched instead of re-querying with the selector:
+            # the tree has already been modified by this point, so a second
+            # query can match a different (or no) node.
+            if selector:
+                for node in list(match):
+                    try:
+                        node.getparent().remove(node)
+                    except (AttributeError, ValueError):
+                        # Already detached, or a pyquery quirk for the root.
+                        pass
 
         return result
 

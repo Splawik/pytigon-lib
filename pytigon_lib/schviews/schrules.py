@@ -27,7 +27,7 @@ def _ensure_rules() -> bool:
     global _RULES_IMPORTED
     if _RULES_IMPORTED is None:
         try:
-            import rules  # noqa: F401
+            import rules  # noqa: F401 - availability probe
             _RULES_IMPORTED = True
         except ImportError:
             _RULES_IMPORTED = False

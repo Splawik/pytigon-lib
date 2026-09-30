@@ -112,14 +112,14 @@ class OdfDocTransform:
         level = 0
         if comment_txt.startswith("."):
             if "table-cell" in comment_elem.tag:
-                for child in comment_elem.getchildren():
+                for child in list(comment_elem):
                     if "annotation" not in child.tag:
                         comment_elem.remove(child)
                 new_cell = etree.Element(TEXT_URN + "p")
                 new_cell.text = comment_txt[1:]
                 comment_elem.append(new_cell)
             else:
-                for child in comment_elem.getchildren():
+                for child in list(comment_elem):
                     if child.tag.endswith("v"):
                         comment_elem.remove(child)
                 comment_elem.append(
@@ -357,7 +357,9 @@ class OdfDocTransform:
                 except (ValueError, TypeError):
                     pass
                 new_text = etree.Element(TEXT_URN + "p")
-                new_text.text = escape(txt)
+                # Assign the raw text: lxml escapes it on serialise, so
+                # escaping here would produce double-escaped output.
+                new_text.text = txt
                 parent.append(new_text)
 
     def process(self, context, debug):
@@ -368,7 +370,7 @@ class OdfDocTransform:
                 doc_content = z.read("content.xml").decode("utf-8")
 
             if delete_from_zip(self.file_name_out, ["content.xml"]) == 0:
-                return
+                return 0
 
             doc = etree.fromstring(
                 doc_content.replace("&apos;", "'")

@@ -1,12 +1,13 @@
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
 
 from pytigon_lib.schhtml.atom import (
     Atom,
-    NullAtom,
-    BrAtom,
     AtomLine,
     AtomList,
+    BrAtom,
+    NullAtom,
     unescape,
 )
 

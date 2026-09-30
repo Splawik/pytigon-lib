@@ -133,9 +133,11 @@ def render_doc(context):
         if doc_type in ("ods", "odt", "odp"):
             file_out, file_in = render_odf(templates, Context(context))
             if file_out:
-                with open(file_out, "rb") as f:
-                    ret_content = f.read()
-                os.remove(file_out)
+                try:
+                    with open(file_out, "rb") as f:
+                        ret_content = f.read()
+                finally:
+                    os.remove(file_out)
                 ret_attr["Content-Disposition"] = _build_disposition(
                     templates[0], doc_type, file_in
                 )
@@ -146,9 +148,11 @@ def render_doc(context):
         elif doc_type in ("xlsx", "docx", "pptx"):
             file_out, file_in = render_ooxml(templates, Context(context))
             if file_out:
-                with open(file_out, "rb") as f:
-                    ret_content = f.read()
-                os.remove(file_out)
+                try:
+                    with open(file_out, "rb") as f:
+                        ret_content = f.read()
+                finally:
+                    os.remove(file_out)
                 ret_attr["Content-Disposition"] = _build_disposition(
                     templates[0], doc_type, file_in
                 )

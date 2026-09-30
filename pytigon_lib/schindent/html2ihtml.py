@@ -173,7 +173,9 @@ class Html2IhtmlParser(Parser):
         Args:
             tag: HTML tag name.
         """
-        self.level -= 1
+        # Unbalanced HTML (a stray closing tag) must not drive the indent
+        # level negative.
+        self.level = max(self.level - 1, 0)
         if self.in_script:
             self.in_script = False
         self.in_tag.pop()

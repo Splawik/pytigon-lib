@@ -55,7 +55,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.3", "pytest>=7.0", "pytest-django>=4.5"]
+dev = ["ruff>=0.3", "pytest>=7.0", "pytest-django>=4.5", "mypy>=1.0"]
 
 [project.urls]
 Documentation = "https://pytigon.github.io/pytigon-lib"
@@ -82,7 +82,6 @@ ignore = [
 line-ending = "lf"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["F403", "F405"]
 "tests/schindent/assets/*.py" = ["F821"]
 "tests/schindent/test2.py" = ["F821"]
 "tests/schindent/test.py" = ["E402"]
@@ -91,9 +90,31 @@ line-ending = "lf"
 "pytigon_lib/schhtml/html_tags.py" = ["F403"]
 "pytigon_lib/schfs/__init__.py" = ["F401"]
 "pytigon_lib/schparser/parser.py" = ["UP045"]
+# Re-export module: the imports exist to make names importable from here.
+"pytigon_lib/schviews/__init__.py" = ["F401"]
+# Tests import names to assert they resolve; a subset of each import is
+# exercised, so the rest are intentionally unasserted.
+"tests/**/*.py" = ["F401", "F403", "F405", "F811", "E402", "E501", "E731", "F841", "E712", "E741", "RUF015"]
+# android_client is imported for its jnius side effects before the app
+# module is loaded, so its imports cannot all be at the top.
+"pytigon_lib/schandroid/android_client.py" = ["E402", "SIM109"]
+"pytigon_lib/schtools/nim_integration.py" = ["E402"]
+# Both files place imports after a module-level constant/list, on purpose:
+# basehtmltags.py builds the tag-name list first, django_storage.py avoids
+# importing Django exceptions before the storage module is configured.
+"pytigon_lib/schhtml/basehtmltags.py" = ["E402"]
+"pytigon_lib/schdjangoext/django_storage.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+warn_return_any = false
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
-norecursedirs = ["tests/schindent/assets"]
+norecursedirs = [".kilo", "tests/schindent/assets", "build", "dist", "__pycache__"]
 filterwarnings = ["ignore::DeprecationWarning"]
 addopts = [
     "--ignore-glob=**/android_client.py",

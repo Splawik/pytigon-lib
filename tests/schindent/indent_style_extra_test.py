@@ -3,6 +3,8 @@
 import io
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
+
 from pytigon_lib.schindent.indent_style import (
     IhtmlToHtml,
     _build_translator,
@@ -278,7 +280,7 @@ class TestIhtmlToHtmlInit:
 
     @patch("pytigon_lib.schindent.indent_style.settings")
     def test_init_with_output_processors(self, mock_settings):
-        proc = lambda x: x.upper()  # noqa: E731
+        proc = lambda x: x.upper()
         c = IhtmlToHtml(
             file_name=None,
             simple_close_tags=[],
@@ -772,7 +774,7 @@ class TestToStr:
     @patch("pytigon_lib.schindent.indent_style.get_prj_name", return_value="prj")
     def test_to_str_output_processors(self, mock_prj, mock_settings):
         mock_settings.PRJ_PATH = "/tmp"
-        proc = lambda x: x.upper()  # noqa: E731
+        proc = lambda x: x.upper()
         c = IhtmlToHtml(
             None, [], [], [], input_str=".", output_processors={"upper": proc}
         )
@@ -833,7 +835,11 @@ class TestConwertToHtmlAlias:
     def test_backward_compat_alias(self, mock_settings):
         from pytigon_lib.schindent.indent_style import ConwertToHtml
 
-        assert ConwertToHtml is IhtmlToHtml
+        # A deprecated shim now, not a plain alias, so it must still build the
+        # same class while warning.
+        with pytest.warns(DeprecationWarning):
+            instance = ConwertToHtml(None, [], [], [], "<div>x</div>", "en")
+        assert isinstance(instance, IhtmlToHtml)
 
 
 # ---------------------------------------------------------------------------

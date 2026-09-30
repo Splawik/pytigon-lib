@@ -7,30 +7,32 @@ format and standard HTML. Used by the template loaders to compile
 
 import logging
 
+from django.template import TemplateSyntaxError
+
 from pytigon_lib.schindent.indent_style import ConwertToHtml
 
 LOGGER = logging.getLogger("pytigon.schdjangoext")
 
 # Elements that should be self-closing in HTML
-SIMPLE_CLOSE_ELEM = ["br", "meta", "input"]
+SIMPLE_CLOSE_ELEM = ("br", "meta", "input")
 
-# Django template elements that should auto-close
-AUTO_CLOSE_DJANGO_ELEM = [
+# Django template elements that should auto-close.
+# ``ifequal``/``ifnotequal`` used to live here but were removed in Django 4.0;
+# a generated template containing them fails to render with TemplateSyntaxError.
+AUTO_CLOSE_DJANGO_ELEM = (
     "for",
     "if",
-    "ifequal",
-    "ifnotequal",
     "ifchanged",
     "block",
     "filter",
     "with",
-]
+)
 
 # Django template elements that should not auto-close
-NO_AUTO_CLOSE_DJANGO_ELEM = [
+NO_AUTO_CLOSE_DJANGO_ELEM = (
     "else",
     "elif",
-]
+)
 
 
 def fa_icons(value):
@@ -58,8 +60,12 @@ def ihtml_to_html(file_name, input_str=None, lang="en"):
         lang: Language code (e.g. ``"en"``, ``"pl"``).
 
     Returns:
-        The rendered HTML string, or an empty string on conversion
-        failure.
+        The rendered HTML string.
+
+    Raises:
+        TemplateSyntaxError: If the ihtml source cannot be converted. Raising
+            instead of returning an empty string prevents the loader from
+            serving a blank page with HTTP 200.
     """
     try:
         conwert = ConwertToHtml(
@@ -76,6 +82,8 @@ def ihtml_to_html(file_name, input_str=None, lang="en"):
         )
         conwert.process()
         return conwert.to_str()
-    except Exception:
+    except Exception as ex:
         LOGGER.exception("Error during ihtml conversion of '%s'", file_name)
-        return ""
+        raise TemplateSyntaxError(
+            f"Error during ihtml conversion of '{file_name}': {ex}"
+        ) from ex

@@ -12,6 +12,8 @@ Syntax example::
     Choose::[a;b;c] → ChoiceField(label="Choose", choices=[('a','a'),...])
 """
 
+import unicodedata
+
 from django import forms
 
 from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
@@ -84,7 +86,11 @@ def _get_name_and_title(s):
 
         "Name"        → ("name", "Name", False)
         "Name!"       → ("name", "Name", True)
+        "Name\\\\!"     → ("nam", "Name!", False)   - escaped, not required
         "fld//Title"  → ("fld", "Title", False)
+
+    A trailing ``!`` marks the field as required. Write ``\\!`` to end a title
+    with a literal exclamation mark.
 
     If no explicit name is given (no ``//``), one is auto-generated
     from the title by ASCII-folding and truncating to 16 characters.
@@ -95,19 +101,25 @@ def _get_name_and_title(s):
     Returns:
         Tuple of (name, title, required).
     """
-    required = s.endswith("!")
-    s = s[:-1] if required else s
+    if s.endswith("\\!"):
+        # Escaped: the "!" belongs to the title, the field is not required.
+        s = s[:-2] + "!"
+        required = False
+    else:
+        required = s.endswith("!")
+        s = s[:-1] if required else s
 
     if "//" in s:
         name, title = s.split("//", 1)
     else:
         title = s
+        # NFKD-fold then drop the combining marks, so non-ASCII titles keep
+        # their letters ("Zamówienia" -> "zamowienia") instead of collapsing
+        # to "?" -> "_" and producing empty or duplicate field names.
+        folded = unicodedata.normalize("NFKD", s)
         name = "".join(
             z
-            for z in s.encode("ascii", "replace")
-            .decode("utf-8")
-            .replace("?", "_")
-            .lower()
+            for z in folded.encode("ascii", "ignore").decode("ascii").lower()
             if z.isalnum() or z == "_"
         )[:16]
     return name, title, required

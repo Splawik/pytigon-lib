@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pytigon_lib.schtools.tools import (
+    bdecode,
+    bencode,
     extend_fun_to,
     get_executable,
     get_from_dicts,
@@ -15,8 +17,6 @@ from pytigon_lib.schtools.tools import (
     get_session,
     is_in_dicts,
     is_null,
-    bencode,
-    bdecode,
     norm_indent,
     update_nested_dict,
 )
@@ -31,45 +31,43 @@ class TestGetRequest:
         mock_request = MagicMock()
         mock_request.session = MagicMock()
 
-        frame = MagicMock()
-        frame.f_code.co_varnames = ("request",)
-        frame.f_locals = {"request": mock_request}
+        def view(request):
+            return get_request()
 
-        frame_info = MagicMock()
-        frame_info.frame = frame
-
-        with patch("inspect.stack", return_value=[MagicMock(), frame_info]):
-            result = get_request()
-            assert result is mock_request
+        assert view(mock_request) is mock_request
 
     def test_request_with_self_request_varnames(self):
         mock_request = MagicMock()
         mock_request.session = MagicMock()
 
-        frame = MagicMock()
-        frame.f_code.co_varnames = ("self", "request")
-        frame.f_locals = {"request": mock_request}
+        class View:
+            def handler(self, request, extra=1):
+                # NB: the heuristic used to be positional over co_varnames, so
+                # a request behind extra leading parameters was missed.
+                return get_request()
 
-        frame_info = MagicMock()
-        frame_info.frame = frame
+        assert View().handler(mock_request) is mock_request
 
-        with patch("inspect.stack", return_value=[MagicMock(), frame_info]):
-            result = get_request()
-            assert result is mock_request
+    def test_request_found_in_an_outer_frame(self):
+        mock_request = MagicMock()
+        mock_request.session = MagicMock()
+
+        def inner():
+            return get_request()
+
+        def middle():
+            return inner()
+
+        def view(request):
+            return middle()
+
+        assert view(mock_request) is mock_request
 
     def test_request_skips_frame_without_session(self):
-        mock_request = MagicMock()
-        del mock_request.session
+        def view(request):
+            return get_request()
 
-        frame = MagicMock()
-        frame.f_code.co_varnames = ("request",)
-        frame.f_locals = {"request": mock_request}
-
-        frame_info = MagicMock()
-        frame_info.frame = frame
-
-        with patch("inspect.stack", return_value=[MagicMock(), frame_info]):
-            assert get_request() is None
+        assert view(object()) is None
 
 
 class TestGetSession:

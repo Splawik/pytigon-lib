@@ -104,59 +104,6 @@ def get_scope_websocket(path: str, headers: list[tuple[str, str]]) -> dict[str, 
     return scope
 
 
-async def get_or_post(
-    application,
-    path: str,
-    headers: list[tuple[str, str]],
-    params: dict[str, str] | None = None,
-    post: bool = False,
-) -> dict[str, Any]:
-    """Invoke an ASGI application with GET or POST and return the response dict.
-
-    Follows HTTP 302 redirects automatically.
-
-    Args:
-        application: The ASGI application callable.
-        path: URL path.
-        headers: List of (name, value) header tuples.
-        params: POST parameters (only used if post=True).
-        post: If True, send a POST request; otherwise GET.
-
-    Returns:
-        Dictionary containing response keys: 'body', 'headers', 'status', etc.
-    """
-    ret = {}
-    scope, content = (
-        get_scope_and_content_http_post(path, headers, params)
-        if post
-        else get_scope_and_content_http_get(path, headers)
-    )
-
-    async def send(message: dict[str, Any]) -> None:
-        """Accumulate ASGI response messages into the ret dictionary."""
-        nonlocal ret
-        for key, value in message.items():
-            ret[key] = ret.get(key, "") + value
-
-    async def receive() -> dict[str, Any]:
-        """Provide the request body to the ASGI application."""
-        nonlocal content
-        return {"type": "http", "body": content.encode("utf-8")}
-
-    await application(scope, receive, send)
-
-    if ret.get("status") == 302 and "headers" in ret:
-        for pos in ret["headers"]:
-            if pos[0] == b"Location":
-                new_url = pos[1].decode("utf-8").replace("http://127.0.0.2", "")
-                ret2 = await get_or_post(application, new_url, headers)
-                if "headers" in ret:
-                    ret2["headers"].extend(ret["headers"])
-                return ret2
-
-    return ret
-
-
 async def websocket(application, path: str, headers: list[tuple[str, str]], input_queue, output) -> dict[str, Any]:
     """Handle a WebSocket connection through an ASGI application.
 
