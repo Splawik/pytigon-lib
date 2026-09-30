@@ -39,3 +39,5 @@ site/
 .DS_Store
 Thumbs.db
 .*/
+# Katalogi ukryte (np. .kilo) sa ignorowane, ale CI musi byc w repo
+!.github/
