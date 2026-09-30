@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from twisted.internet import reactor
 from twisted.web import server, xmlrpc
 
+from pytigon_lib.schtools.safe_exec import validate_source
+
 LOGGER = logging.getLogger("pytigon_task")
 #: Timezone-aware process start; see ``_now()`` for the local-time equivalent.
 INIT_TIME = datetime.datetime.now(UTC)
@@ -294,16 +296,22 @@ class SChScheduler:
         functions = []
         if isinstance(time_functions, str):
             for pos in time_functions.split(";"):
-                if pos:
-                    if (len(pos) > 2 and pos[1] == "(") or len(pos) == 1:
-                        if pos[0] in self.fmap:
-                            x = pos.split("(")
-                            pos = f"{self.fmap[pos[0]].__name__}({x[1] if len(x) > 1 else ''})"
-                    y = eval(pos, {"__builtins__": {}}, {fn.__name__: fn for fn in self.fmap.values()})
-                    if isinstance(y, (list, tuple)):
-                        functions.extend(y)
-                    else:
-                        functions.append(y)
+                if not pos:
+                    continue
+                if (len(pos) > 2 and pos[1] == "(") or len(pos) == 1:
+                    if pos[0] in self.fmap:
+                        x = pos.split("(")
+                        pos = f"{self.fmap[pos[0]].__name__}({x[1] if len(x) > 1 else ''})"
+                # A scheduler spec that reaches for the interpreter internals
+                # is a bug or an attack, not a schedule: validating it here is
+                # what actually stops the escape, the empty __builtins__ never
+                # did.
+                validate_source(pos, mode="eval")
+                y = eval(pos, {"__builtins__": {}}, {fn.__name__: fn for fn in self.fmap.values()})
+                if isinstance(y, (list, tuple)):
+                    functions.extend(y)
+                else:
+                    functions.append(y)
         elif isinstance(time_functions, (list, tuple)):
             functions = time_functions
         else:

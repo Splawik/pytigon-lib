@@ -13,6 +13,7 @@ from pytigon_lib.schhtml.render_helpers import (
     get_size,
 )
 from pytigon_lib.schtools.images import svg_to_png
+from pytigon_lib.schtools.safe_exec import validate_source
 
 _logger = logging.getLogger(__name__)
 
@@ -201,6 +202,9 @@ class ParCalc(AtomTag):
 
     Evaluates simple arithmetic expressions using a restricted namespace
     that only allows basic math operations and a few predefined variables.
+    The expression is first checked by the shared validator, which is what
+    stops the interpreter-escape idiom; restricting ``__builtins__`` alone
+    never did.
     """
 
     _SAFE_BUILTINS = {
@@ -230,6 +234,7 @@ class ParCalc(AtomTag):
         safe_globals = {"__builtins__": self._SAFE_BUILTINS}
         safe_locals = {"table": table, "body": body, "html": html}
         try:
+            validate_source(data, mode="eval")
             data2 = str(eval(data, safe_globals, safe_locals))
         except Exception:
             data2 = ""

@@ -53,9 +53,12 @@ CSS_TAG = [
     "link",
 ]
 
-import fnmatch  # noqa: E402
+# Imports below the tag-name lists above are intentionally late; E402 is
+# disabled for this file in pyproject.toml for that reason.
+import fnmatch
 
-from pytigon_lib.schhtml.atom import AtomList  # noqa: E402
+from pytigon_lib.schhtml.atom import AtomList
+from pytigon_lib.schtools.safe_exec import ForbiddenConstruct, validate_source
 
 
 def rgb_to_hex(color):
@@ -369,10 +372,10 @@ class BaseHtmlElemParser:
 
     @staticmethod
     def _safe_eval_expr(expr, context):
-        """Safely evaluate a simple arithmetic expression.
+        """Evaluate a simple arithmetic expression.
 
         Only supports: numbers, +, -, *, /, parentheses, and variable names
-        from the provided context dictionary. No builtins or attribute access.
+        from the provided context dictionary.
 
         Args:
             expr: String expression to evaluate.
@@ -384,16 +387,18 @@ class BaseHtmlElemParser:
         # Replace known variables with their values
         for key, value in context.items():
             expr = expr.replace(key, str(value))
-        # Remove any remaining non-math characters for safety
+        # Remove any remaining non-math characters
         # Only allow digits, operators, parentheses, whitespace, and dot
         sanitized = "".join(c for c in expr if c in "0123456789.+-*/() " or c.isdigit())
         if not sanitized:
             return 0
-        # Use eval with an empty namespace for safety
-        # since we've sanitized to only math-safe characters
         try:
+            # The character filter above already rules out attribute access, but
+            # the shared validator is what actually stops the escape ladder -
+            # restricting __builtins__ never did.
+            validate_source(sanitized, mode="eval")
             return int(eval(sanitized, {"__builtins__": {}}, {}))
-        except (SyntaxError, ValueError, ZeroDivisionError):
+        except (SyntaxError, ValueError, ZeroDivisionError, ForbiddenConstruct):
             return 0
 
     def _norm_sizes(self, sizes, dxy):
