@@ -6,6 +6,8 @@ grouping pivot table data within OOXML spreadsheet transformations.
 These are used as extended transformation scripts by OOXmlDocTransform.
 """
 
+from .ooxml_process import _serialise
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,9 +72,13 @@ def make_update_filter_fun(cache_field_name, pivot_table_name, pivot_field_name,
                                     item.attrib["h"] = "1"
                         break
 
-                # Add to update list if not from cache
+                # Add to update list if not from cache. Serialised here because
+                # to_update holds text, not lxml elements (so the DOM can be
+                # released instead of being kept until the archive is rewritten).
                 if not ret["from_cache"]:
-                    doc_transform.to_update.append((pivot_table_name, root2))
+                    doc_transform.to_update.append(
+                        (pivot_table_name, _serialise(root2))
+                    )
 
         except Exception as e:
             logger.error("Error updating pivot filter: %s", e)

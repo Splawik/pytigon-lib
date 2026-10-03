@@ -108,6 +108,27 @@ def make_col_row(col, row):
     return letters + str(row)
 
 
+def _serialise(elem):
+    """Serialise an lxml element to the text written into the archive.
+
+    Callers serialise at append time rather than at write time so the DOM can
+    be released immediately; an lxml tree costs far more memory than its
+    serialised form.
+
+    lxml is imported here rather than using the module-level ``etree``: that
+    global stays None until an OOXmlDocTransform is constructed, and this
+    helper is also called from outside that flow (ooxml_tools).
+    """
+    from lxml import etree as _etree
+
+    return (
+        _etree.tostring(elem, pretty_print=True)
+        .decode("utf-8")
+        .replace("<tmp>", "")
+        .replace("</tmp>", "")
+    )
+
+
 def key_for_addr(excel_addr):
     """Generate a sort key for an Excel address.
 
@@ -200,10 +221,16 @@ class OOXmlDocTransform(OdfDocTransform):
         """
         if self.comments:
             labels = []
-            d = sheet.findall(".//c", namespaces=sheet.nsmap)
-            for pos in d:
-                if "r" in pos.attrib:
-                    labels.append(pos.attrib["r"])
+            # Cell elements by reference, so the per-comment lookup below does
+            # not rebuild a list of every cell in the sheet. Previously each
+            # comment re-ran sheet.findall(".//c", ...), i.e. len(comments)
+            # full-sheet allocations.
+            cells_by_ref = {}
+            for pos in sheet.findall(".//c", namespaces=sheet.nsmap):
+                ref = pos.attrib.get("r")
+                if ref is not None:
+                    labels.append(ref)
+                    cells_by_ref.setdefault(ref, pos)
             labels.sort(key=key_for_addr)
 
             import bisect
@@ -221,10 +248,12 @@ class OOXmlDocTransform(OdfDocTransform):
                     else:
                         continue
 
-                d = filter_attr(sheet.findall(".//c", namespaces=sheet.nsmap), "r", label)
-                if len(d) > 0:
+                # label always comes from labels (or is itself in labels), so
+                # an exact-reference lookup is equivalent to filter_attr here.
+                cell = cells_by_ref.get(label)
+                if cell is not None:
                     if value2 and (value2.startswith("^") or value2.startswith("$") or value2.startswith(".")):
-                        self._handle_annotation(d[0], value2)
+                        self._handle_annotation(cell, value2)
 
     def shared_strings_to_inline(self, sheet):
         """
@@ -450,11 +479,15 @@ class OOXmlDocTransform(OdfDocTransform):
                                         comment = pos2.getparent().getparent().getparent()
                                         comment_list = comment.getparent()
                                         comment_list.remove(comment)
-                            self.to_update.append((comments_name, root))
+                            self.to_update.append((comments_name, _serialise(root)))
                     except KeyError:
                         pass
                     sheet2 = self.handle_sheet(sheet, django_context)
-                    self.to_update.append((sheet_name, sheet2))
+                    # Serialise now rather than at write time: an lxml DOM
+                    # costs roughly 5-10x the serialised XML, and keeping one
+                    # per worksheet until the archive is rewritten held the
+                    # whole workbook's DOMs in memory at once.
+                    self.to_update.append((sheet_name, _serialise(sheet2)))
                 except KeyError:
                     break
                 id += 1
@@ -467,13 +500,7 @@ class OOXmlDocTransform(OdfDocTransform):
             delete_from_zip(self.file_name_out, [pos[0] for pos in self.to_update])
             with zipfile.ZipFile(self.file_name_out, "a", zipfile.ZIP_DEFLATED) as z:
                 for pos in self.to_update:
-                    z.writestr(
-                        pos[0],
-                        etree.tostring(pos[1], pretty_print=True)
-                        .decode("utf-8")
-                        .replace("<tmp>", "")
-                        .replace("</tmp>", ""),
-                    )
+                    z.writestr(pos[0], pos[1])
         else:
             doc_type = context["doc_type"]
             if doc_type == "docx":

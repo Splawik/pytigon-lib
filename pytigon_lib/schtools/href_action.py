@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from django.conf import settings
 from django.template import Template
 from django.utils.html import escape
@@ -151,6 +153,7 @@ def unpack_value(standard_web_browser, value):
     return ret
 
 
+@lru_cache(maxsize=2048)
 def get_action_parm(standard_web_browser, action, key, default_value=""):
     """Resolve an action parameter by searching through the action hierarchy.
 
@@ -158,6 +161,12 @@ def get_action_parm(standard_web_browser, action, key, default_value=""):
     'edit-new_row'). The lookup searches from right to left through
     these components in STANDARD_ACTIONS, falling back to the 'default'
     entry.
+
+    Memoised: STANDARD_ACTIONS is a module constant and this is a pure
+    function of immutable arguments. Action.__init__ calls it eight times
+    per action, once per action per table row, so every rendered row used to
+    repeat the same split and dict lookups. The returned str is immutable, so
+    sharing one instance between Action objects is safe.
 
     Args:
         standard_web_browser: Whether the client is a standard web browser.

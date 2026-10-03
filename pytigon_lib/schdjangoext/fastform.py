@@ -236,17 +236,19 @@ def form_from_str(input_str, init_data=None, base_form_class=forms.Form, prefix=
         _safe_exec_form(input_str, globals(), locals_dict)
         return locals_dict["make_form_class"](base_form_class, init_data)
 
+    # Parsed once per form class instead of once per instantiation: input_str is
+    # a closure constant, so _scan_lines/_read_form_line are pure and their
+    # result cannot change between two instances.
+    field_specs = []
+    for line in _scan_lines(input_str):
+        if not line:
+            continue
+        field_specs.append(_read_form_line(line.strip()))
+
     class _Form(base_form_class):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            lines = _scan_lines(input_str)
-
-            for line in lines:
-                if not line:
-                    continue
-                name, field_type, title, required, form_kwargs = _read_form_line(
-                    line.strip()
-                )
+            for name, field_type, title, required, form_kwargs in field_specs:
                 if not field_type:
                     continue
 

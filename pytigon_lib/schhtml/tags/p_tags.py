@@ -392,6 +392,9 @@ class Ul(ParArray):
     def __init__(self, parent, parser, tag, attrs):
         ParArray.__init__(self, parent, parser, tag, attrs)
         self.children = []
+        # Identity mirror of self.children: `child not in self.children` is a
+        # linear scan, which made registering n <li> items quadratic.
+        self._children_ids = set()
         self.level = 1
         p = parent
         while p:
@@ -404,7 +407,8 @@ class Ul(ParArray):
         if self.dc_info.dc.handle_html_directly:
             return super().child_ready_to_render(child)
 
-        if child not in self.children:
+        if id(child) not in self._children_ids:
+            self._children_ids.add(id(child))
             if child.lp < 0:
                 child.lp = self.lp
                 self.lp += 1
@@ -425,6 +429,7 @@ class Ul(ParArray):
                 for child in self.rendered_children:
                     self.parent.parent.rendered_children.append(child)
                     self.parent.parent.children.append(child)
+                    self.parent.parent._children_ids.add(id(child))
                 self.rendered_children = []
             # else:
             #    self.parent.child_ready_to_render(self)

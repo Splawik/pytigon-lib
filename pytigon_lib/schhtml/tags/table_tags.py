@@ -180,7 +180,7 @@ class TableTag(BaseHtmlAtomParser):
             return
         if not self.sizes_ok:
             if not self.sizes:
-                self.sizes = [[-1, -1, -1]] * self.col_count
+                self.sizes = [[-1, -1, -1] for _ in range(self.col_count)]
             # Apply explicit widths declared via <colgroup>/<col>.
             for i, width in enumerate(self.col_widths):
                 if i >= self.col_count or width is None:
@@ -381,7 +381,7 @@ class TableTag(BaseHtmlAtomParser):
                     ) - self.extra_space[1]
                     self.sizes[no_size_id][1] = self.sizes[no_size_id][0]
                     self.sizes[no_size_id][2] = self.sizes[no_size_id][0]
-                    self.tr_list[-1][i].set_width(self.width - width_tab)
+                    self.tr_list[-1][no_size_id].set_width(self.width - width_tab)
                     no_size_count = 0
                 if no_size_count == 0:
                     self.sizes_ok = True
@@ -406,26 +406,30 @@ class TableTag(BaseHtmlAtomParser):
             row.height = dy
             return dy
 
-    def _row_rowspan_height(self, rows):
+    def _row_rowspan_height(self, start):
+        # Takes the starting index rather than a slice: the caller used to pass
+        # self.tr_list[i:], allocating a fresh R-element list for every row
+        # (O(R^2) pointers per layout pass, and the pass runs at least twice).
+        rows = self.tr_list
         for i in range(0, self.col_count):
-            if rows[0][i].__class__ != TdRef and rows[0][i].rowspan > 1:
+            if rows[start][i].__class__ != TdRef and rows[start][i].rowspan > 1:
                 width = 0
-                for j in range(0, rows[0][i].colspan):
+                for j in range(0, rows[start][i].colspan):
                     width += self.sizes[i + j][0]
-                sy = rows[0][i].get_height()
+                sy = rows[start][i].get_height()
                 sy2 = 0
-                for j in range(0, rows[0][i].rowspan):
-                    sy2 += self._row_height(rows[j])
+                for j in range(0, rows[start][i].rowspan):
+                    sy2 += self._row_height(rows[start + j])
                 if sy > sy2:
-                    delta = (sy - sy2) / rows[0][i].rowspan
-                    for j in range(0, rows[0][i].rowspan):
-                        rows[j].height = rows[j].height + delta
+                    delta = (sy - sy2) / rows[start][i].rowspan
+                    for j in range(0, rows[start][i].rowspan):
+                        rows[start + j].height = rows[start + j].height + delta
 
     def _calculate_rows_height(self):
         for row in self.tr_list:
             self._row_height(row)
         for i in range(0, len(self.tr_list)):
-            self._row_rowspan_height(self.tr_list[i:])
+            self._row_rowspan_height(i)
 
     def _iter(self):
         if self.subtab:

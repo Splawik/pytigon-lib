@@ -6,7 +6,23 @@ class BaseDcInfoCommon:
 
     def __init__(self, dc):
         self.dc = dc
-        self.styles = []
+        self._styles = []
+        self._style_ids = {}
+
+    @property
+    def styles(self):
+        """Distinct style strings seen so far; part of the serialised state."""
+        return self._styles
+
+    @styles.setter
+    def styles(self, value):
+        # basedc.py rebinds this wholesale when restoring saved state, so the
+        # lookup index built by get_style_id() must be rebuilt from the new
+        # list (first occurrence wins, matching the original linear scan).
+        self._styles = value
+        self._style_ids = {}
+        for i, existing in enumerate(value):
+            self._style_ids.setdefault(existing, i)
 
     def get_text_width(self, txt, style):
         return 12 * len(txt)
@@ -65,12 +81,14 @@ class BaseDcInfo(BaseDcInfoCommon):
         return (dx, dx_space, dy_up, dy_down)
 
     def get_style_id(self, style):
-        i = 0
-        for pos in self.styles:
-            if style == pos:
-                return i
-            i += 1
-        self.styles.append(style)
+        # Called once per rendered element with a freshly built style string,
+        # so a linear scan over the distinct styles made the render O(n*k).
+        index = self._style_ids
+        i = index.get(style)
+        if i is None:
+            i = len(self.styles)
+            self.styles.append(style)
+            index[style] = i
         return i
 
 

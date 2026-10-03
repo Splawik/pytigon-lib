@@ -93,6 +93,20 @@ def schurljoin(base, address):
     return base + address
 
 
+def _contains_error_page(content) -> bool:
+    """Check whether a response body looks like a Django debug traceback page.
+
+    Searching bytes directly avoids materialising the whole ``repr`` of the
+    body, which matters because this runs on the response path of every
+    proxied request.
+    """
+    if content is None:
+        return False
+    if isinstance(content, bytes):
+        return b"Traceback" in content and b"copy-and-paste" in content
+    return "Traceback" in content and "copy-and-paste" in content
+
+
 class RetHttp:
     """Wrapper for HTTP response from the asgi/wsgi bridge.
 
@@ -343,8 +357,7 @@ class HttpResponse:
         if (
             self.ret_content_type
             and "text/" in self.ret_content_type
-            and "Traceback" in str(self.content)
-            and "copy-and-paste" in str(self.content)
+            and _contains_error_page(self.content)
         ):
             if HTTP_ERROR_FUNC:
                 BLOCK = True
@@ -366,9 +379,17 @@ class HttpResponse:
             and isinstance(self.content, bytes)
             and (b"Cache-control" in self.content or "/plugins" in self.url)
         ):
-            http_client.http_cache[self.url] = (self.ret_content_type, self.content)
-            if len(http_client.http_cache) > 128:
-                http_client.http_cache.popitem(last=False)
+            cache = http_client.http_cache
+            cache[self.url] = (self.ret_content_type, self.content)
+            # Bounded by bytes as well as entries: entries are whole response
+            # bodies (plugin listings in particular), so 128 entries alone did
+            # not bound memory. The byte ceiling is read with a default so any
+            # mapping-only client still works.
+            max_bytes = getattr(http_client, "http_cache_max_bytes", 32 * 1024 * 1024)
+            total = sum(len(entry[1]) for entry in cache.values())
+            while len(cache) > 128 or (total > max_bytes and len(cache) > 1):
+                _, evicted = cache.popitem(last=False)
+                total -= len(evicted[1])
         self.new_url = self.response.url if isinstance(self.response.url, str) else self.response.url.path
 
     def ptr(self):
@@ -396,6 +417,10 @@ class HttpClient:
         """Initialize HTTP client."""
         self.base_address = address if address else "http://127.0.0.2"
         self.http_cache = OrderedDict()
+        # Bounded by BYTES as well as entries: entries are whole response
+        # bodies (plugin listings, in particular), so 128 entries could pin
+        # far more memory than intended.
+        self.http_cache_max_bytes = 32 * 1024 * 1024
         self.app = None
         # Per-instance cookie jars so that concurrent HttpClient instances
         # (e.g. serving different users in a multi-threaded server) do not
@@ -478,6 +503,11 @@ class HttpClient:
             direct_access = False
         LOGGER.info(adr)
         if not post_request and "?" not in adr and adr in self.http_cache:
+            # Mark recently used so eviction is least-recently-used. Only when
+            # the cache actually supports it (a plain dict is a valid mapping).
+            move_to_end = getattr(self.http_cache, "move_to_end", None)
+            if move_to_end:
+                move_to_end(adr)
             return HttpResponse(
                 adr,
                 content=self.http_cache[adr][1],

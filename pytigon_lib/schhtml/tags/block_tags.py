@@ -187,13 +187,17 @@ class BodyTag(InlineElements):
                 cont = True
                 while cont:
                     width, min_width, max_width = child.get_width()
+                    # Hoisted: for a <table> child this walks every row and
+                    # every cell via calc_height(), so evaluating it three
+                    # times per child was very expensive.
+                    client_width = self.get_client_width()[0]
                     w = (
                         max_width
-                        if max_width >= 0 and max_width < self.get_client_width()[0]
+                        if max_width >= 0 and max_width < client_width
                         else (
                             min_width
-                            if min_width >= 0 and min_width > self.get_client_width()[0]
-                            else self.get_client_width()[0]
+                            if min_width >= 0 and min_width > client_width
+                            else client_width
                         )
                     )
                     child.set_width(w)

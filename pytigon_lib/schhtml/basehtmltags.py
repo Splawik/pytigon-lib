@@ -141,7 +141,7 @@ class BaseHtmlElemParser:
             )[0]
         if attrs and self.height == -1 and "max-height" in attrs:
             self.max_height = self._norm_sizes_and_minmax(
-                self.attrs, "height", "max-height", None, self.get_parent_height()
+                self.attrs, "max-height", "max-height", None, self.get_parent_height()
             )[0]
         if attrs and self.height == -1 and "min-height" in attrs:
             self.min_height = self._norm_sizes_and_minmax(
@@ -428,7 +428,10 @@ class BaseHtmlElemParser:
                     e = pos.split("(", 1)[1].rsplit(")", 1)[0].strip()
                 else:
                     e = pos
-                e = e.replace("px", "").replace("em", "*em").replace("rem", "*rem").replace("%", "*height/100")
+                # "rem" must be replaced before "em": "rem" contains "em", so the old order
+                # turned 2rem into 2r*em and then matched nothing, which made
+                # the sanitizer raise and calc() return 0.
+                e = e.replace("px", "").replace("rem", "*rem").replace("em", "*em").replace("%", "*height/100")
                 c = {"top": self.dy, "height": dxy, "em": 1, "rem": 1}
                 if hasattr(self, "get_context"):
                     context = self.get_context()

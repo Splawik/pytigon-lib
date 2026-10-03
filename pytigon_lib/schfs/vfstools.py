@@ -397,6 +397,25 @@ class ZipWriter:
         if any(re.match(pattern, file_name, re.I) for pattern in self.exclude):
             return
 
+        if name_in_zip:
+            arcname = name_in_zip
+        elif base_path_in_zip is not None:
+            arcname = base_path_in_zip.rstrip("/") + "/" + self._strip_base(file_name)
+        else:
+            arcname = self._strip_base(file_name)
+
+        if self.sha256_tab is None:
+            # No digest to collect: stream straight from the file instead of
+            # buffering it whole. ZipFile.write() uses the same compression,
+            # so this costs nothing and removes the largest file in the tree
+            # from the peak.
+            try:
+                self.zip_file.write(file_name, arcname)
+            except OSError:
+                # Skip files that cannot be read (permissions, etc.).
+                return
+            return
+
         try:
             with open(file_name, "rb") as f:
                 data = f.read()
@@ -404,15 +423,7 @@ class ZipWriter:
             # Skip files that cannot be read (permissions, etc.).
             return
 
-        if name_in_zip:
-            self.writestr(name_in_zip, data)
-        elif base_path_in_zip is not None:
-            self.writestr(
-                base_path_in_zip.rstrip("/") + "/" + self._strip_base(file_name),
-                data,
-            )
-        else:
-            self.writestr(self._strip_base(file_name), data)
+        self.writestr(arcname, data)
 
     def writestr(self, path: str, data: bytes) -> None:
         """Write raw *data* as a member named *path* inside the archive."""
@@ -531,13 +542,10 @@ def convert_file(
         ValueError: If the *output_format* is not recognised.
         OSError: If any file or stream operation fails.
     """
-    # Lazy imports to avoid circular dependencies at module level.
-    from pytigon_lib.schhtml.docxdc import DocxDc
-    from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
-    from pytigon_lib.schhtml.pdfdc import PdfDc
-    from pytigon_lib.schhtml.xlsxdc import XlsxDc
-    from pytigon_lib.schindent.indent_markdown import markdown_to_html
-    from pytigon_lib.schindent.indent_style import ihtml_to_html_base
+    # Lazy imports to avoid circular dependencies at module level. These are
+    # imported inside the branch that uses them: pulling docx/xlsxwriter here
+    # cost ~15 MB of permanent RSS on the html path (the template-compilation
+    # path), which never touches either of them.
 
     # Recognised output formats that require a dc (document-converter) object.
     _DC_FORMATS = frozenset({"pdf", "xpdf", "spdf", "docx", "xlsx"})
@@ -576,8 +584,12 @@ def convert_file(
             processor = IndentMarkdownProcessor(output_format="html")
             buf: str | None = processor.convert(fin.read())
         elif input_format == "md":
+            from pytigon_lib.schindent.indent_markdown import markdown_to_html
+
             buf = markdown_to_html(fin.read())
         elif input_format == "ihtml":
+            from pytigon_lib.schindent.indent_style import ihtml_to_html_base
+
             buf = ihtml_to_html_base(None, input_str=fin.read())
         elif input_format == "spdf":
             buf = None
@@ -594,6 +606,7 @@ def convert_file(
         dc: Any = None
 
         if output_format in ("pdf", "xpdf"):
+            from pytigon_lib.schhtml.pdfdc import PdfDc
 
             def notify_callback_pdf(event_name: str, data: dict[str, Any]) -> None:
                 if event_name == "end" and buf:
@@ -609,6 +622,7 @@ def convert_file(
             dc.set_paging(True)
 
         elif output_format == "spdf":
+            from pytigon_lib.schhtml.pdfdc import PdfDc
 
             def notify_callback_spdf(event_name: str, data: dict[str, Any]) -> None:
                 if event_name == "end":
@@ -632,8 +646,12 @@ def convert_file(
             dc.set_paging(True)
 
         elif output_format == "docx":
+            from pytigon_lib.schhtml.docxdc import DocxDc
+
             dc = DocxDc(output_stream=fout)
         elif output_format == "xlsx":
+            from pytigon_lib.schhtml.xlsxdc import XlsxDc
+
             dc = XlsxDc(output_stream=fout)
         else:
             raise ValueError(
@@ -641,6 +659,8 @@ def convert_file(
             )
 
         # ---- render ----
+        from pytigon_lib.schhtml.htmlviewer import HtmlViewerParser
+
         p = HtmlViewerParser(
             dc=dc,
             calc_only=False,

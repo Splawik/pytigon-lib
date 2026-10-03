@@ -225,9 +225,14 @@ class FsspecSimpleFS(AbstractFileSystem):
         result: dict[str, dict[str, Any]] = {}
         for backend_name, entry in entries.items():
             name = self._logical_name(backend_name)
-            item = copy.deepcopy(entry)
-            item["name"] = name
-            result[name] = item
+            if detail:
+                item = copy.deepcopy(entry)
+                item["name"] = name
+                result[name] = item
+            else:
+                # detail=False discards every value it just built, so don't
+                # deep-copy the entry at all.
+                result[name] = name
         return result if detail else sorted(result)
 
     def mkdir(self, path: str, create_parents: bool = True, **kwargs: Any) -> None:
@@ -448,9 +453,14 @@ class FsspecMultiFS(AbstractFileSystem):
                     else backend_name.strip("/")
                 )
                 if relative_name not in found:
-                    entry = copy.deepcopy(item)
-                    entry["name"] = relative_name
-                    found[relative_name] = entry
+                    if detail:
+                        entry = copy.deepcopy(item)
+                        entry["name"] = relative_name
+                        found[relative_name] = entry
+                    else:
+                        # detail=False discards every value it just built, so
+                        # don't deep-copy the entry at all.
+                        found[relative_name] = relative_name
         return found if detail else sorted(found)
 
     def mkdir(self, path: str, create_parents: bool = True, **kwargs: Any) -> None:
@@ -681,9 +691,14 @@ class FsspecMountFS(AbstractFileSystem):
         for backend_name, entry in entries.items():
             name = str(backend_name).replace("\\", "/")
             logical = name[len(root) + 1 :] if root and name.startswith(f"{root}/") else name.strip("/")
-            item = copy.deepcopy(entry)
-            item["name"] = logical
-            result[logical] = item
+            if detail:
+                item = copy.deepcopy(entry)
+                item["name"] = logical
+                result[logical] = item
+            else:
+                # detail=False discards every value it just built, so don't
+                # deep-copy the entry at all.
+                result[logical] = logical
         return result if detail else sorted(result)
 
     def mkdir(self, path: str, create_parents: bool = True, **kwargs: Any) -> None:

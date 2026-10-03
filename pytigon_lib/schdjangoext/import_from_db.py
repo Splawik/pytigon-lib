@@ -12,6 +12,11 @@ from django.conf import settings
 from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
 
 CACHE = {}
+# CACHE held one entry per distinct generated function, each pinning a compiled
+# module namespace, and expiry was only *evaluated* by in_cache() - expired
+# entries were never removed, so the dict grew for the life of the process.
+# Bounded to the most recent entries, dropping the oldest first.
+CACHE_MAX_ENTRIES = 256
 
 
 def _get_setting(name, default=None):
@@ -43,7 +48,10 @@ def in_cache(key):
             return True
         cache_time = CACHE[key][1]
         time_diff = (datetime.datetime.now() - cache_time).total_seconds()
-        return time_diff < cache_timeout
+        if time_diff < cache_timeout:
+            return True
+        # Expired: drop it rather than leaving it pinned in memory.
+        CACHE.pop(key, None)
     return False
 
 
@@ -55,7 +63,11 @@ def add_to_cache(key, value):
         value: Value to store.
     """
     global CACHE
+    # Re-insert so the entry becomes the most recent one.
+    CACHE.pop(key, None)
     CACHE[key] = (value, datetime.datetime.now())
+    while len(CACHE) > CACHE_MAX_ENTRIES:
+        CACHE.pop(next(iter(CACHE)))
 
 
 def get_from_cache(key):

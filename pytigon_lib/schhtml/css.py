@@ -42,8 +42,10 @@ class CssPos:
         self.parents = {}
         # Deep-copy: several CssPos instances are built from the same attrs
         # dict and extend() mutates it in place, which would otherwise leak one
-        # selector's attributes into every other selector.
-        self.attrs = copy.deepcopy(attrs) if len(line) == 1 else {}
+        # selector's attributes into every other selector. Skipped for an empty
+        # attrs dict: get_dict() builds a throwaway holder per HTML element and
+        # deepcopy({}) is pure overhead.
+        self.attrs = copy.deepcopy(attrs) if (len(line) == 1 and attrs) else {}
         if len(line) > 1:
             parent = CssPos(line[:-1], attrs)
             self.parents[parent.key()] = parent

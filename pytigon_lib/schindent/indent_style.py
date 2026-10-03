@@ -468,12 +468,17 @@ class IhtmlToHtml:
         Args:
             min_indent: Minimum indentation to flush to.
         """
-        for pos in reversed(self.buffer):
-            if pos[0] >= min_indent:
-                self.output.append([pos[0], pos[1], pos[2]])
-                self.buffer.remove(pos)
-            else:
-                break
+        # Walked backwards and deleted in place: list.remove() rescans from
+        # index 0, which made this O(k*n) per source line, and it also removed
+        # the *first* equal element rather than the one at the current
+        # position, so duplicate [indent, close_tag, status] triples - which
+        # nested identical tags produce - could be emitted out of order.
+        buf = self.buffer
+        idx = len(buf) - 1
+        while idx >= 0 and buf[idx][0] >= min_indent:
+            self.output.append(buf[idx])
+            del buf[idx]
+            idx -= 1
 
     # ---- Line transformation ----
 
