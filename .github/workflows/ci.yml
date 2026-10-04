@@ -29,9 +29,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "mypy>=1.0" "ruff>=0.3"
 
-      # Gating: syntax errors and undefined names. Kept green on purpose.
+      # Gating: syntax errors, undefined names and unused imports.
       - name: Ruff (gating)
-        run: ruff check . --select E9,F63,F7,F82
+        run: ruff check . --select E9,F63,F7,F82,F401
 
       # Informational: the full rule set still has open findings.
       - name: Ruff (full report)
@@ -46,20 +46,27 @@ jobs:
         run: mypy pytigon_lib || true
 
   test:
-    name: Test
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install package and dev dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          python -m pytest tests/ -q
+          python -m pytest tests/ -q \
+            --cov=pytigon_lib \
+            --cov-report=term-missing:skip-covered \
+            --cov-fail-under=45

@@ -14,6 +14,42 @@ from pytigon_lib.schtools.safe_exec import safe_exec as _safe_exec
 
 logger = logging.getLogger(__name__)
 
+# Guidance shown when the project package is missing. The ``pytigon`` package on
+# its own is the base of the system and is not meant to be a runnable install;
+# ``pytigon-batteries`` is the web-server package set and ``pytigon-gui`` the
+# desktop application. Both pull in ``pytigon-standard-prj``, which carries the
+# standard projects/applications.
+MISSING_PROJECTS_HINT = """\
+Pytigon could not find its standard projects.
+
+The 'pytigon' package is the base of the system and is not a runnable install
+on its own. Install the package that matches what you want to run:
+
+    pip install pytigon-batteries    # Pytigon as a web server
+    pip install pytigon-gui          # desktop application with its own server
+
+Both of them install 'pytigon-standard-prj', which provides the standard
+projects and applications. If you only need the base framework (for example to
+build a custom, reduced system), install the missing projects yourself and make
+sure a 'pytigon_standard_prj' package is importable."""
+
+
+def _import_standard_projects():
+    """Import ``pytigon_standard_prj`` with an actionable error message.
+
+    Returns:
+        The imported ``pytigon_standard_prj`` module.
+
+    Raises:
+        ImportError: If the package is missing, with installation guidance.
+    """
+    try:
+        import pytigon_standard_prj
+    except ImportError as exc:
+        raise ImportError(MISSING_PROJECTS_HINT) from exc
+
+    return pytigon_standard_prj
+
 
 def _mkdir(path, ext=None):
     """Create a directory if it does not exist.
@@ -261,7 +297,7 @@ def init(prj, root_path, data_path, prj_path, static_app_path, paths=None):
             upgrade = True
             print("Upgrade data")
     if not is_data_path:
-        import pytigon_standard_prj
+        pytigon_standard_prj = _import_standard_projects()
 
         zip_file2 = os.path.join(
             pytigon_standard_prj.__path__[0], "install", ".pytigon.zip"

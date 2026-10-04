@@ -2,7 +2,9 @@
 
 import datetime
 import io
+import logging
 import os
+import re
 import zipfile
 
 from pytigon_lib.schdjangoext.django_manage import cmd
@@ -10,6 +12,48 @@ from pytigon_lib.schfs.vfstools import extractall
 from pytigon_lib.schtools.env import get_environ
 from pytigon_lib.schtools.main_paths import get_main_paths, get_prj_name
 from pytigon_lib.schtools.process import py_run
+
+logger = logging.getLogger(__name__)
+
+# Project names come from the archive's ``*.dist-info`` directory name, which
+# is attacker-controlled. Restrict them to a safe alphabet before the name is
+# ever joined into a filesystem path or used to locate ``manage.py``.
+_PRJ_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+
+
+def ensure_default_admin(database: str = "default"):
+    """Create the bootstrap administrator if it does not exist yet.
+
+    The account is a documented default, not a secret, so packages can rely on
+    it being present and own their data with it. This is **create-only**: when
+    the account already exists its password is left untouched, so an operator
+    who changed the bootstrap password keeps their change.
+
+    Args:
+        database: The database alias to create the account in.
+
+    Returns:
+        The user when it was created, otherwise ``None`` (existing account or
+        the auth tables are not available yet).
+    """
+    from django.contrib.auth import get_user_model
+    from django.db import DatabaseError
+
+    env = get_environ()
+    username = env("AUTOUSERNAME")
+    password = env("AUTOPASSWORD")
+
+    user_model = get_user_model()
+    field = user_model.USERNAME_FIELD
+    try:
+        if user_model.objects.using(database).filter(**{field: username}).exists():
+            return None
+        kwargs = {field: username, "password": password}
+        if field != "email":
+            kwargs["email"] = "auto@pytigon.cloud"
+        return user_model.objects.db_manager(database).create_superuser(**kwargs)
+    except DatabaseError:
+        return None
 
 
 def install():
@@ -48,6 +92,11 @@ def install():
             print("Migration for database: default - fails")
 
     if not upgrade:
+        # The bootstrap administrator must exist before packaged data is
+        # imported, because that data may reference it from foreign keys.
+        # Create-only, so a password the operator already changed is preserved.
+        ensure_default_admin("default")
+
         if db_profile != "default":
             temp_path = os.path.join(data_path, "temp")
             if not os.path.exists(temp_path):
@@ -86,13 +135,6 @@ def install():
             cmd(parameters)
 
             cmd(["loaddata", "--database", "default", json_path, "--traceback"])
-            from django.contrib.auth.models import User
-
-            env = get_environ()
-            username = env("AUTOUSERNAME")
-            password = env("AUTOPASSWORD")
-
-            User.objects.db_manager("default").create_superuser(username, "auto@pytigon.cloud", password)
     if "after_install" in get_commands():
         try:
             cmd(
@@ -193,13 +235,7 @@ def export_to_db(withoutapp=None, to_local_db=True):
         cmd(["loaddata", "--database", "default", json_path, "--traceback"])
 
     if to_local_db:
-        from django.contrib.auth.models import User
-
-        env = get_environ()
-        username = env("AUTOUSERNAME")
-        password = env("AUTOPASSWORD")
-
-        User.objects.db_manager("local").create_superuser(username, "auto@pytigon.cloud", password)
+        ensure_default_admin("local")
 
 
 def export_to_local_db(withoutapp=None):
@@ -270,6 +306,11 @@ class Ptig:
                 self.version = x2[1] if len(x2) > 1 else "latest"
                 self.prj_name = x2[0]
                 break
+        if self.prj_name is not None and not _PRJ_NAME_RE.match(self.prj_name):
+            logger.warning(
+                "Rejecting .ptig archive with unsafe project name: %r", self.prj_name
+            )
+            self.prj_name = None
         self.extract_to = None
 
     def is_ok(self):
@@ -322,6 +363,9 @@ class Ptig:
         Returns:
             List of status/info strings describing what was done.
         """
+        if not self.is_ok():
+            raise ValueError("Invalid .ptig archive: missing or unsafe project name")
+
         import pytigon.schserw.settings
 
         paths = get_main_paths(self.prj_name)

@@ -1,9 +1,10 @@
 """Execution helpers for code that comes from configuration, not from Python.
 
-Pytigon evaluates code that lives *outside* the source tree: ``{"object": ...}``
-envelopes in decoded JSON, ``<calc>`` bodies in HTML, ``*_build.py`` scripts in
-a project, definitions stored in the database, and scheduler specs. This module
-is the single place that decides how much to trust such code.
+Pytigon evaluates code that lives *outside* the source tree: ``<calc>`` bodies
+in HTML, ``*_build.py`` scripts in a project, definitions stored in the
+database, and scheduler specs. This module is the single place that decides how
+much to trust such code. (Decoded JSON no longer reaches this module:
+``schjson`` reconstructs values structurally and never evaluates them.)
 
 Why this is not a sandbox
 -------------------------

@@ -78,7 +78,7 @@ class TestOpenFile:
         with patch("pytigon_lib.schfs.vfstools.default_storage") as mock_storage:
             mock_storage.fs = mock_fs
             open_file("/vfs/test.txt", "r", for_vfs=True)
-            mock_fs.open.assert_called_once_with("/vfs/test.txt", "r")
+            mock_fs.open.assert_called_once_with("/vfs/test.txt", "r", encoding="utf-8")
 
 
 class TestOpenAndCreateDir:

@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 
 from pytigon_lib.schtools.schjson import (
-    _SAFE_EVAL_GLOBALS,
+    _ENVELOPE_TYPE_KEY,
     _STANDARD_TYPES,
     ComplexDecoder,
     ComplexEncoder,
@@ -34,32 +34,46 @@ class TestComplexEncoder:
 
     def test_datetime(self, encoder):
         result = encoder.default(datetime.datetime(2023, 1, 1))
-        assert result == {"object": "datetime.datetime(2023, 1, 1, 0, 0)"}
+        assert result == {
+            "__pytigon_type__": "datetime",
+            "value": "2023-01-01T00:00:00",
+        }
 
     def test_datetime_with_microseconds(self, encoder):
         result = encoder.default(datetime.datetime(2023, 1, 1, 12, 30, 45, 123456))
-        assert result == {"object": "datetime.datetime(2023, 1, 1, 12, 30, 45, 123456)"}
+        assert result == {
+            "__pytigon_type__": "datetime",
+            "value": "2023-01-01T12:30:45.123456",
+        }
 
-    def test_datetime_repr_drops_zero_seconds(self, encoder):
-        """``repr()`` omits seconds when they equal 0."""
+    def test_datetime_zero_seconds_are_kept(self, encoder):
         result = encoder.default(datetime.datetime(2023, 1, 1, 12, 0, 0))
-        assert result == {"object": "datetime.datetime(2023, 1, 1, 12, 0)"}
+        assert result == {
+            "__pytigon_type__": "datetime",
+            "value": "2023-01-01T12:00:00",
+        }
+
+    def test_datetime_timezone_is_preserved(self, encoder):
+        dt = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
+        result = encoder.default(dt)
+        assert result["__pytigon_type__"] == "datetime"
+        assert result["value"] == "2023-01-01T00:00:00+00:00"
 
     # -- date ---------------------------------------------------------------
 
     def test_date(self, encoder):
         result = encoder.default(datetime.date(2023, 1, 1))
-        assert result == {"object": "datetime.date(2023, 1, 1)"}
+        assert result == {"__pytigon_type__": "date", "value": "2023-01-01"}
 
     # -- Decimal ------------------------------------------------------------
 
     def test_decimal(self, encoder):
         result = encoder.default(Decimal("10.5"))
-        assert result == {"object": "Decimal('10.5')"}
+        assert result == {"__pytigon_type__": "decimal", "value": "10.5"}
 
     def test_decimal_integer(self, encoder):
         result = encoder.default(Decimal("42"))
-        assert result == {"object": "Decimal('42')"}
+        assert result == {"__pytigon_type__": "decimal", "value": "42"}
 
     # -- numpy arrays (simulated via tolist) --------------------------------
 
@@ -76,7 +90,7 @@ class TestComplexEncoder:
     # -- unknown complex types ----------------------------------------------
 
     def test_unknown_complex_type(self, encoder):
-        """Types without special handling fall back to ``repr()``."""
+        """Types without special handling fall back to an informational repr."""
 
         class MyCustomType:
             pass
@@ -105,13 +119,14 @@ class TestComplexEncoder:
     def test_json_dumps_datetime(self):
         data = {"ts": datetime.datetime(2023, 1, 1, 12, 0, 0)}
         encoded = json.dumps(data, cls=ComplexEncoder)
-        # repr omits zero seconds
-        assert "datetime.datetime(2023, 1, 1, 12, 0)" in encoded
+        assert "2023-01-01T12:00:00" in encoded
+        assert '"__pytigon_type__": "datetime"' in encoded
 
     def test_json_dumps_decimal(self):
         data = {"price": Decimal("19.99")}
         encoded = json.dumps(data, cls=ComplexEncoder)
-        assert "Decimal('19.99')" in encoded
+        assert '"__pytigon_type__": "decimal"' in encoded
+        assert "19.99" in encoded
 
     def test_json_dumps_unknown_type_falls_back_to_repr(self):
         """Unknown types become ``{"object": "..."}`` via repr fallback."""
@@ -133,37 +148,61 @@ class TestComplexEncoder:
 class TestAsComplex:
     """Tests for :func:`as_complex`."""
 
-    def test_decodes_datetime(self):
+    # -- typed envelope (new format) ----------------------------------------
+
+    def test_decodes_typed_datetime(self):
+        dct = {"__pytigon_type__": "datetime", "value": "2023-01-01T00:00:00"}
+        assert as_complex(dct) == datetime.datetime(2023, 1, 1)
+
+    def test_decodes_typed_date(self):
+        dct = {"__pytigon_type__": "date", "value": "2023-01-01"}
+        assert as_complex(dct) == datetime.date(2023, 1, 1)
+
+    def test_decodes_typed_decimal(self):
+        dct = {"__pytigon_type__": "decimal", "value": "10.5"}
+        assert as_complex(dct) == Decimal("10.5")
+
+    def test_malformed_typed_datetime_is_returned_unchanged(self):
+        dct = {"__pytigon_type__": "datetime", "value": "not-a-date"}
+        assert as_complex(dct) is dct
+
+    def test_unknown_typed_envelope_is_returned_unchanged(self):
+        dct = {"__pytigon_type__": "whatever", "value": "x"}
+        assert as_complex(dct) is dct
+
+    # -- legacy ``{"object": ...}`` envelope, read without eval -------------
+
+    def test_decodes_legacy_datetime(self):
         dct = {"object": "datetime.datetime(2023, 1, 1, 0, 0)"}
         result = as_complex(dct)
         assert result == datetime.datetime(2023, 1, 1)
 
-    def test_decodes_date(self):
+    def test_decodes_legacy_date(self):
         dct = {"object": "datetime.date(2023, 1, 1)"}
         result = as_complex(dct)
         assert result == datetime.date(2023, 1, 1)
 
-    def test_decodes_decimal(self):
+    def test_decodes_legacy_decimal(self):
         dct = {"object": "Decimal('10.5')"}
         result = as_complex(dct)
         assert result == Decimal("10.5")
 
+    def test_decodes_legacy_microseconds_and_negative_numbers(self):
+        dct = {"object": "datetime.datetime(2023, 1, 1, 12, 30, 45, 123456)"}
+        assert as_complex(dct) == datetime.datetime(2023, 1, 1, 12, 30, 45, 123456)
+
+        dct = {"object": "Decimal('-10.5')"}
+        assert as_complex(dct) == Decimal("-10.5")
+
     def test_decodes_standard_type_via_repr(self):
-        """Standard types whose repr is valid Python are recovered."""
-        dct = {"object": "42"}
-        assert as_complex(dct) == 42
-
-        dct = {"object": "3.14"}
-        assert as_complex(dct) == 3.14
-
-        dct = {"object": "'hello'"}
-        assert as_complex(dct) == "hello"
-
-        dct = {"object": "[1, 2, 3]"}
-        assert as_complex(dct) == [1, 2, 3]
-
-        dct = {"object": "{'a': 1}"}
-        assert as_complex(dct) == {"a": 1}
+        """Plain literals whose repr is valid Python are recovered."""
+        assert as_complex({"object": "42"}) == 42
+        assert as_complex({"object": "3.14"}) == 3.14
+        assert as_complex({"object": "'hello'"}) == "hello"
+        assert as_complex({"object": "[1, 2, 3]"}) == [1, 2, 3]
+        assert as_complex({"object": "{'a': 1}"}) == {"a": 1}
+        assert as_complex({"object": "True"}) is True
+        assert as_complex({"object": "None"}) is None
 
     def test_no_object_key_returns_dict(self):
         dct = {"some_key": "some_value"}
@@ -174,15 +213,8 @@ class TestAsComplex:
         dct = {"object": "this is not valid python !!!"}
         assert as_complex(dct) is None
 
-    def test_forbidden_builtins_blocked(self):
-        """``__import__`` and other dangerous builtins are not in safe globals."""
-        dct = {"object": "__import__('os').system('ls')"}
-        # eval should fail because __import__ is not in the restricted globals
-        assert as_complex(dct) is None
-
     def test_empty_object_value_returns_none(self):
         dct = {"object": ""}
-        # eval("") raises SyntaxError → None
         assert as_complex(dct) is None
 
 
@@ -198,6 +230,17 @@ class TestDumpsLoads:
         data = {"date": datetime.datetime(2023, 1, 1)}
         decoded = loads(dumps(data))
         assert decoded["date"] == data["date"]
+
+    def test_roundtrip_datetime_microseconds(self):
+        data = {"date": datetime.datetime(2023, 1, 1, 12, 30, 45, 123456)}
+        decoded = loads(dumps(data))
+        assert decoded["date"] == data["date"]
+
+    def test_roundtrip_datetime_timezone(self):
+        data = {"date": datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)}
+        decoded = loads(dumps(data))
+        assert decoded["date"] == data["date"]
+        assert decoded["date"].tzinfo is not None
 
     def test_roundtrip_date(self):
         data = {"date": datetime.date(2023, 6, 15)}
@@ -226,12 +269,10 @@ class TestDumpsLoads:
         assert decoded == data
 
     def test_dumps_is_url_encoded(self):
-        """The output of dumps() must be URL-safe (no spaces, braces unencoded only)."""
+        """The output of dumps() must be URL-safe."""
         data = {"x": "hello world"}
         encoded = dumps(data)
-        # quote_plus encodes spaces as '+'
         assert "+" in encoded or "%20" in encoded
-        # Decoded should get back original
         decoded = loads(encoded)
         assert decoded == data
 
@@ -283,7 +324,6 @@ class TestJsonDumpsLoads:
         data = {"a": 1}
         encoded = json_dumps(data, indent=2)
         assert "\n" in encoded
-        # Still decodes correctly
         assert json_loads(encoded) == data
 
     def test_json_loads_invalid_raises_valueerror(self):
@@ -299,7 +339,13 @@ class TestJsonDumpsLoads:
 class TestComplexDecoder:
     """Tests for :class:`ComplexDecoder`."""
 
-    def test_decode_datetime(self):
+    def test_decode_typed_datetime(self):
+        decoder = ComplexDecoder()
+        data = '{"date": {"__pytigon_type__": "datetime", "value": "2023-01-01T00:00:00"}}'
+        decoded = decoder.decode(data)
+        assert decoded["date"] == datetime.datetime(2023, 1, 1)
+
+    def test_decode_legacy_datetime(self):
         decoder = ComplexDecoder()
         data = '{"date": {"object": "datetime.datetime(2023, 1, 1, 0, 0)"}}'
         decoded = decoder.decode(data)
@@ -307,14 +353,14 @@ class TestComplexDecoder:
 
     def test_decode_decimal(self):
         decoder = ComplexDecoder()
-        data = '{"value": {"object": "Decimal(\'10.5\')"}}'
+        data = '{"value": {"__pytigon_type__": "decimal", "value": "10.5"}}'
         decoded = decoder.decode(data)
         assert decoded["value"] == Decimal("10.5")
 
     def test_decode_mixed(self):
         decoder = ComplexDecoder()
         data = (
-            '{"date": {"object": "datetime.datetime(2023, 1, 1, 0, 0)"}, '
+            '{"date": {"__pytigon_type__": "datetime", "value": "2023-01-01T00:00:00"}, '
             '"value": {"object": "Decimal(\'10.5\')"}}'
         )
         decoded = decoder.decode(data)
@@ -343,9 +389,5 @@ class TestConstants:
         assert "bool" in _STANDARD_TYPES
         assert "NoneType" in _STANDARD_TYPES
 
-    def test_safe_eval_globals_restricted(self):
-        """Dangerous builtins must NOT be present."""
-        assert "__import__" not in _SAFE_EVAL_GLOBALS.get("__builtins__", {})
-        assert "exec" not in _SAFE_EVAL_GLOBALS.get("__builtins__", {})
-        assert "open" not in _SAFE_EVAL_GLOBALS.get("__builtins__", {})
-        assert "eval" not in _SAFE_EVAL_GLOBALS.get("__builtins__", {})
+    def test_typed_envelope_key_is_namespaced(self):
+        assert _ENVELOPE_TYPE_KEY == "__pytigon_type__"

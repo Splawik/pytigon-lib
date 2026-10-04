@@ -109,15 +109,77 @@ class TestDefaultBlock:
 
 
 class TestMakePermsUrlTestFun:
+    @patch("django.conf.settings.PUBLIC", False)
     @patch("pytigon_lib.schviews.perms.get_app_name")
     @patch("django.conf.settings.INSTALLED_APPS", ["test_app"])
-    def test_no_perm_for_url_skips_check(self, mock_get_app_name, rf):
+    def test_no_policy_blocks_anonymous(self, mock_get_app_name, rf):
         mock_get_app_name.return_value = "test_app"
         mock_fun = MagicMock(return_value=HttpResponse("ok"))
-        wrapper = make_perms_url_test_fun("test_app", mock_fun)
+        block_view = MagicMock(return_value=HttpResponse("blocked", status=401))
+        wrapper = make_perms_url_test_fun("test_app", mock_fun, block_view)
         resp = wrapper(rf.get("/"))
+        mock_fun.assert_not_called()
+        block_view.assert_called_once()
+        assert resp.status_code == 401
+
+    @patch("django.conf.settings.PUBLIC", False)
+    @patch("pytigon_lib.schviews.perms.get_app_name")
+    @patch("django.conf.settings.INSTALLED_APPS", ["test_app"])
+    def test_no_policy_allows_authenticated(self, mock_get_app_name, rf):
+        mock_get_app_name.return_value = "test_app"
+        mock_fun = MagicMock(return_value=HttpResponse("ok"))
+        block_view = MagicMock(return_value=HttpResponse("blocked", status=401))
+        wrapper = make_perms_url_test_fun("test_app", mock_fun, block_view)
+        req = rf.get("/")
+        req.user = MagicMock(is_authenticated=True, is_staff=False)
+        wrapper(req)
         mock_fun.assert_called_once()
-        assert resp.content == b"ok"
+        block_view.assert_not_called()
+
+    @patch("django.conf.settings.PUBLIC", False)
+    @patch("django.conf.settings.STAFF_ONLY_APPS", ("schinstall",))
+    @patch("pytigon_lib.schviews.perms.get_app_name")
+    @patch("django.conf.settings.INSTALLED_APPS", ["schinstall"])
+    def test_staff_only_app_blocks_non_staff(self, mock_get_app_name, rf):
+        mock_get_app_name.return_value = "schinstall"
+        mock_fun = MagicMock(return_value=HttpResponse("ok"))
+        block_view = MagicMock(return_value=HttpResponse("blocked", status=401))
+        wrapper = make_perms_url_test_fun("schinstall", mock_fun, block_view)
+        req = rf.get("/")
+        req.user = MagicMock(is_authenticated=True, is_staff=False)
+        wrapper(req)
+        mock_fun.assert_not_called()
+        block_view.assert_called_once()
+
+    @patch("django.conf.settings.PUBLIC", False)
+    @patch("django.conf.settings.STAFF_ONLY_APPS", ("schinstall",))
+    @patch("pytigon_lib.schviews.perms.get_app_name")
+    @patch("django.conf.settings.INSTALLED_APPS", ["schinstall"])
+    def test_staff_only_app_allows_staff(self, mock_get_app_name, rf):
+        mock_get_app_name.return_value = "schinstall"
+        mock_fun = MagicMock(return_value=HttpResponse("ok"))
+        block_view = MagicMock(return_value=HttpResponse("blocked", status=401))
+        wrapper = make_perms_url_test_fun("schinstall", mock_fun, block_view)
+        req = rf.get("/")
+        req.user = MagicMock(is_authenticated=True, is_staff=True)
+        wrapper(req)
+        mock_fun.assert_called_once()
+
+    @patch("django.conf.settings.PUBLIC", True)
+    @patch("django.conf.settings.STAFF_ONLY_APPS", ("schinstall",))
+    @patch("pytigon_lib.schviews.perms.get_app_name")
+    @patch("django.conf.settings.INSTALLED_APPS", ["schinstall"])
+    def test_staff_only_app_is_enforced_even_on_public_site(
+        self, mock_get_app_name, rf
+    ):
+        """A PUBLIC site must not expose the installer to anonymous users."""
+        mock_get_app_name.return_value = "schinstall"
+        mock_fun = MagicMock(return_value=HttpResponse("ok"))
+        block_view = MagicMock(return_value=HttpResponse("blocked", status=401))
+        wrapper = make_perms_url_test_fun("schinstall", mock_fun, block_view)
+        wrapper(rf.get("/"))
+        mock_fun.assert_not_called()
+        block_view.assert_called_once()
 
 
 class TestMakePermsTestFun:

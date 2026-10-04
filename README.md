@@ -50,4 +50,4 @@ views = GenericTable(MyModel).table('mytable').gen()
 
 ## License
 
-LGPLv2.1 — see [LICENSE](LICENSE)
+LGPL-2.1 — see [LICENSE](LICENSE)

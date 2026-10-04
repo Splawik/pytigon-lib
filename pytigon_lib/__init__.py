@@ -14,10 +14,10 @@ Raises:
         message and raises the exception.
 
 author: Sławomir Chołaj (slawomir.cholaj@gmail.com)
-license: LGPL 3.0
+license: LGPL-2.1
 """
 
-__version__ = "0.261002"
+__version__ = "0.261004"
 
 import importlib.util
 import logging

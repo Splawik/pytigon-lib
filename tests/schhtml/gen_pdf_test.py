@@ -4,6 +4,7 @@ import tempfile
 
 import PIL
 import pypdfium2 as pdfium
+import pytest
 from pytigon.pytigon_run import run
 
 from pytigon_lib.schtest.html_test import html_content_cmp
@@ -12,6 +13,15 @@ from pytigon_lib.schtools.images import compare_images
 from pytigon_lib.schtools.main_paths import get_main_paths
 
 os.environ["SCRIPT_MODE"] = "1"
+
+# The test renders documents and compares every page pixel-by-pixel against
+# committed reference images. The result depends on the local LibreOffice
+# version, fonts and PDF library versions, so it only means something on the
+# canonical toolchain.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("PYTIGON_GOLDEN_TESTS") != "1",
+    reason="golden/visual test; set PYTIGON_GOLDEN_TESTS=1 on the canonical toolchain",
+)
 
 PATHS = get_main_paths()
 

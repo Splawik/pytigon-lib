@@ -21,6 +21,13 @@ from pytigon_lib.schviews.viewtools import render_to_response
 
 logger = logging.getLogger(__name__)
 
+# Applications whose forms always require a staff user. These expose
+# administrative actions (installing a ``.ptig`` package runs its installer;
+# the builder clones repositories and restarts the server), so they must be
+# staff-only even on a site running in ``PUBLIC`` mode. Operators can extend
+# the list with the ``STAFF_ONLY_APPS`` setting.
+_DEFAULT_STAFF_ONLY_APPS = frozenset({"schinstall", "schbuilder"})
+
 _ANONYMOUS_PK: Any | None = None
 _ANONYMOUS_LOCK = threading.Lock()
 
@@ -169,7 +176,7 @@ def make_perms_url_test_fun(
             if len(elements) > 1:
                 module2 = getattr(module, elements[-1])
                 if module2:
-                    module3 = getattr(module2, "models")
+                    module3 = module2.models
                     if module3:
                         perms = module3.Perms
                         if hasattr(perms, "PermsForUrl"):
@@ -180,16 +187,39 @@ def make_perms_url_test_fun(
             )
 
     def perms_test(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        """Permission-checking wrapper for URL-based access control."""
+        """Permission-checking wrapper for URL-based access control.
+
+        When the application defines ``Perms.PermsForUrl`` that policy governs
+        access. When it does not, this wrapper fails **closed** instead of
+        passing every request through:
+
+        * applications listed in ``settings.STAFF_ONLY_APPS`` (default:
+          ``schinstall``, ``schbuilder``) always require a staff user, even on
+          a ``PUBLIC`` site — installing a package executes its installer;
+        * otherwise an anonymous request is denied unless the whole site is
+          explicitly public via ``settings.PUBLIC``.
+
+        Without this default every application using ``form_with_perms`` was
+        reachable without authentication, including the ``.ptig`` installer.
+        """
+        user = getattr(request, "user", None)
+        staff_only = getattr(settings, "STAFF_ONLY_APPS", _DEFAULT_STAFF_ONLY_APPS)
+
         if perm_for_url:
+            if user is None:
+                return if_block_view(request)
             perm = perm_for_url(request.path)
-            user = request.user
             if not user.is_authenticated:
-                user = get_anonymous()
-                if not user:
-                    user = request.user
+                user = get_anonymous() or user
             if not user.has_perm(f"{appbase}.{perm}"):
                 return if_block_view(request)
+        elif app_name in staff_only:
+            if user is None or not user.is_authenticated or not user.is_staff:
+                return if_block_view(request)
+        elif not getattr(settings, "PUBLIC", False):
+            if user is None or not user.is_authenticated:
+                return if_block_view(request)
+
         return fun(request, app_name, *args, **kwargs)
 
     return perms_test

@@ -3,9 +3,18 @@ import os
 import pathlib
 import tempfile
 
+import pytest
+
 from pytigon_lib.schdjangoext.spreadsheet_render import render_odf, render_ooxml
 from pytigon_lib.schtest.html_test import html_content_cmp
 from pytigon_lib.schtools.doc_tools import soffice_convert
+
+# The output is produced by LibreOffice and compared with a committed reference
+# HTML file, so it only reproduces on the canonical toolchain.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("PYTIGON_GOLDEN_TESTS") != "1",
+    reason="golden/visual test; set PYTIGON_GOLDEN_TESTS=1 on the canonical toolchain",
+)
 
 TEST_PATH = pathlib.Path(__file__).parent.resolve()
 

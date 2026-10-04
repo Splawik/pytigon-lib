@@ -2,5 +2,5 @@
 set -euo pipefail
 
 echo "=== pytigon-lib ptig @pytest ==="
-ptig @pytest tests/ -m "$@"
+ptig @pytest tests/ "$@"
 echo

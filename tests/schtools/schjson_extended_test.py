@@ -15,20 +15,21 @@ class TestComplexEncoderAdditional:
 
     def test_date(self, encoder):
         result = encoder.default(datetime.date(2024, 12, 31))
-        assert result == {"object": "datetime.date(2024, 12, 31)"}
+        assert result == {"__pytigon_type__": "date", "value": "2024-12-31"}
 
     def test_datetime_with_tzinfo(self, encoder):
-        dt = datetime.datetime(2023, 1, 1)
+        dt = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
         result = encoder.default(dt)
-        assert "object" in result
+        assert result["__pytigon_type__"] == "datetime"
+        assert result["value"].endswith("+00:00")
 
     def test_decimal_negative(self, encoder):
         result = encoder.default(Decimal("-10.5"))
-        assert result == {"object": "Decimal('-10.5')"}
+        assert result == {"__pytigon_type__": "decimal", "value": "-10.5"}
 
     def test_decimal_zero(self, encoder):
         result = encoder.default(Decimal("0"))
-        assert result == {"object": "Decimal('0')"}
+        assert result == {"__pytigon_type__": "decimal", "value": "0"}
 
 
 class TestDumpsLoadsExtra:

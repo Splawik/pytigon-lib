@@ -312,7 +312,10 @@ class TestDuplicateRow:
         mock_model.objects.get.return_value = mock_obj
         mock_get_model.return_value = mock_model
         resp = duplicate_row(rf.get("/"), "app", "Tab", 1)
-        assert resp.content == b"YES"
+        # On success the view answers with a page that refreshes the opener and
+        # reports YES in the body.
+        assert b"YES" in resp.content
+        assert b"refresh_page" in resp.content
         assert mock_obj.id is None
         mock_obj.save.assert_called_once()
 

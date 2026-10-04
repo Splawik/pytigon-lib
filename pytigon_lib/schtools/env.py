@@ -60,6 +60,15 @@ def get_environ(path: str | None = None) -> environ.Env:
             CORS_ORIGIN_WHITELIST=(str, ""),
             AUTOUSERNAME=(str, "auto"),
             AUTOPASSWORD=(str, "anawa"),
+            PYTIGON_STRICT_DEFAULT_ADMIN=(bool, False),
+            FORCE_PASSWORD_CHANGE_IN_PRODUCTION=(bool, True),
+            LOGIN_ONLY_APPS=(str, "schcommander"),
+            WEBSOCKET_REQUIRE_AUTH=(bool, True),
+            WEBSOCKET_STAFF_ONLY=(
+                str,
+                "schcommander/,schbuilder/,schtasks/,schai/,schserverless/,schremote/",
+            ),
+            WEBSOCKET_PUBLIC_PATHS=(str, ""),
         )
     if path:
         env_paths = [os.path.join(path, ".env"), os.path.join(path, "env")]

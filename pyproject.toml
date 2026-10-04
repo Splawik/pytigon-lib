@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytigon-lib"
-version = "0.261002"
+version = "0.261004"
 description = "Pytigon library — Python/Django application framework with multi-format rendering and indentation-based HTML preprocessor"
 authors = [{name = "Slawomir Cholaj", email = "slawomir.cholaj@gmail.com"}]
-license = "LGPL-3.0-only"
+license = "LGPL-2.1-or-later"
 readme = "README.md"
 requires-python = ">=3.12"
 classifiers = [
@@ -55,7 +55,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.3", "pytest>=7.0", "pytest-django>=4.5", "mypy>=1.0"]
+dev = ["ruff>=0.3", "pytest>=7.0", "pytest-django>=4.5", "pytest-cov>=4.0", "pytest-timeout>=2.0", "pre-commit>=3.0", "mypy>=1.0"]
+# Integration tests that exercise pytigon-lib together with the pytigon
+# application project. Install and run with:
+#   pip install -e ".[test-full]"
+#   PYTIGON_TEST_FULL=1 pytest tests/
+test-full = ["pytigon>=0.261002", "pytigon-standard-prj>=0.261002"]
 
 [project.urls]
 Documentation = "https://pytigon.github.io/pytigon-lib"
@@ -65,6 +70,9 @@ Repository = "https://github.com/Splawik/pytigon-lib"
 where = ["."]
 include = ["pytigon_lib*"]
 exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+pytigon_lib = ["py.typed"]
 
 [tool.ruff]
 target-version = "py312"
@@ -114,28 +122,23 @@ warn_return_any = false
 warn_unused_ignores = false
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+timeout = 300
 norecursedirs = [".kilo", "tests/schindent/assets", "build", "dist", "__pycache__"]
 filterwarnings = ["ignore::DeprecationWarning"]
 addopts = [
     "--ignore-glob=**/android_client.py",
-    "-m", "not django",
-    "--ignore=tests/schdjangoext",
-    "--ignore=tests/schviews",
-    "--ignore=tests/schhttptools/test.py",
-    "--ignore=tests/schhttptools/test2.py",
-    "--ignore=tests/schindent/test.py",
-    "--ignore=tests/schindent/test2.py",
-    "--ignore=tests/schindent/ihtml2html_test.py",
-    "--ignore=tests/schhtml/gen_pdf_test.py",
-    "--ignore=tests/schspreadsheet/gen_doc_test.py",
-    "--ignore=tests/schfs/schfs__init___test.py",
-    "--ignore=tests/schfs/vfstools_test.py",
-    "--ignore=tests/schtools/encrypt_test.py",
-    "--ignore=tests/schtools/schhtmlgen_test.py",
-    "--ignore=tests/schtools/wiki_test.py",
-    "--ignore=tests/__init___test.py",
-    "--ignore=tests/schhtml/pdfdc_test.py",
 ]
 markers = [
-    "django: tests requiring Django setup (run from pytigon parent project)",
+    "django: integration test that needs the full Pytigon stack; collected only with PYTIGON_TEST_FULL=1",
+    "golden: visual/golden-file comparison; runs only with PYTIGON_GOLDEN_TESTS=1 because it depends on the local LibreOffice and font toolchain",
 ]
+
+[tool.coverage.run]
+source = ["pytigon_lib"]
+
+[tool.coverage.report]
+# Measured ~48% for the standalone suite. Raise as coverage grows; this floor
+# only prevents silent regressions.
+fail_under = 45
