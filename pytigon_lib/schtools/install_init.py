@@ -240,8 +240,7 @@ def _pip_install(data_path, _data_path, prj_path, _prj_path, prj):
         os.path.join(prjlib, "install.txt")
     ):
         ok = True
-        if not os.path.exists(prjlib):
-            os.mkdir(prjlib, exist_ok=True)
+        os.makedirs(prjlib, exist_ok=True)
         config_file = os.path.join(prj_path, prj, "install.ini")
         if os.path.exists(config_file):
             config = configparser.ConfigParser()
