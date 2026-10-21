@@ -8,6 +8,8 @@ import secrets
 import zipfile
 from tempfile import NamedTemporaryFile
 from typing import Any
+import shutil
+import tempfile
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -105,9 +107,7 @@ def open_file(filename: str, mode: str, for_vfs: bool = False, encoding: str | N
         raise OSError(f"Failed to open file '{filename}': {e}") from e
 
 
-def open_and_create_dir(
-    filename: str, mode: str, for_vfs: bool = False, encoding: str | None = None
-) -> Any:
+def open_and_create_dir(filename: str, mode: str, for_vfs: bool = False, encoding: str | None = None) -> Any:
     """Open a file, creating intermediate directories as needed.
 
     Args:
@@ -132,9 +132,7 @@ def open_and_create_dir(
                 os.makedirs(dirname)
         return open_file(filename, mode, for_vfs, encoding=encoding)
     except Exception as e:
-        raise OSError(
-            f"Failed to create directory or open file '{filename}': {e}"
-        ) from e
+        raise OSError(f"Failed to create directory or open file '{filename}': {e}") from e
 
 
 def get_unique_filename(base_name: str | None = None, ext: str | None = None) -> str:
@@ -228,12 +226,7 @@ def _clear_content(data: bytes) -> bytes:
     Useful for comparing text-based file contents where formatting
     differences (spaces, newlines, tabs) should be ignored.
     """
-    return (
-        data.replace(b" ", b"")
-        .replace(b"\n", b"")
-        .replace(b"\t", b"")
-        .replace(b"\r", b"")
-    )
+    return data.replace(b" ", b"").replace(b"\n", b"").replace(b"\t", b"").replace(b"\r", b"")
 
 
 def _cmp_txt_str_content(data1: bytes, data2: bytes) -> bool:
@@ -300,9 +293,7 @@ def extractall(
         if zipinfo_name.endswith(("/", "\\")):
             os.makedirs(os.path.join(path, zipinfo_name), exist_ok=True)
         else:
-            if exclude and any(
-                re.match(pattern, zipinfo_name, re.I) for pattern in exclude
-            ):
+            if exclude and any(re.match(pattern, zipinfo_name, re.I) for pattern in exclude):
                 continue
 
             out_name = os.path.join(path, zipinfo_name)
@@ -310,9 +301,7 @@ def extractall(
                 logger.warning("Skipping unsafe zip entry: %s", zipinfo_name)
                 continue
 
-            if backup_zip is not None and (
-                not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts
-            ):
+            if backup_zip is not None and (not backup_exts or zipinfo_name.rsplit(".", 1)[-1] in backup_exts):
                 if os.path.exists(out_name):
                     new_data = zip_file.read(zipinfo_name, pwd)
                     with open(out_name, "rb") as f:
@@ -353,9 +342,7 @@ class ZipWriter:
         if compression is None:
             compression = zipfile.ZIP_DEFLATED
         self.compression = compression
-        self.zip_file = zipfile.ZipFile(
-            filename, "w", compression, compresslevel=9
-        )
+        self.zip_file = zipfile.ZipFile(filename, "w", compression, compresslevel=9)
         self.exclude = exclude or []
         self.sha256_tab: list[tuple[str, str, int]] | None = [] if sha256 else None
 
@@ -442,9 +429,7 @@ class ZipWriter:
         else:
             self.add_folder_to_zip(file, base_path_in_zip=base_path_in_zip)
 
-    def add_folder_to_zip(
-        self, folder: str, base_path_in_zip: str | None = None
-    ) -> None:
+    def add_folder_to_zip(self, folder: str, base_path_in_zip: str | None = None) -> None:
         """Recursively add *folder* contents to the archive."""
         try:
             entries = os.listdir(folder)
@@ -558,20 +543,14 @@ def convert_file(
                 "rt",
                 for_vfs_input,
             )
-            input_format = (
-                input_format or filename_or_stream_in.rsplit(".", 1)[-1].lower()
-            )
+            input_format = input_format or filename_or_stream_in.rsplit(".", 1)[-1].lower()
         else:
             fin = filename_or_stream_in
 
         # ---- open output ----
         if isinstance(filename_or_stream_out, str):
-            fout: Any = open_file(
-                automount(filename_or_stream_out), "wb", for_vfs_output
-            )
-            output_format = (
-                output_format or filename_or_stream_out.rsplit(".", 1)[-1].lower()
-            )
+            fout: Any = open_file(automount(filename_or_stream_out), "wb", for_vfs_output)
+            output_format = output_format or filename_or_stream_out.rsplit(".", 1)[-1].lower()
         else:
             fout = filename_or_stream_out
 
@@ -615,9 +594,7 @@ def convert_file(
 
             dc = PdfDc(
                 output_stream=fout,
-                notify_callback=(
-                    notify_callback_pdf if output_format == "xpdf" else None
-                ),
+                notify_callback=(notify_callback_pdf if output_format == "xpdf" else None),
             )
             dc.set_paging(True)
 
@@ -694,3 +671,55 @@ def convert_file(
                 fout.close()
             except Exception:
                 pass
+
+
+def add_file_to_zip(zip_path: str, file_path: str, content) -> None:
+    """
+    Saves or updates a file inside a ZIP archive.
+
+    :param zip_path: Path to the ZIP file (will be created if it doesn't exist).
+    :param file_path: Destination path of the file inside the ZIP archive.
+    :param content: Content of the file (str for UTF-8 text, bytes for binary data).
+    """
+    # 1. Prepare data based on the type (str vs bytes)
+    if isinstance(content, str):
+        data = content.encode("utf-8")
+    elif isinstance(content, bytes):
+        data = content
+    else:
+        raise TypeError("The 'content' parameter must be of type str or bytes.")
+
+    # 2. Handle the situation when the ZIP file already exists
+    if os.path.exists(zip_path) and zipfile.is_zipfile(zip_path):
+        # Create a temporary ZIP file to safely replace any duplicate file
+        temp_dir = tempfile.mkdtemp()
+        temp_zip_path = os.path.join(temp_dir, "temp.zip")
+
+        try:
+            with (
+                zipfile.ZipFile(zip_path, "r") as yin,
+                zipfile.ZipFile(temp_zip_path, "w", zipfile.ZIP_DEFLATED) as yout,
+            ):
+                # Copy all files except the one we want to overwrite
+                for item in yin.infolist():
+                    if item.filename != file_path:
+                        yout.writestr(item, yin.read(item.filename))
+
+                # Write the new content of the target file
+                yout.writestr(file_path, data)
+
+            # Replace the old ZIP file with the updated temporary one
+            shutil.move(temp_zip_path, zip_path)
+        finally:
+            # Clean up the temporary directory
+            shutil.rmtree(temp_dir)
+
+    else:
+        # 3. If the ZIP does not exist, create it from scratch and add the file
+        # Ensure the destination directory for the ZIP file exists
+        zip_dir = os.path.dirname(zip_path)
+        if zip_dir and not os.path.exists(zip_dir):
+            os.makedirs(zip_dir, exist_ok=True)
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr(file_path, data)
