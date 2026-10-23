@@ -88,13 +88,7 @@ def set_http_idle_func(func):
 
 def schurljoin(base, address):
     """Join base URL and address."""
-    if (
-        address
-        and base
-        and base[-1] == "/"
-        and address[0] == "/"
-        and not base.endswith("://")
-    ):
+    if address and base and base[-1] == "/" and address[0] == "/" and not base.endswith("://"):
         return base + address[1:]
     return base + address
 
@@ -176,17 +170,11 @@ def asgi_or_wsgi_get_or_post(
         ret = []
     global CLIENT
     if not CLIENT:
-        CLIENT = Client(
-            HTTP_USER_AGENT=(
-                "Emscripten" if platform_name() == "Emscripten" else user_agent
-            )
-        )
+        CLIENT = Client(HTTP_USER_AGENT=("Emscripten" if platform_name() == "Emscripten" else user_agent))
     url2 = url.replace("http://127.0.0.2", "")
     if post:
         if json_data:
-            response = CLIENT.post(
-                url2, json.dumps(params), content_type="application/json"
-            )
+            response = CLIENT.post(url2, json.dumps(params), content_type="application/json")
         else:
             params2 = {}
             for key, value in params.items():
@@ -235,9 +223,7 @@ def _get_httpx_client():
     global HTTPX_CLIENT
     if HTTPX_CLIENT is None or getattr(HTTPX_CLIENT, "is_closed", False):
         HTTPX_CLIENT = httpx.Client(
-            limits=httpx.Limits(
-                max_connections=32, max_keepalive_connections=16, keepalive_expiry=30.0
-            ),
+            limits=httpx.Limits(max_connections=32, max_keepalive_connections=16, keepalive_expiry=30.0),
             follow_redirects=False,
         )
     return HTTPX_CLIENT
@@ -260,14 +246,8 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
     ret = []
     if direct_access and ASGI_APPLICATION:
         post = method == "post"
-        headers = [
-            (key.encode("utf-8"), value.encode("utf-8"))
-            for key, value in argv["headers"].items()
-        ]
-        cookies = ";".join(
-            f"{key}={value.split(';', 1)[0]}"
-            for key, value in argv.get("cookies", {}).items()
-        )
+        headers = [(key.encode("utf-8"), value.encode("utf-8")) for key, value in argv["headers"].items()]
+        cookies = ";".join(f"{key}={value.split(';', 1)[0]}" for key, value in argv.get("cookies", {}).items())
         if cookies:
             headers.append((b"cookie", cookies.encode("utf-8")))
         if platform_name() == "Emscripten" or FORCE_WSGI:
@@ -320,9 +300,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
             if platform_name() == "Emscripten" or FORCE_WSGI:
                 requests_request(method, url, argv, ret)
             else:
-                t = Thread(
-                    target=requests_request, args=(method, url, argv, ret), daemon=True
-                )
+                t = Thread(target=requests_request, args=(method, url, argv, ret), daemon=True)
                 t.start()
                 try:
                     if IN_PAINT:
@@ -346,9 +324,7 @@ def request(method, url, direct_access, argv, app=None, user_agent="pytigon"):
 class HttpResponse:
     """HTTP response wrapper."""
 
-    def __init__(
-        self, url, ret_code=200, response=None, content=None, ret_content_type=None
-    ):
+    def __init__(self, url, ret_code=200, response=None, content=None, ret_content_type=None):
         self.url = url
         self.ret_code = ret_code
         self.response = response
@@ -361,11 +337,7 @@ class HttpResponse:
         global BLOCK, HTTP_ERROR_FUNC
         # Use the per-instance cookie jar from the HttpClient so that
         # concurrent clients don't share session cookies.
-        cookies = (
-            http_client.cookies_embeded
-            if self.url.startswith("http://127.0.0.2/")
-            else http_client.cookies
-        )
+        cookies = http_client.cookies_embeded if self.url.startswith("http://127.0.0.2/") else http_client.cookies
         self.content = self.response.content
         self.ret_code = self.response.status_code
         if self.response.status_code != 200:
@@ -380,11 +352,7 @@ class HttpResponse:
         if self.response.cookies:
             for key, value in self.response.cookies.items():
                 cookies[key] = value
-        if (
-            self.ret_content_type
-            and "text/" in self.ret_content_type
-            and _contains_error_page(self.content)
-        ):
+        if self.ret_content_type and "text/" in self.ret_content_type and _contains_error_page(self.content):
             if HTTP_ERROR_FUNC:
                 BLOCK = True
                 try:
@@ -394,9 +362,7 @@ class HttpResponse:
                     # left BLOCK stuck True and the request loop spinning.
                     BLOCK = False
             else:
-                with open(
-                    os.path.join(settings.DATA_PATH, "last_error.html"), "wb"
-                ) as f:
+                with open(os.path.join(settings.DATA_PATH, "last_error.html"), "wb") as f:
                     f.write(self.content)
             self.ret_content_type = "500"
             self.content = b""
@@ -418,11 +384,7 @@ class HttpResponse:
             while len(cache) > 128 or (total > max_bytes and len(cache) > 1):
                 _, evicted = cache.popitem(last=False)
                 total -= len(evicted[1])
-        self.new_url = (
-            self.response.url
-            if isinstance(self.response.url, str)
-            else self.response.url.path
-        )
+        self.new_url = self.response.url if isinstance(self.response.url, str) else self.response.url.path
 
     def ptr(self):
         """Return request content."""
@@ -430,16 +392,8 @@ class HttpResponse:
 
     def str(self):
         """Return request content as string."""
-        dec = (
-            "iso-8859-2"
-            if self.ret_content_type and "iso-8859-2" in self.ret_content_type
-            else "utf-8"
-        )
-        return (
-            decode(self.content, dec)
-            if self.ret_content_type and "text" in self.ret_content_type
-            else self.content
-        )
+        dec = "iso-8859-2" if self.ret_content_type and "iso-8859-2" in self.ret_content_type else "utf-8"
+        return decode(self.content, dec) if self.ret_content_type and "text" in self.ret_content_type else self.content
 
     def json(self):
         """Return request content as JSON."""
@@ -539,20 +493,10 @@ class HttpClient:
                 else:
                     BLOCK_EVENT.wait(timeout=0.1)
         self.content = ""
-        address = (
-            "http://127.0.0.2/plugins/" + address_str[1:]
-            if address_str[0] == "^"
-            else address_str
-        )
-        adr = (
-            schurljoin(self.base_address, address)
-            if address[0] in ("/", ".")
-            else address
-        )
+        address = "http://127.0.0.2/plugins/" + address_str[1:] if address_str[0] == "^" else address_str
+        adr = schurljoin(self.base_address, address) if address[0] in ("/", ".") else address
         adr = norm_path(adr)
-        if adr.startswith("http://127.0.0.2") or self.base_address.startswith(
-            "http://127.0.0.2"
-        ):
+        if adr.startswith("http://127.0.0.2") or self.base_address.startswith("http://127.0.0.2"):
             cookies = self.cookies_embeded
             direct_access = True
         else:
@@ -570,11 +514,7 @@ class HttpClient:
                 content=self.http_cache[adr][1],
                 ret_content_type=self.http_cache[adr][0],
             )
-        if (
-            adr.startswith("http://127.0.0")
-            and ("/static/" in adr or "/site_media" in adr)
-            and "?" not in adr
-        ):
+        if adr.startswith("http://127.0.0") and ("/static/" in adr or "/site_media" in adr) and "?" not in adr:
             path = adr.replace("http://127.0.0.2", "")
             try:
                 ext = "." + path.split(".")[-1]
@@ -596,9 +536,7 @@ class HttpClient:
                         },
                     )
 
-                    return HttpResponse(
-                        adr, content=content, response=ret_http, ret_content_type=mt
-                    )
+                    return HttpResponse(adr, content=content, response=ret_http, ret_content_type=mt)
             except (OSError, FileNotFoundError):
                 LOGGER.exception("Static file load error: %s", path)
                 return HttpResponse(adr, 400, content=b"", ret_content_type="text/html")
@@ -615,11 +553,7 @@ class HttpClient:
         if parm is None:
             parm = {}
 
-        headers = (
-            {"User-Agent": user_agent, "Referer": adr}
-            if user_agent
-            else {"Referer": adr}
-        )
+        headers = {"User-Agent": user_agent, "Referer": adr} if user_agent else {"Referer": adr}
         argv = {"headers": headers, "follow_redirects": True, "cookies": cookies}
         if credentials:
             argv["auth"] = credentials
@@ -636,9 +570,7 @@ class HttpClient:
                     files = {
                         key: stack.enter_context(open(value[1:], "rb"))
                         for key, value in parm.items()
-                        if isinstance(value, str)
-                        and value.startswith("@")
-                        and os.path.exists(value[1:])
+                        if isinstance(value, str) and value.startswith("@") and os.path.exists(value[1:])
                     }
                     for key in files:
                         del parm[key]
@@ -688,9 +620,7 @@ async def local_websocket(path, input_queue, output):
     global COOKIES_EMBEDED, ASGI_APPLICATION
     user_agent = ""
     headers = [(b"User-Agent", user_agent), (b"Referer", path)]
-    cookies = ";".join(
-        f"{key}={value.split(';', 1)[0]}" for key, value in COOKIES_EMBEDED.items()
-    )
+    cookies = ";".join(f"{key}={value.split(';', 1)[0]}" for key, value in COOKIES_EMBEDED.items())
     if cookies:
         headers.append((b"cookie", cookies.encode("utf-8")))
     if "csrftoken" in COOKIES_EMBEDED:
