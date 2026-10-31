@@ -33,7 +33,9 @@ class AppConfigMod(AppConfig):
             all_models: Optional pre-loaded models dictionary. If not
                 given, ``self.apps.all_models`` is used.
         """
-        self.models = self.apps.all_models[self.label] if all_models is None else all_models
+        self.models = (
+            self.apps.all_models[self.label] if all_models is None else all_models
+        )
 
         if module_has_submodule(self.module, MODELS_MODULE_NAME):
             models_module_name = f"{self.name}.{MODELS_MODULE_NAME}"
