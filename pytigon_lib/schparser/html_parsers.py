@@ -4,7 +4,7 @@ HTML content parsers for extracting structured data from HTML documents.
 This module provides parsers for:
 - Tables (:class:`SimpleTabParserBase`, :class:`SimpleTabParser`)
 - Unordered lists / tree structures (:class:`TreeParser`)
-- SchPage window layout (:class:`ShtmlParser`) – splits a page into
+- SChPage window layout (:class:`ShtmlParser`) – splits a page into
   header, footer, panel, body, and script fragments.
 """
 
@@ -178,7 +178,7 @@ class TreeParser(Parser):
 
 
 class ShtmlParser(Parser):
-    """Parser for SchPage windows – splits HTML into layout fragments.
+    """Parser for SChPage windows – splits HTML into layout fragments.
 
     Extracts metadata from ``<meta>`` tags and divides the document into:
     body, header, footer, and panel regions. Each region is represented
