@@ -17,6 +17,10 @@ except ImportError:
 
 from pytigon_lib.schdjangoext.fastform import form_from_str
 from pytigon_lib.schtools.schjson import ComplexDecoder, ComplexEncoder
+from pytigon_lib.schdjangoext.imp_exp import (
+    export_django_queryset2json,
+    import_django_objects_json,
+)
 
 
 class CallProxy:
@@ -345,27 +349,25 @@ def standard_table_action(
         else:
             main_queryset = base_queryset
 
-        accessors = [
-            rel.get_accessor_name() for rel in model_class._meta.related_objects
-        ]
-        if accessors:
-            main_queryset = main_queryset.prefetch_related(*accessors)
+        return export_django_queryset2json(main_queryset)
+
+        # accessors = [rel.get_accessor_name() for rel in model_class._meta.related_objects]
+        # if accessors:
+        #    main_queryset = main_queryset.prefetch_related(*accessors)
 
         # Single pass over the queryset: the original code serialized the whole
         # queryset into a list and then re-evaluated it (and every related
         # manager) per row, which is a full N+1 on top of double materialising.
         # The prefetches above are what make the per-accessor lookup cheap.
-        main_data = []
-        for obj in main_queryset.iterator(chunk_size=200):
-            (data,) = serializers.serialize("python", [obj])
-            for accessor_name in accessors:
-                related_fields = getattr(obj, accessor_name).all()
-                data["fields"][accessor_name] = serializers.serialize(
-                    "python", related_fields.iterator(chunk_size=200)
-                )
-            main_data.append(data)
+        # main_data = []
+        # for obj in main_queryset.iterator(chunk_size=200):
+        #    (data,) = serializers.serialize("python", [obj])
+        #    for accessor_name in accessors:
+        #        related_fields = getattr(obj, accessor_name).all()
+        #        data["fields"][accessor_name] = serializers.serialize("python", related_fields.iterator(chunk_size=200))
+        #    main_data.append(data)
 
-        return json.dumps(main_data)
+        # return json.dumps(main_data)
 
     if action == "paste" and not subtree:
         data2 = data.get("data", [])
@@ -390,10 +392,12 @@ def standard_table_action(
 
     if action == "paste" and subtree:
         data2 = data.get("data", [])
-        cls = list_view.get_queryset().model  # SChTable
+        created_count = import_django_objects_json(data2)
+
+        # cls = list_view.get_queryset().model  # SChTable
 
         # Dozwolone pola głównego modelu (bez id/pk)
-        allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
+        # allowed_fields = {f.name for f in cls._meta.get_fields() if f.name not in ("id", "pk")}
 
         # related_model = None
         # for rel in cls._meta.related_objects:
@@ -405,50 +409,50 @@ def standard_table_action(
 
         # allowed_fields_related = {f.name for f in related_model._meta.get_fields() if f.name not in ("id", "pk")}
 
-        created_count = 0
+        # created_count = 0
 
         # Parent rows and their children are written together: a failure part
         # way through would otherwise leave orphaned children behind.
-        with transaction.atomic():
-            for obj_data in data2:
-                main_obj = cls()
-                main_fields = obj_data.get("fields", {})
+        # with transaction.atomic():
+        #     for obj_data in data2:
+        #         main_obj = cls()
+        #         main_fields = obj_data.get("fields", {})
 
-                for key, value in main_fields.items():
-                    if key in ("id", "pk"):
-                        continue
-                    if key not in allowed_fields:
-                        continue
+        #         for key, value in main_fields.items():
+        #             if key in ("id", "pk"):
+        #                 continue
+        #             if key not in allowed_fields:
+        #                 continue
 
-                    field = cls._meta.get_field(key)
-                    if field.is_relation and field.many_to_one:
-                        setattr(main_obj, f"{key}_id", value)
-                    else:
-                        setattr(main_obj, key, value)
+        #             field = cls._meta.get_field(key)
+        #             if field.is_relation and field.many_to_one:
+        #                 setattr(main_obj, f"{key}_id", value)
+        #             else:
+        #                 setattr(main_obj, key, value)
 
-                main_obj.save()
-                created_count += 1
+        #         main_obj.save()
+        #         created_count += 1
 
-                for relation in cls._meta.related_objects:
-                    accessor_name = relation.get_accessor_name()
-                    related_model = relation.related_model
-                    related_objects_data = main_fields.get(accessor_name, [])
-                    for rel_obj_data in related_objects_data:
-                        new_rel_obj = related_model()
-                        rel_fields = rel_obj_data.get("fields", {})
+        #         for relation in cls._meta.related_objects:
+        #             accessor_name = relation.get_accessor_name()
+        #             related_model = relation.related_model
+        #             related_objects_data = main_fields.get(accessor_name, [])
+        #             for rel_obj_data in related_objects_data:
+        #                 new_rel_obj = related_model()
+        #                 rel_fields = rel_obj_data.get("fields", {})
 
-                        for key, value in rel_fields.items():
-                            if key in ("id", "pk"):
-                                continue
-                            if key == "parent":
-                                setattr(new_rel_obj, "parent_id", main_obj.pk)
-                            else:
-                                field = related_model._meta.get_field(key)
-                                if field.is_relation and field.many_to_one:
-                                    setattr(new_rel_obj, f"{key}_id", value)
-                                else:
-                                    setattr(new_rel_obj, key, value)
-                        new_rel_obj.save()
+        #                 for key, value in rel_fields.items():
+        #                     if key in ("id", "pk"):
+        #                         continue
+        #                     if key == "parent":
+        #                         setattr(new_rel_obj, "parent_id", main_obj.pk)
+        #                     else:
+        #                         field = related_model._meta.get_field(key)
+        #                         if field.is_relation and field.many_to_one:
+        #                             setattr(new_rel_obj, f"{key}_id", value)
+        #                         else:
+        #                             setattr(new_rel_obj, key, value)
+        #                 new_rel_obj.save()
 
         return {"success": 1, "created": created_count}
 
